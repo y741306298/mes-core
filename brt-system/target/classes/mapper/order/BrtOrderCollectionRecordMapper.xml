@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtOrderCollectionRecordMapper">
+    
+    <resultMap type="com.brt.order.vo.BrtOrderCollectionRecordVo" id="BrtOrderCollectionRecordResult">
+        <result property="recordId"    column="record_id"    />
+        <result property="nodeId"    column="node_id"    />
+        <result property="orderNodeId"    column="order_node_id"    />
+        <result property="orderId"    column="order_id"    />
+        <result property="orderType"    column="order_type"    />
+        <result property="collectionAmount"    column="collection_amount"    />
+        <result property="surplusAmount"    column="surplus_amount"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="updateBy"    column="update_by"    />
+    </resultMap>
+
+    <sql id="brtOrderCollectionRecordAllField">
+            A.record_id,
+            A.node_id,
+            A.order_node_id,
+            A.order_id,
+            A.order_type,
+            A.collection_amount,
+            A.surplus_amount,
+            A.create_time,
+            A.create_by,
+            A.update_time,
+        A.update_by
+    </sql>
+
+    <sql id="brtOrderCollectionRecordQuerySql">
+        select <include refid="brtOrderCollectionRecordAllField"/>
+        from brt_order_collection_record A
+    </sql>
+
+    <select id="queryBrtOrderCollectionRecordList" parameterType="com.brt.order.vo.BrtOrderCollectionRecordVo" resultMap="BrtOrderCollectionRecordResult">
+        <include refid="brtOrderCollectionRecordQuerySql"/>
+        <where>
+            <if test="brtOrderCollectionRecordVo.nodeId != null  and brtOrderCollectionRecordVo.nodeId != ''"> and A.node_id = #{brtOrderCollectionRecordVo.nodeId}</if>
+            <if test="brtOrderCollectionRecordVo.orderNodeId != null  and brtOrderCollectionRecordVo.orderNodeId != ''"> and A.order_node_id = #{brtOrderCollectionRecordVo.orderNodeId}</if>
+            <if test="brtOrderCollectionRecordVo.orderId != null  and brtOrderCollectionRecordVo.orderId != ''"> and A.order_id = #{brtOrderCollectionRecordVo.orderId}</if>
+            <if test="brtOrderCollectionRecordVo.orderType != null  and brtOrderCollectionRecordVo.orderType != ''"> and A.order_type = #{brtOrderCollectionRecordVo.orderType}</if>
+            <if test="brtOrderCollectionRecordVo.collectionAmount != null "> and A.collection_amount = #{brtOrderCollectionRecordVo.collectionAmount}</if>
+            <if test="brtOrderCollectionRecordVo.surplusAmount != null "> and A.surplus_amount = #{brtOrderCollectionRecordVo.surplusAmount}</if>
+        </where>
+        order by A.create_time desc
+    </select>
+
+    <select id="queryBrtOrderCollectionRecordByRecordId" resultMap="BrtOrderCollectionRecordResult">
+        <include refid="brtOrderCollectionRecordQuerySql"/>
+        where A.record_id = #{RecordId}
+    </select>
+</mapper>

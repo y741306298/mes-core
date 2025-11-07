@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtFlowNodeFieldMapper">
+    
+    <resultMap type="com.brt.order.vo.BrtFlowNodeFieldVo" id="BrtFlowNodeFieldResult">
+        <result property="fieldId"    column="field_id"    />
+        <result property="templateId"    column="template_id"    />
+        <result property="nodeId"    column="node_id"    />
+        <result property="nodeType"    column="node_type"    />
+        <result property="fieldName"    column="field_name"    />
+        <result property="fieldType"    column="field_type"    />
+        <result property="dictType"    column="dict_type"    />
+        <result property="businessType"    column="business_type"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="updateBy"    column="update_by"    />
+    </resultMap>
+
+    <sql id="brtFlowNodeFieldAllField">
+            A.field_id,
+            A.template_id,
+            A.node_id,
+            A.node_type,
+            A.field_name,
+            A.field_type,
+            A.dict_type,
+            A.business_type,
+            A.create_time,
+            A.create_by,
+            A.update_time,
+        A.update_by
+    </sql>
+
+    <sql id="brtFlowNodeFieldQuerySql">
+        select <include refid="brtFlowNodeFieldAllField"/>
+        from brt_flow_node_field A
+    </sql>
+
+    <select id="queryBrtFlowNodeFieldList" parameterType="com.brt.order.vo.BrtFlowNodeFieldVo" resultMap="BrtFlowNodeFieldResult">
+        <include refid="brtFlowNodeFieldQuerySql"/>
+        <where>  
+            <if test="brtFlowNodeFieldVo.templateId != null  and brtFlowNodeFieldVo.templateId != ''"> and A.template_id = #{brtFlowNodeFieldVo.templateId}</if>
+            <if test="brtFlowNodeFieldVo.nodeId != null  and brtFlowNodeFieldVo.nodeId != ''"> and A.node_id = #{brtFlowNodeFieldVo.nodeId}</if>
+            <if test="brtFlowNodeFieldVo.nodeType != null  and brtFlowNodeFieldVo.nodeType != ''"> and A.node_type = #{brtFlowNodeFieldVo.nodeType}</if>
+            <if test="brtFlowNodeFieldVo.fieldName != null  and brtFlowNodeFieldVo.fieldName != ''"> and A.field_name like concat('%', #{brtFlowNodeFieldVo.fieldName}, '%')</if>
+            <if test="brtFlowNodeFieldVo.fieldType != null  and brtFlowNodeFieldVo.fieldType != ''"> and A.field_type = #{brtFlowNodeFieldVo.fieldType}</if>
+            <if test="brtFlowNodeFieldVo.dictType != null  and brtFlowNodeFieldVo.dictType != ''"> and A.dict_type = #{brtFlowNodeFieldVo.dictType}</if>
+            <if test="brtFlowNodeFieldVo.businessType != null  and brtFlowNodeFieldVo.businessType != ''"> and A.business_type = #{brtFlowNodeFieldVo.businessType}</if>
+        </where>
+        order by A.create_time desc
+    </select>
+
+    <select id="queryBrtFlowNodeFieldByFieldId" resultMap="BrtFlowNodeFieldResult">
+        <include refid="brtFlowNodeFieldQuerySql"/>
+        where A.field_id = #{FieldId}
+    </select>
+</mapper>

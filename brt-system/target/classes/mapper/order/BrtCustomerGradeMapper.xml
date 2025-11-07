@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtCustomerGradeMapper">
+    
+    <resultMap type="com.brt.order.vo.BrtCustomerGradeVo" id="BrtCustomerGradeResult">
+        <result property="gradeId"    column="grade_id"    />
+        <result property="gradeName"    column="grade_name"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="updateBy"    column="update_by"    />
+    </resultMap>
+
+    <sql id="brtCustomerGradeAllField">
+            A.grade_id,
+            A.grade_name,
+            A.create_time,
+            A.create_by,
+            A.update_time,
+        A.update_by
+    </sql>
+
+    <sql id="brtCustomerGradeQuerySql">
+        select <include refid="brtCustomerGradeAllField"/>
+        from brt_customer_grade A
+    </sql>
+
+    <select id="queryBrtCustomerGradeList" parameterType="com.brt.order.vo.BrtCustomerGradeVo" resultMap="BrtCustomerGradeResult">
+        <include refid="brtCustomerGradeQuerySql"/>
+        <where>  
+            <if test="brtCustomerGradeVo.gradeName != null  and brtCustomerGradeVo.gradeName != ''"> and A.grade_name like concat('%', #{brtCustomerGradeVo.gradeName}, '%')</if>
+        </where>
+        order by A.create_time desc
+    </select>
+
+    <select id="queryBrtCustomerGradeByGradeId" resultMap="BrtCustomerGradeResult">
+        <include refid="brtCustomerGradeQuerySql"/>
+        where A.grade_id = #{GradeId}
+    </select>
+</mapper>

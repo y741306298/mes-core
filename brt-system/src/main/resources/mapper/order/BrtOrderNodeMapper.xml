@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtOrderNodeMapper">
+
+    <resultMap type="com.brt.order.vo.BrtOrderNodeVo" id="BrtOrderNodeResult">
+        <result property="orderNodeId"    column="order_node_id"    />
+        <result property="orderTemplateId"    column="order_template_id"    />
+        <result property="orderId"    column="order_id"    />
+        <result property="templateId"    column="template_id"    />
+        <result property="nodeId"    column="node_id"    />
+        <result property="deptId"    column="dept_id"    />
+        <result property="userId"    column="user_id"    />
+        <result property="complateDate"    column="complate_date"    />
+        <result property="nodeStatus"    column="node_status"    />
+        <result property="nodeRemark"    column="node_remark"    />
+        <result property="sort"    column="sort"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="createId"    column="create_id"    />
+        <result property="childId"    column="child_id"    />
+        <result property="principal"    column="principal"    />
+        <result property="nodePrincipal"    column="node_principal"    />
+        <result property="timeout"    column="timeout"    />
+        <association property="flowNodeVo" javaType="com.brt.order.vo.BrtFlowNodeVo" column="node_id" select="com.brt.order.mapper.BrtFlowNodeMapper.queryBrtFlowNodeByNodeId" />
+        <association property="user" javaType="com.brt.common.core.domain.entity.SysUser" column="user_id" select="com.brt.system.mapper.SysUserMapper.selectUserById" />
+        <association property="nodePrincipalVo" javaType="com.brt.common.core.domain.entity.SysUser" column="node_principal" select="com.brt.system.mapper.SysUserMapper.selectUserById" />
+        <collection property="userList" ofType="com.brt.common.core.domain.entity.SysUser" column="dept_id" select="com.brt.system.mapper.SysUserMapper.selectUserListByDeptId" />
+    </resultMap>
+
+    <resultMap id="BrtOrderNodeListResult" extends="BrtOrderNodeResult" type="com.brt.order.vo.BrtOrderNodeVo">
+        <association property="orderTemplateVo" javaType="com.brt.order.vo.BrtOrderTemplateVo">
+            <result column="order_no" property="orderNo"/>
+            <result column="customer_id" property="customerId"/>
+            <result column="audit_status" property="auditStatus"/>
+            <result column="details_desc" property="detailsDesc"/>
+            <result column="order_type" property="orderType"/>
+            <association property="customerVo" javaType="com.brt.order.vo.BrtCustomerVo" column="customer_id" select="com.brt.order.mapper.BrtCustomerMapper.queryBrtCustomerByCustomerId" />
+        </association>
+    </resultMap>
+
+    <sql id="brtOrderNodeAllField">
+            A.order_node_id,
+            A.order_template_id,
+            A.order_id,
+            A.template_id,
+            A.node_id,
+            A.dept_id,
+            A.user_id,
+            A.principal,
+            A.complate_date,
+            A.node_status,
+            A.node_remark,
+            A.sort,
+            A.node_principal,
+            A.create_time,
+            A.timeout,
+            A.create_by,
+            A.update_time,
+            A.update_by,
+            A.create_id,
+            A.child_id
+    </sql>
+
+    <sql id="brtOrderNodeQuerySql">
+        select <include refid="brtOrderNodeAllField"/>
+        from brt_order_node A
+    </sql>
+
+    <select id="queryBrtOrderNodeList" parameterType="com.brt.order.vo.BrtOrderNodeVo" resultMap="BrtOrderNodeListResult">
+        select
+        A.order_node_id,
+        A.order_template_id,
+        A.order_id,
+        A.template_id,
+        A.node_id,
+        A.dept_id,
+        A.user_id,
+        A.complate_date,
+        A.node_status,
+        A.node_remark,
+        A.sort,
+        A.node_principal,
+        A.create_time,
+        A.create_by,
+        A.update_time,
+        A.update_by,
+        T.order_no,
+        T.customer_id,
+        T.audit_status,
+        T.details_desc,
+        T.order_type
+        from brt_order_node A
+        inner join brt_order_template T on A.order_template_id = T.order_template_id
+        <where>
+            <if test="brtOrderNodeVo.orderTemplateId != null  and brtOrderNodeVo.orderTemplateId != ''"> and A.order_template_id = #{brtOrderNodeVo.orderTemplateId}</if>
+            <if test="brtOrderNodeVo.orderId != null  and brtOrderNodeVo.orderId != ''"> and A.order_id = #{brtOrderNodeVo.orderId}</if>
+            <if test="brtOrderNodeVo.templateId != null  and brtOrderNodeVo.templateId != ''"> and A.template_id = #{brtOrderNodeVo.templateId}</if>
+            <if test="brtOrderNodeVo.nodeId != null  and brtOrderNodeVo.nodeId != ''"> and A.node_id = #{brtOrderNodeVo.nodeId}</if>
+            <if test="brtOrderNodeVo.deptId != null  and brtOrderNodeVo.deptId != ''"> and A.dept_id = #{brtOrderNodeVo.deptId}</if>
+            <if test="brtOrderNodeVo.userId != null  and brtOrderNodeVo.userId != ''"> and A.user_id = #{brtOrderNodeVo.userId}</if>
+            <if test="brtOrderNodeVo.complateDate != null "> and A.complate_date = #{brtOrderNodeVo.complateDate}</if>
+            <if test="brtOrderNodeVo.nodeStatus != null  and brtOrderNodeVo.nodeStatus != ''"> and A.node_status = #{brtOrderNodeVo.nodeStatus}</if>
+            <if test="brtOrderNodeVo.nodeRemark != null  and brtOrderNodeVo.nodeRemark != ''"> and A.node_remark = #{brtOrderNodeVo.nodeRemark}</if>
+            <if test="brtOrderNodeVo.sort != null "> and A.sort = #{brtOrderNodeVo.sort}</if>
+            <if test="brtOrderNodeVo.isFilterVoid != null and brtOrderNodeVo.isFilterVoid == 'Y'.toString() ">
+                and T.order_template_status &lt;&gt; '2'
+            </if>
+
+            <choose>
+                <when test="brtOrderNodeVo.childId != null and brtOrderNodeVo.childId == '1'.toString()">
+                    and A.child_id is null
+                </when>
+                <when test="brtOrderNodeVo.childId != null and brtOrderNodeVo.childId != ''">
+                    and A.child_id = #{brtOrderNodeVo.childId}
+                </when>
+            </choose>
+        </where>
+        order by A.complate_date desc
+    </select>
+
+
+    <select id="myTask" parameterType="com.brt.order.vo.BrtOrderNodeVo" resultMap="BrtOrderNodeListResult">
+        select
+        A.order_node_id,
+        A.order_template_id,
+        A.order_id,
+        A.template_id,
+        A.node_id,
+        A.dept_id,
+        A.user_id,
+        A.complate_date,
+        A.node_status,
+        A.node_remark,
+        A.sort,
+        A.node_principal,
+        A.create_time,
+        A.create_by,
+        A.update_time,
+        A.update_by,
+        T.order_no,
+        T.customer_id,
+        T.audit_status,
+        T.details_desc,
+        T.order_type
+        from brt_order_node A
+        inner join brt_order_template T on A.order_template_id = T.order_template_id
+
+        where 1=1
+        and (
+        T.order_template_status != '1'
+        and T.order_template_status != '2'
+        )
+
+        <if test="brtOrderNodeVo.nodeStatus!=null and brtOrderNodeVo.nodeStatus!=''">
+            and A.node_status = #{brtOrderNodeVo.nodeStatus}
+        </if>
+        <if test="brtOrderNodeVo.nodeStatus==null or brtOrderNodeVo.nodeStatus==''">
+            and ((
+                T.audit_status = '2'
+                and A.node_status = '1'
+                <if test="brtOrderNodeVo.userId!=null and brtOrderNodeVo.userId!=''">
+                    and A.user_id = #{brtOrderNodeVo.userId}
+                </if>
+            ) or
+            (
+                T.audit_status = '2'
+                and A.node_status = '1'
+                <if test="brtOrderNodeVo.userId!=null and brtOrderNodeVo.userId!=''">
+                    and A.principal = #{brtOrderNodeVo.userId}
+                </if>
+            ))
+        </if>
+
+        <if test="brtOrderNodeVo.orderTemplateId != null  and brtOrderNodeVo.orderTemplateId != ''"> and A.order_template_id = #{brtOrderNodeVo.orderTemplateId}</if>
+        <if test="brtOrderNodeVo.orderId != null  and brtOrderNodeVo.orderId != ''"> and A.order_id = #{brtOrderNodeVo.orderId}</if>
+        <if test="brtOrderNodeVo.templateId != null  and brtOrderNodeVo.templateId != ''"> and A.template_id = #{brtOrderNodeVo.templateId}</if>
+        <if test="brtOrderNodeVo.nodeId != null  and brtOrderNodeVo.nodeId != ''"> and A.node_id = #{brtOrderNodeVo.nodeId}</if>
+        <if test="brtOrderNodeVo.deptId != null  and brtOrderNodeVo.deptId != ''"> and A.dept_id = #{brtOrderNodeVo.deptId}</if>
+        <if test="brtOrderNodeVo.complateDate != null "> and A.complate_date = #{brtOrderNodeVo.complateDate}</if>
+
+
+        order by A.complate_date desc
+    </select>
+
+
+    <select id="queryBrtOrderNodeByOrderNodeId" resultMap="BrtOrderNodeResult">
+        <include refid="brtOrderNodeQuerySql"/>
+        where A.order_node_id = #{OrderNodeId}
+    </select>
+
+    <select id="queryBrtOrderNodeListByOrderTemplateId" resultMap="BrtOrderNodeResult">
+        <include refid="brtOrderNodeQuerySql"/>
+        where A.order_template_id = #{orderTemplateId}
+        order by A.sort asc
+    </select>
+
+    <select id="selectNowOrderNodeByOrderId" resultMap="BrtOrderNodeResult">
+        <include refid="brtOrderNodeQuerySql"/>
+        where A.order_id = #{orderId} and A.node_status in ('0','1')
+        order by A.sort asc limit 1
+    </select>
+
+    <select id="isComplete" resultType="String">
+        SELECT
+            count(*)
+        FROM
+            brt_order_node
+        WHERE
+            order_id = #{orderId}
+          and order_template_id = #{orderTemplateId}
+          AND (node_status IN (
+                              '0',
+                              '1',
+                             '-1',
+                              ''
+            )
+            or node_status is null
+            )
+        <if test="childId!=null and childId!=''">
+            and child_id = #{childId}
+        </if>
+    </select>
+
+    <select id="onAudit" resultType="String">
+        SELECT
+            n.order_node_id
+        FROM
+            brt_order_node n
+                INNER JOIN brt_flow_node fn on n.template_id = fn.template_id and n.node_id = fn.node_id
+        where fn.node_name = '审批'
+        and n.order_id = #{orderId}
+    </select>
+</mapper>

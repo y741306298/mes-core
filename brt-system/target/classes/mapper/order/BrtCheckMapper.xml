@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtCheckMapper">
+
+    <resultMap type="com.brt.order.vo.BrtCheckVo" id="BrtCheckResult">
+        <result property="checkId"    column="check_id"    />
+        <result property="checkNo"    column="check_no"    />
+        <result property="typeId"    column="type_id"    />
+        <result property="orderId"    column="order_id"    />
+        <result property="orderNo"    column="order_no"    />
+        <result property="userId"    column="user_id"    />
+        <result property="checkAmount"    column="check_amount"    />
+        <result property="accountId"    column="account_id"    />
+        <result property="checkDate"    column="check_date"    />
+        <result property="checkRemark"    column="check_remark"    />
+        <result property="attachments"    column="attachments"    />
+        <result property="checkType"    column="check_type"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <association property="checkTypeVo" javaType="com.brt.order.vo.BrtCheckTypeVo" column="type_id" select="com.brt.order.mapper.BrtCheckTypeMapper.queryBrtCheckTypeByTypeId" />
+        <association property="accountVo" javaType="com.brt.order.vo.BrtAccountVo" column="account_id" select="com.brt.order.mapper.BrtAccountMapper.queryBrtAccountByAccountId" />
+    </resultMap>
+
+    <sql id="brtCheckAllField">
+            A.check_id,
+            A.check_no,
+            A.type_id,
+            A.order_id,
+            A.order_no,
+            A.user_id,
+            A.check_amount,
+            A.account_id,
+            A.check_date,
+            A.check_remark,
+            A.attachments,
+            A.check_type,
+            A.create_time,
+            A.create_by,
+            A.update_time,
+        A.update_by
+    </sql>
+
+    <sql id="brtCheckQuerySql">
+        select <include refid="brtCheckAllField"/>
+        from brt_check A
+    </sql>
+
+    <select id="queryBrtCheckList" parameterType="com.brt.order.vo.BrtCheckVo" resultMap="BrtCheckResult">
+        <include refid="brtCheckQuerySql"/>
+        <where>
+            <if test="brtCheckVo.typeId != null  and brtCheckVo.typeId != ''"> and A.type_id = #{brtCheckVo.typeId}</if>
+            <if test="brtCheckVo.orderId != null  and brtCheckVo.orderId != ''"> and A.order_id = #{brtCheckVo.orderId}</if>
+            <if test="brtCheckVo.orderNo != null  and brtCheckVo.orderNo != ''"> and A.order_no like concat('%',#{brtCheckVo.orderNo},'%')</if>
+            <if test="brtCheckVo.userId != null  and brtCheckVo.userId != ''"> and A.user_id = #{brtCheckVo.userId}</if>
+            <if test="brtCheckVo.checkAmount != null "> and A.check_amount = #{brtCheckVo.checkAmount}</if>
+            <if test="brtCheckVo.accountId != null  and brtCheckVo.accountId != ''"> and A.account_id = #{brtCheckVo.accountId}</if>
+            <if test="brtCheckVo.checkDate != null "> and A.check_date = #{brtCheckVo.checkDate}</if>
+            <if test="brtCheckVo.checkRemark != null  and brtCheckVo.checkRemark != ''"> and A.check_remark = #{brtCheckVo.checkRemark}</if>
+            <if test="brtCheckVo.attachments != null  and brtCheckVo.attachments != ''"> and A.attachments = #{brtCheckVo.attachments}</if>
+            <if test="brtCheckVo.checkType != null  and brtCheckVo.checkType != ''"> and A.check_type = #{brtCheckVo.checkType}</if>
+            <if test="brtCheckVo.checkDateType != null and brtCheckVo.checkDateType != ''">
+                <choose>
+                    <when test="brtCheckVo.checkDateType == '0'.toString() ">
+                        and date_format(A.check_date,'%y%m%d') = date_format(now(),'%y%m%d')
+                    </when>
+                    <when test="brtCheckVo.checkDateType == '1'.toString() ">
+                        and DATE(A.check_date) = CURDATE() - INTERVAL 1 DAY
+                    </when>
+                    <when test="brtCheckVo.checkDateType == '2'.toString() ">
+                        and date_format(A.check_date,'%y%m') = date_format(now(),'%y%m')
+                    </when>
+                    <when test="brtCheckVo.checkDateType == '3'.toString() ">
+                        and QUARTER(A.check_date) = QUARTER(CURDATE()) and YEAR(A.check_date) = YEAR(CURDATE())
+                    </when>
+                    <when test="brtCheckVo.checkDateType == '4'.toString() ">
+                        and YEAR(A.check_date) = YEAR(CURDATE())
+                    </when>
+                </choose>
+            </if>
+            <if test="brtCheckVo.checkDateStart != null and brtCheckVo.checkDateStart != '' and brtCheckVo.checkDateEnd != null and brtCheckVo.checkDateEnd != ''">
+                and date_format(A.check_date,'%y%m%d') between date_format(#{brtCheckVo.checkDateStart},'%y%m%d') and date_format(#{brtCheckVo.checkDateEnd},'%y%m%d')
+            </if>
+            <!-- 数据范围过滤 -->
+            ${brtCheckVo.params.brtDataScope}
+        </where>
+        order by A.create_time desc
+    </select>
+
+    <select id="queryBrtCheckByCheckId" resultMap="BrtCheckResult">
+        <include refid="brtCheckQuerySql"/>
+        where A.check_id = #{CheckId}
+    </select>
+
+    <select id="achievement" resultType="java.util.Map">
+        select
+            p1.`month`,
+            p1.income,
+            p1.disburse,
+-- 		p1.surplus,
+            ifnull(p2.surplus,0) totalBalance
+        from (
+                 SELECT
+                     months.`month`,
+                     sum(ifnull(p.income,0)) income,
+                     sum(ifnull(p.disburse,0)) disburse,
+                     sum(ifnull(p.income,0))-sum(ifnull(p.disburse,0)) surplus
+
+                 FROM (
+                          SELECT 1 AS `month` UNION SELECT 2 UNION SELECT 3 UNION SELECT 4
+                          UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8
+                          UNION SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12
+                      ) AS months
+                          left join
+                      (
+                          SELECT
+                              YEAR(check_date) `year`,
+                              MONTH(check_date) `month`,
+                              case when check_type = '0' then check_amount else 0 end as disburse,
+                              case when check_type = '1' then check_amount else 0 end as income
+                          FROM
+                              brt_check
+                          where YEAR(check_date) = #{year}
+                            and order_type = #{orderType}
+                      ) p on p.`month` = months.`month`
+                 GROUP BY months.`month`
+                 ORDER BY months.`month`
+             )p1
+                 LEFT JOIN(
+            select
+                months.`month`,
+                sum(ifnull(p.income,0))-
+                sum(ifnull(p.disburse,0)) surplus
+
+            from (
+                     SELECT 1 AS `month` UNION SELECT 2 UNION SELECT 3 UNION SELECT 4
+                     UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8
+                     UNION SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12
+                 ) months
+
+                     left join
+                 (
+                     SELECT
+                         MONTH(check_date) `month`,
+                         case when check_type = '0' then check_amount else 0 end as disburse,
+                         case when check_type = '1' then check_amount else 0 end as income
+                     FROM
+                         brt_check
+                     where
+                         YEAR(check_date) = #{year}
+                       and order_type = #{orderType}
+                 ) p on p.`month` &lt;= months.`month`
+                <if test="month!=null and month!=''">
+                    where months.`month`&lt;= #{month}
+                </if>
+        GROUP BY months.`month`
+        ) p2 on p2.`month` = p1.`month`
+    </select>
+
+    <select id="accountAchievement" resultType="java.util.Map">
+        SELECT
+        c.account_id,
+        a.account_name as month,
+        sum(case when check_type = '0' then check_amount else 0 end) as disburse,
+        sum(case when check_type = '1' then check_amount else 0 end) as income,
+        (t.income - t.disburse) as totalBalance
+        FROM brt_check c
+        left join brt_account a on c.account_id = a.account_id
+        left join (
+            SELECT
+            A.account_id,
+            sum(case when check_type = '0' then check_amount else 0 end) as disburse,
+            sum(case when check_type = '1' then check_amount else 0 end) as income
+            FROM brt_check A
+            where YEAR(A.check_date) = #{year} and A.order_type = #{orderType}
+            group by A.account_id
+        )t on t.account_id = c.account_id
+        where YEAR(c.check_date) = #{year} and c.order_type = #{orderType} and MONTH(c.check_date) = #{month}
+        GROUP BY c.account_id
+    </select>
+
+    <select id="exportAchievement" resultType="com.brt.order.vo.BrtCheckAchievementVo">
+        select
+        p1.`month`,
+        p1.income,
+        p1.expend,
+        p1.balance,
+        ifnull(p2.surplus,0) totalBalance
+        from (
+        SELECT
+        months.`month`,
+        sum(ifnull(p.income,0)) income,
+        sum(ifnull(p.disburse,0)) expend,
+        sum(ifnull(p.income,0))-sum(ifnull(p.disburse,0)) balance
+
+        FROM (
+        SELECT 1 AS `month` UNION SELECT 2 UNION SELECT 3 UNION SELECT 4
+        UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8
+        UNION SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12
+        ) AS months
+        left join
+        (
+        SELECT
+        YEAR(check_date) `year`,
+        MONTH(check_date) `month`,
+        case when check_type = '0' then check_amount else 0 end as disburse,
+        case when check_type = '1' then check_amount else 0 end as income
+        FROM
+        brt_check
+        where YEAR(check_date) = #{year}
+        and order_type = #{orderType}
+        ) p on p.`month` = months.`month`
+        GROUP BY months.`month`
+        ORDER BY months.`month`
+        )p1
+        LEFT JOIN(
+        select
+        months.`month`,
+        sum(ifnull(p.income,0))-
+        sum(ifnull(p.disburse,0)) surplus
+
+        from (
+        SELECT 1 AS `month` UNION SELECT 2 UNION SELECT 3 UNION SELECT 4
+        UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8
+        UNION SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12
+        ) months
+
+        left join
+        (
+        SELECT
+        MONTH(check_date) `month`,
+        case when check_type = '0' then check_amount else 0 end as disburse,
+        case when check_type = '1' then check_amount else 0 end as income
+        FROM
+        brt_check
+        where
+        YEAR(check_date) = #{year}
+        and order_type = #{orderType}
+        ) p on p.`month` &lt;= months.`month`
+        <if test="month!=null and month!=''">
+            where months.`month`&lt;= #{month}
+        </if>
+        GROUP BY months.`month`
+        ) p2 on p2.`month` = p1.`month`
+    </select>
+
+</mapper>

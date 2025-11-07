@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtMarketOrderMapper">
+
+    <resultMap type="com.brt.order.vo.BrtMarketOrderVo" id="BrtMarketOrderResult">
+        <result property="orderId"    column="order_id"    />
+        <result property="orderNo"    column="order_no"    />
+        <result property="supplierId"    column="supplier_id"    />
+        <result property="contact"    column="contact"    />
+        <result property="contactTel"    column="contact_tel"    />
+        <result property="deliveryAddress"    column="delivery_address"    />
+        <result property="orderTime"    column="order_time"    />
+        <result property="receivingTime"    column="receiving_time"    />
+        <result property="templateId"    column="template_id"    />
+        <result property="craftType"    column="craft_type"    />
+        <result property="totalNum"    column="total_num"    />
+        <result property="totalAmount"    column="total_amount"    />
+        <result property="currencyType"    column="currency_type"    />
+        <result property="attachments"    column="attachments"    />
+        <result property="userId"    column="user_id"    />
+        <result property="orderRemark"    column="order_remark"    />
+        <result property="collectionAmount" column="collection_amount"/>
+        <result property="collectionStatus" column="collection_status"/>
+        <result property="orderStatus" column="order_status"/>
+        <result property="createTime"    column="create_time"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="status"    column="status"    />
+        <result property="finishDate"    column="finish_date"    />
+        <result property="otherFields"    column="other_fields"    />
+        <result property="paymentTime"    column="payment_time"    />
+        <association property="supplierVo" javaType="com.brt.order.vo.BrtSupplierVo" column="supplier_id" select="com.brt.order.mapper.BrtSupplierMapper.queryBrtSupplierBySupplierId" />
+        <association property="user" javaType="com.brt.common.core.domain.entity.SysUser" column="user_id" select="com.brt.system.mapper.SysUserMapper.selectUserById" />
+        <association property="nowOrderNodeVo" javaType="com.brt.order.vo.BrtOrderNodeVo" column="order_id" select="com.brt.order.mapper.BrtOrderNodeMapper.selectNowOrderNodeByOrderId" />
+        <!--        <association property="supplierAddressVo" javaType="com.brt.order.vo.BrtSupplierAddressVo" column="supplier_address_id" select="com.brt.order.mapper.BrtSupplierAddressMapper.queryBrtSupplierAddressByAddressId" />-->
+    </resultMap>
+
+    <sql id="brtMarketOrderAllField">
+        A.order_id,
+            A.order_no,
+            A.supplier_id,
+            A.contact,
+            A.contact_tel,
+            A.delivery_address,
+            A.order_time,
+            A.receiving_time,
+            A.template_id,
+            A.craft_type,
+            A.total_num,
+            A.total_amount,
+            A.currency_type,
+            A.attachments,
+            A.user_id,
+            A.order_remark,
+            A.collection_amount,
+            A.collection_status,
+            A.order_status,
+            A.create_time,
+            A.create_by,
+            A.update_time,
+            A.update_by,
+            A.status,
+            A.finish_date,
+            A.other_fields,
+            A.payment_time
+    </sql>
+
+    <sql id="brtMarketOrderQuerySql">
+        select <include refid="brtMarketOrderAllField"/>
+        from brt_market_order A
+    </sql>
+
+    <select id="queryBrtMarketOrderList" parameterType="com.brt.order.vo.BrtMarketOrderVo" resultMap="BrtMarketOrderResult">
+        <include refid="brtMarketOrderQuerySql"/>
+        <where>
+            <if test="brtMarketOrderVo.orderNo != null  and brtMarketOrderVo.orderNo != ''"> and A.order_no like concat('%',#{brtMarketOrderVo.orderNo},'%')</if>
+            <if test="brtMarketOrderVo.supplierId != null  and brtMarketOrderVo.supplierId != ''"> and A.supplier_id = #{brtMarketOrderVo.supplierId}</if>
+            <if test="brtMarketOrderVo.contact != null  and brtMarketOrderVo.contact != ''"> and A.contact = #{brtMarketOrderVo.contact}</if>
+            <if test="brtMarketOrderVo.contactTel != null  and brtMarketOrderVo.contactTel != ''"> and A.contact_tel = #{brtMarketOrderVo.contactTel}</if>
+            <if test="brtMarketOrderVo.deliveryAddress != null  and brtMarketOrderVo.deliveryAddress != ''"> and A.delivery_address = #{brtMarketOrderVo.deliveryAddress}</if>
+            <if test="brtMarketOrderVo.orderTime != null "> and A.order_time = #{brtMarketOrderVo.orderTime}</if>
+            <if test="brtMarketOrderVo.receivingTime != null "> and A.receiving_time = #{brtMarketOrderVo.receivingTime}</if>
+            <if test="brtMarketOrderVo.templateId != null  and brtMarketOrderVo.templateId != ''"> and A.template_id = #{brtMarketOrderVo.templateId}</if>
+            <if test="brtMarketOrderVo.craftType != null  and brtMarketOrderVo.craftType != ''"> and A.craft_type = #{brtMarketOrderVo.craftType}</if>
+            <if test="brtMarketOrderVo.totalNum != null "> and A.total_num = #{brtMarketOrderVo.totalNum}</if>
+            <if test="brtMarketOrderVo.totalAmount != null "> and A.total_amount = #{brtMarketOrderVo.totalAmount}</if>
+            <if test="brtMarketOrderVo.currencyType != null  and brtMarketOrderVo.currencyType != ''"> and A.currency_type = #{brtMarketOrderVo.currencyType}</if>
+            <if test="brtMarketOrderVo.attachments != null  and brtMarketOrderVo.attachments != ''"> and A.attachments = #{brtMarketOrderVo.attachments}</if>
+            <if test="brtMarketOrderVo.userId != null  and brtMarketOrderVo.userId != ''"> and A.user_id = #{brtMarketOrderVo.userId}</if>
+            <if test="brtMarketOrderVo.collectionStatus != null and brtMarketOrderVo.collectionStatus != ''"> and A.collection_status = #{brtMarketOrderVo.collectionStatus}</if>
+            <if test="brtMarketOrderVo.status != null and brtMarketOrderVo.status != ''"> and A.status = #{brtMarketOrderVo.status}</if>
+            <if test="brtMarketOrderVo.dateType != null and brtMarketOrderVo.dateType != ''">
+                <choose>
+                    <when test="brtMarketOrderVo.dateType == '0'.toString() ">
+                        and date_format(A.order_time,'%y%m%d') = date_format(now(),'%y%m%d')
+                    </when>
+                    <when test="brtMarketOrderVo.dateType == '1'.toString() ">
+                        and DATE(A.order_time) = CURDATE() - INTERVAL 1 DAY
+                    </when>
+                    <when test="brtMarketOrderVo.dateType == '2'.toString() ">
+                        and date_format(A.order_time,'%y%m') = date_format(now(),'%y%m')
+                    </when>
+                    <when test="brtMarketOrderVo.dateType == '3'.toString() ">
+                        and QUARTER(A.order_time) = QUARTER(CURDATE()) and YEAR(A.order_time) = YEAR(CURDATE())
+                    </when>
+                    <when test="brtMarketOrderVo.dateType == '4'.toString() ">
+                        and YEAR(A.order_time) = YEAR(CURDATE())
+                    </when>
+                </choose>
+            </if>
+            <if test="brtMarketOrderVo.createTimeStart != null and brtMarketOrderVo.createTimeStart != '' and brtMarketOrderVo.createTimeEnd != null and brtMarketOrderVo.createTimeEnd != ''">
+                and date_format(A.order_time,'%y%m%d') between date_format(#{brtMarketOrderVo.createTimeStart},'%y%m%d') and date_format(#{brtMarketOrderVo.createTimeEnd},'%y%m%d')
+            </if>
+            <if test="brtMarketOrderVo.ids!=null">
+                and order_id in
+                <foreach collection="brtMarketOrderVo.ids" item="item" open="(" separator="," close=")">
+                    #{item}
+                </foreach>
+            </if>
+            <!-- 数据范围过滤 -->
+            ${brtMarketOrderVo.params.brtDataScope}
+        </where>
+        order by A.create_time desc
+    </select>
+
+    <select id="queryBrtMarketOrderByOrderId" resultMap="BrtMarketOrderResult">
+        <include refid="brtMarketOrderQuerySql"/>
+        where A.order_id = #{OrderId}
+    </select>
+
+    <select id="updateStatus" parameterType="com.brt.order.vo.BrtMarketOrderVo" >
+        update brt_market_order set status = #{brtMarketOrderVo.status}
+
+        <if test="brtMarketOrderVo.finishDate!=null and brtMarketOrderVo.finishDate!=''">
+            , finish_date = #{brtMarketOrderVo.finishDate}
+        </if>
+        where order_id =#{brtMarketOrderVo.orderId}
+    </select>
+
+    <select id="selectReceivingNum" parameterType="String" resultType="String">
+        SELECT
+                sum(ifnull(omp.materiel_num,0))
+        FROM
+                brt_market_order so
+                        LEFT JOIN brt_order_materiel_plan omp ON omp.order_id = so.order_id
+        where so.supplier_id = #{supplierId}
+    </select>
+
+    <select id="getOrderByTemplateId" resultMap="BrtMarketOrderResult">
+        <include refid="brtMarketOrderQuerySql"/>
+        where A.order_id = (
+            select order_id from brt_order_template where order_template_id = #{orderTemplateId}
+        )
+    </select>
+
+
+</mapper>

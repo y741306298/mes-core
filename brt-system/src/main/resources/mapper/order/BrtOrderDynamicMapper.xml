@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtOrderDynamicMapper">
+
+    <resultMap type="com.brt.order.vo.BrtOrderDynamicVo" id="BrtOrderDynamicResult">
+        <result property="dynamicId"    column="dynamic_id"    />
+        <result property="orderId"    column="order_id"    />
+        <result property="orderNodeId"    column="order_node_id"    />
+        <result property="nodeId"    column="node_id"    />
+        <result property="userId"    column="user_id"    />
+        <result property="dynamicContent"    column="dynamic_content"    />
+        <result property="attachments"    column="attachments"    />
+        <result property="remark"    column="remark"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="updateBy"    column="update_by"    />
+
+        <association property="user" javaType="com.brt.common.core.domain.entity.SysUser" column="user_id" select="com.brt.system.mapper.SysUserMapper.selectUserById" />
+        <association property="flowNodeVo" javaType="com.brt.order.vo.BrtFlowNodeVo" column="node_id" select="com.brt.order.mapper.BrtFlowNodeMapper.queryBrtFlowNodeByNodeId" />
+    </resultMap>
+
+    <sql id="brtOrderDynamicAllField">
+            A.dynamic_id,
+            A.order_id,
+            A.order_node_id,
+            A.node_id,
+            A.user_id,
+            A.dynamic_content,
+            A.attachments,
+            A.remark,
+            A.create_time,
+            A.create_by,
+            A.update_time,
+        A.update_by
+    </sql>
+
+    <sql id="brtOrderDynamicQuerySql">
+        select <include refid="brtOrderDynamicAllField"/>
+        from brt_order_dynamic A
+    </sql>
+
+    <select id="queryBrtOrderDynamicList" parameterType="com.brt.order.vo.BrtOrderDynamicVo" resultMap="BrtOrderDynamicResult">
+        <include refid="brtOrderDynamicQuerySql"/>
+        <where>
+            <if test="brtOrderDynamicVo.orderId != null  and brtOrderDynamicVo.orderId != ''"> and A.order_id = #{brtOrderDynamicVo.orderId}</if>
+            <if test="brtOrderDynamicVo.orderNodeId != null  and brtOrderDynamicVo.orderNodeId != ''"> and A.order_node_id = #{brtOrderDynamicVo.orderNodeId}</if>
+            <if test="brtOrderDynamicVo.nodeId != null  and brtOrderDynamicVo.nodeId != ''"> and A.node_id = #{brtOrderDynamicVo.nodeId}</if>
+            <if test="brtOrderDynamicVo.userId != null  and brtOrderDynamicVo.userId != ''"> and A.user_id = #{brtOrderDynamicVo.userId}</if>
+            <if test="brtOrderDynamicVo.dynamicContent != null  and brtOrderDynamicVo.dynamicContent != ''"> and A.dynamic_content = #{brtOrderDynamicVo.dynamicContent}</if>
+            <if test="brtOrderDynamicVo.attachments != null  and brtOrderDynamicVo.attachments != ''"> and A.attachments = #{brtOrderDynamicVo.attachments}</if>
+        </where>
+        order by A.create_time desc
+    </select>
+
+    <select id="queryBrtOrderDynamicByDynamicId" resultMap="BrtOrderDynamicResult">
+        <include refid="brtOrderDynamicQuerySql"/>
+        where A.dynamic_id = #{DynamicId}
+    </select>
+</mapper>

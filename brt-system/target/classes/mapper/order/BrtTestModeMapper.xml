@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtTestModeMapper">
+    
+    <resultMap type="com.brt.order.vo.BrtTestModeVo" id="BrtTestModeResult">
+        <result property="modeId"    column="mode_id"    />
+        <result property="modeName"    column="mode_name"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="updateBy"    column="update_by"    />
+    </resultMap>
+
+    <sql id="brtTestModeAllField">
+            A.mode_id,
+            A.mode_name,
+            A.create_time,
+            A.create_by,
+            A.update_time,
+        A.update_by
+    </sql>
+
+    <sql id="brtTestModeQuerySql">
+        select <include refid="brtTestModeAllField"/>
+        from brt_test_mode A
+    </sql>
+
+    <select id="queryBrtTestModeList" parameterType="com.brt.order.vo.BrtTestModeVo" resultMap="BrtTestModeResult">
+        <include refid="brtTestModeQuerySql"/>
+        <where>  
+            <if test="brtTestModeVo.modeName != null  and brtTestModeVo.modeName != ''"> and A.mode_name like concat('%', #{brtTestModeVo.modeName}, '%')</if>
+        </where>
+        order by A.create_time desc
+    </select>
+
+    <select id="queryBrtTestModeByModeId" resultMap="BrtTestModeResult">
+        <include refid="brtTestModeQuerySql"/>
+        where A.mode_id = #{ModeId}
+    </select>
+</mapper>

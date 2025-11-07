@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtIntertransferOrderMapper">
+
+    <resultMap type="com.brt.order.vo.BrtIntertransferOrderVo" id="BrtIntertransferOrderResult">
+        <result property="intertransferId"    column="intertransfer_id"    />
+        <result property="intertransferNo"    column="intertransfer_no"    />
+        <result property="userId"    column="user_id"    />
+        <result property="intertransferAmount"    column="intertransfer_amount"    />
+        <result property="payAccountId"    column="pay_account_id"    />
+        <result property="collectionAccountId"    column="collection_account_id"    />
+        <result property="intertransferDate"    column="intertransfer_date"    />
+        <result property="intertransferRemark"    column="intertransfer_remark"    />
+        <result property="attachments"    column="attachments"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="updateBy"    column="update_by"    />
+
+        <association property="payAccountVo" javaType="com.brt.order.vo.BrtAccountVo" column="pay_account_id" select="com.brt.order.mapper.BrtAccountMapper.queryBrtAccountByAccountId"/>
+        <association property="collectionAccountVo" javaType="com.brt.order.vo.BrtAccountVo" column="collection_account_id" select="com.brt.order.mapper.BrtAccountMapper.queryBrtAccountByAccountId"/>
+    </resultMap>
+
+    <sql id="brtIntertransferOrderAllField">
+            A.intertransfer_id,
+            A.intertransfer_no,
+            A.user_id,
+            A.intertransfer_amount,
+            A.pay_account_id,
+            A.collection_account_id,
+            A.intertransfer_date,
+            A.intertransfer_remark,
+            A.attachments,
+            A.create_time,
+            A.create_by,
+            A.update_time,
+        A.update_by
+    </sql>
+
+    <sql id="brtIntertransferOrderQuerySql">
+        select <include refid="brtIntertransferOrderAllField"/>
+        from brt_intertransfer_order A
+    </sql>
+
+    <select id="queryBrtIntertransferOrderList" parameterType="com.brt.order.vo.BrtIntertransferOrderVo" resultMap="BrtIntertransferOrderResult">
+        <include refid="brtIntertransferOrderQuerySql"/>
+        <where>
+            <if test="brtIntertransferOrderVo.intertransferNo != null  and brtIntertransferOrderVo.intertransferNo != ''"> and A.intertransfer_no like concat('%',#{brtIntertransferOrderVo.intertransferNo},'%')</if>
+            <if test="brtIntertransferOrderVo.userId != null  and brtIntertransferOrderVo.userId != ''"> and A.user_id = #{brtIntertransferOrderVo.userId}</if>
+            <if test="brtIntertransferOrderVo.intertransferAmount != null "> and A.intertransfer_amount = #{brtIntertransferOrderVo.intertransferAmount}</if>
+            <if test="brtIntertransferOrderVo.payAccountId != null  and brtIntertransferOrderVo.payAccountId != ''"> and A.pay_account_id = #{brtIntertransferOrderVo.payAccountId}</if>
+            <if test="brtIntertransferOrderVo.collectionAccountId != null  and brtIntertransferOrderVo.collectionAccountId != ''"> and A.collection_account_id = #{brtIntertransferOrderVo.collectionAccountId}</if>
+            <if test="brtIntertransferOrderVo.intertransferDate != null "> and A.intertransfer_date = #{brtIntertransferOrderVo.intertransferDate}</if>
+            <if test="brtIntertransferOrderVo.intertransferRemark != null  and brtIntertransferOrderVo.intertransferRemark != ''"> and A.intertransfer_remark = #{brtIntertransferOrderVo.intertransferRemark}</if>
+            <if test="brtIntertransferOrderVo.attachments != null  and brtIntertransferOrderVo.attachments != ''"> and A.attachments = #{brtIntertransferOrderVo.attachments}</if>
+            <if test="brtIntertransferOrderVo.intertransferDateType != null and brtIntertransferOrderVo.intertransferDateType != ''">
+                <choose>
+                    <when test="brtIntertransferOrderVo.intertransferDateType == '0'.toString() ">
+                        and date_format(A.intertransfer_date,'%y%m%d') = date_format(now(),'%y%m%d')
+                    </when>
+                    <when test="brtIntertransferOrderVo.intertransferDateType == '1'.toString() ">
+                        and DATE(A.intertransfer_date) = CURDATE() - INTERVAL 1 DAY
+                    </when>
+                    <when test="brtIntertransferOrderVo.intertransferDateType == '2'.toString() ">
+                        and date_format(A.intertransfer_date,'%y%m') = date_format(now(),'%y%m')
+                    </when>
+                    <when test="brtIntertransferOrderVo.intertransferDateType == '3'.toString() ">
+                        and QUARTER(A.intertransfer_date) = QUARTER(CURDATE()) and YEAR(A.intertransfer_date) = YEAR(CURDATE())
+                    </when>
+                    <when test="brtIntertransferOrderVo.intertransferDateType == '4'.toString() ">
+                        and YEAR(A.intertransfer_date) = YEAR(CURDATE())
+                    </when>
+                </choose>
+            </if>
+            <if test="brtIntertransferOrderVo.intertransferDateStart != null and brtIntertransferOrderVo.intertransferDateStart != '' and brtIntertransferOrderVo.intertransferDateEnd != null and brtIntertransferOrderVo.intertransferDateEnd != ''">
+                and date_format(A.intertransfer_date,'%y%m%d') between date_format(#{brtIntertransferOrderVo.intertransferDateStart},'%y%m%d') and date_format(#{brtIntertransferOrderVo.intertransferDateEnd},'%y%m%d')
+            </if>
+            <!-- 数据范围过滤 -->
+            ${brtIntertransferOrderVo.params.brtDataScope}
+        </where>
+        order by A.create_time desc
+    </select>
+
+    <select id="queryBrtIntertransferOrderByIntertransferId" resultMap="BrtIntertransferOrderResult">
+        <include refid="brtIntertransferOrderQuerySql"/>
+        where A.intertransfer_id = #{IntertransferId}
+    </select>
+</mapper>

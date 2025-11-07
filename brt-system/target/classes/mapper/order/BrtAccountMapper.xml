@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtAccountMapper">
+    
+    <resultMap type="com.brt.order.vo.BrtAccountVo" id="BrtAccountResult">
+        <result property="accountId"    column="account_id"    />
+        <result property="accountName"    column="account_name"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="updateBy"    column="update_by"    />
+    </resultMap>
+
+    <sql id="brtAccountAllField">
+            A.account_id,
+            A.account_name,
+            A.create_time,
+            A.create_by,
+            A.update_time,
+        A.update_by
+    </sql>
+
+    <sql id="brtAccountQuerySql">
+        select <include refid="brtAccountAllField"/>
+        from brt_account A
+    </sql>
+
+    <select id="queryBrtAccountList" parameterType="com.brt.order.vo.BrtAccountVo" resultMap="BrtAccountResult">
+        <include refid="brtAccountQuerySql"/>
+        <where>  
+            <if test="brtAccountVo.accountName != null  and brtAccountVo.accountName != ''"> and A.account_name like concat('%', #{brtAccountVo.accountName}, '%')</if>
+        </where>
+        order by A.create_time desc
+    </select>
+
+    <select id="queryBrtAccountByAccountId" resultMap="BrtAccountResult">
+        <include refid="brtAccountQuerySql"/>
+        where A.account_id = #{AccountId}
+    </select>
+</mapper>

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtCustomerAddressMapper">
+    
+    <resultMap type="com.brt.order.vo.BrtCustomerAddressVo" id="BrtCustomerAddressResult">
+        <result property="addressId"    column="address_id"    />
+        <result property="customerId"    column="customer_id"    />
+        <result property="addressType"    column="address_type"    />
+        <result property="addressShort"    column="address_short"    />
+        <result property="destination"    column="destination"    />
+        <result property="logisticsCompany"    column="logistics_company"    />
+        <result property="addressProvince"    column="address_province"    />
+        <result property="addressCity"    column="address_city"    />
+        <result property="addressArea"    column="address_area"    />
+        <result property="addressDetails"    column="address_details"    />
+        <result property="postcode"    column="postcode"    />
+        <result property="addressRemark"    column="address_remark"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="updateBy"    column="update_by"    />
+    </resultMap>
+
+    <sql id="brtCustomerAddressAllField">
+            A.address_id,
+            A.customer_id,
+            A.address_type,
+            A.address_short,
+            A.destination,
+            A.logistics_company,
+            A.address_province,
+            A.address_city,
+            A.address_area,
+            A.address_details,
+            A.postcode,
+            A.address_remark,
+            A.create_time,
+            A.create_by,
+            A.update_time,
+        A.update_by
+    </sql>
+
+    <sql id="brtCustomerAddressQuerySql">
+        select <include refid="brtCustomerAddressAllField"/>
+        from brt_customer_address A
+    </sql>
+
+    <select id="queryBrtCustomerAddressList" parameterType="com.brt.order.vo.BrtCustomerAddressVo" resultMap="BrtCustomerAddressResult">
+        <include refid="brtCustomerAddressQuerySql"/>
+        <where>  
+            <if test="brtCustomerAddressVo.customerId != null  and brtCustomerAddressVo.customerId != ''"> and A.customer_id = #{brtCustomerAddressVo.customerId}</if>
+            <if test="brtCustomerAddressVo.addressType != null  and brtCustomerAddressVo.addressType != ''"> and A.address_type = #{brtCustomerAddressVo.addressType}</if>
+            <if test="brtCustomerAddressVo.addressShort != null  and brtCustomerAddressVo.addressShort != ''"> and A.address_short = #{brtCustomerAddressVo.addressShort}</if>
+            <if test="brtCustomerAddressVo.destination != null  and brtCustomerAddressVo.destination != ''"> and A.destination = #{brtCustomerAddressVo.destination}</if>
+            <if test="brtCustomerAddressVo.logisticsCompany != null  and brtCustomerAddressVo.logisticsCompany != ''"> and A.logistics_company = #{brtCustomerAddressVo.logisticsCompany}</if>
+            <if test="brtCustomerAddressVo.addressProvince != null  and brtCustomerAddressVo.addressProvince != ''"> and A.address_province = #{brtCustomerAddressVo.addressProvince}</if>
+            <if test="brtCustomerAddressVo.addressCity != null  and brtCustomerAddressVo.addressCity != ''"> and A.address_city = #{brtCustomerAddressVo.addressCity}</if>
+            <if test="brtCustomerAddressVo.addressArea != null  and brtCustomerAddressVo.addressArea != ''"> and A.address_area = #{brtCustomerAddressVo.addressArea}</if>
+            <if test="brtCustomerAddressVo.addressDetails != null  and brtCustomerAddressVo.addressDetails != ''"> and A.address_details = #{brtCustomerAddressVo.addressDetails}</if>
+            <if test="brtCustomerAddressVo.postcode != null  and brtCustomerAddressVo.postcode != ''"> and A.postcode = #{brtCustomerAddressVo.postcode}</if>
+            <if test="brtCustomerAddressVo.addressRemark != null  and brtCustomerAddressVo.addressRemark != ''"> and A.address_remark = #{brtCustomerAddressVo.addressRemark}</if>
+        </where>
+        order by A.create_time desc
+    </select>
+
+    <select id="queryBrtCustomerAddressByAddressId" resultMap="BrtCustomerAddressResult">
+        <include refid="brtCustomerAddressQuerySql"/>
+        where A.address_id = #{AddressId}
+    </select>
+</mapper>

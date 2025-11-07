@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtCustomerDeliveryMapper">
+
+    <resultMap type="com.brt.order.vo.BrtCustomerDeliveryVo" id="BrtCustomerDeliveryResult">
+        <result property="deliveryId"    column="delivery_id"    />
+        <result property="customerId"    column="customer_id"    />
+        <result property="orderId"    column="order_id"    />
+        <result property="orderNodeId"    column="order_node_id"    />
+        <result property="deliveryStatus"    column="delivery_status"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="updateBy"    column="update_by"    />
+    </resultMap>
+
+    <sql id="brtCustomerDeliveryAllField">
+            A.delivery_id,
+            A.customer_id,
+            A.order_id,
+            A.order_node_id,
+            A.delivery_status,
+            A.create_time,
+            A.create_by,
+            A.update_time,
+        A.update_by
+    </sql>
+
+    <sql id="brtCustomerDeliveryQuerySql">
+        select <include refid="brtCustomerDeliveryAllField"/>
+        from brt_customer_delivery A
+    </sql>
+
+    <select id="queryBrtCustomerDeliveryList" parameterType="com.brt.order.vo.BrtCustomerDeliveryVo" resultMap="BrtCustomerDeliveryResult">
+        <include refid="brtCustomerDeliveryQuerySql"/>
+        <where>
+            <if test="brtCustomerDeliveryVo.customerId != null  and brtCustomerDeliveryVo.customerId != ''"> and A.customer_id = #{brtCustomerDeliveryVo.customerId}</if>
+            <if test="brtCustomerDeliveryVo.orderId != null  and brtCustomerDeliveryVo.orderId != ''"> and A.order_id = #{brtCustomerDeliveryVo.orderId}</if>
+            <if test="brtCustomerDeliveryVo.orderNodeId != null  and brtCustomerDeliveryVo.orderNodeId != ''"> and A.order_node_id = #{brtCustomerDeliveryVo.orderNodeId}</if>
+            <if test="brtCustomerDeliveryVo.deliveryStatus != null  and brtCustomerDeliveryVo.deliveryStatus != ''"> and A.delivery_status = #{brtCustomerDeliveryVo.deliveryStatus}</if>
+        </where>
+        order by A.create_time desc
+    </select>
+
+    <select id="queryBrtCustomerDeliveryByDeliveryId" resultMap="BrtCustomerDeliveryResult">
+        <include refid="brtCustomerDeliveryQuerySql"/>
+        where A.delivery_id = #{DeliveryId}
+    </select>
+
+    <select id="deliveryRemind" resultType="com.brt.order.vo.BrtDeliveryRemindVo">
+        SELECT
+            so.delivery_time deliveryTime, -- 计划送货日期
+            c.customer_name customerName, -- 客户名称
+            omp.update_time updateTime, -- 送货日期
+            ifnull(m.materiel_name,omp.materiel_id) materielName, -- 产品名称
+            ifnull(omp.order_num,0) detailsNum, -- 销售数量
+            ifnull(omp.materiel_num,0) fulfillNum, -- 已送货数量
+            ifnull(omp.order_num,0)-ifnull(omp.materiel_num,0) surplusNum, -- 剩余数量
+            so.order_remark remark, -- 备注
+            so.delivery_address address, -- 送货地址
+            so.order_no orderNo,  -- 关联业务
+            m.files imgPath, -- 图片
+            so.order_id orderId,
+            so.customer_id customerId,
+            p1.handle,
+            m.materiel_id materielId,
+            so.template_id templateId
+        FROM
+            brt_sales_order so
+                inner join brt_customer_delivery cd on cd.order_id = so.order_id
+                inner join brt_sales_order_details sod on sod.order_id = so.order_id
+                inner join brt_order_materiel_plan omp on omp.order_details_id = sod.details_id and omp.order_node_id = cd.order_node_id
+                left JOIN brt_materiel m on m.materiel_id = omp.materiel_id
+                left join brt_customer c on so.customer_id = c.customer_id
+                left join (
+                    select
+                        p.orderId,
+                        if(p.orderNum-p.materielNum >0,if(p.materielNum=0,'送货','部分送货'),'全部送货') handle
+                    from (
+                        SELECT
+                            so.order_id orderId,
+                            sum(ifnull( omp.order_num, 0 )) orderNum,
+                            sum(ifnull( omp.materiel_num, 0 )) materielNum
+                        FROM
+                        brt_sales_order so
+                            inner join brt_customer_delivery cd on cd.order_id = so.order_id
+                            INNER JOIN brt_sales_order_details sod ON sod.order_id = so.order_id
+                            INNER JOIN brt_order_materiel_plan omp ON omp.order_details_id = sod.details_id and omp.order_node_id = cd.order_node_id
+                        GROUP BY
+                        so.order_id
+                    )p
+                )p1 on p1.orderId = so.order_id
+        <where>
+            <if test="deliveryRemindVo.customerId!=null and deliveryRemindVo.customerId!=''">
+                and so.customer_id = #{deliveryRemindVo.customerId}
+            </if>
+            <if test="deliveryRemindVo.timeStart!=null and deliveryRemindVo.timeStart!=''">
+                and omp.update_time &gt;= str_to_date(#{deliveryRemindVo.timeStart},"%Y-%m-%d")
+            </if>
+            <if test="deliveryRemindVo.timeEnd!=null and deliveryRemindVo.timeEnd!=''">
+                and omp.update_time &lt;= str_to_date(#{deliveryRemindVo.timeEnd},"%Y-%m-%d")
+            </if>
+            <if test="deliveryRemindVo.customerName!=null and deliveryRemindVo.customerName !=''">
+                and c.customer_name like concat('%',#{deliveryRemindVo.customerName},'%')
+            </if>
+            <if test="deliveryRemindVo.customerType!=null and deliveryRemindVo.customerType !=''">
+                and c.type_id = #{deliveryRemindVo.customerType}
+            </if>
+            <if test="deliveryRemindVo.materielId!=null and deliveryRemindVo.materielId !=''">
+                and m.materiel_id = #{deliveryRemindVo.materielId}
+            </if>
+            <if test="deliveryRemindVo.orderNo!=null and deliveryRemindVo.orderNo !=''">
+                and so.order_no like concat('%',#{deliveryRemindVo.orderNo},'%')
+            </if>
+            <if test="deliveryRemindVo.status!=null and deliveryRemindVo.status.size()>0 ">
+                and p1.handle in
+                <foreach collection="deliveryRemindVo.status" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+            </if>
+            <if test="deliveryRemindVo.address!=null and deliveryRemindVo.address !=''">
+                and so.delivery_address like concat('%',#{deliveryRemindVo.address},'%')
+            </if>
+        </where>
+    </select>
+
+    <select id="deliveryByOrder" parameterType="String" resultType="com.brt.order.vo.BrtDeliveryRemindVo">
+        SELECT
+            so.order_id orderId,
+            c.customer_name customerName, -- 客户名称
+            omp.update_time updateTime, -- 送货日期
+            ifnull(m.materiel_name,omp.materiel_id) materielName, -- 产品名称
+            ifnull(omp.order_num,0) detailsNum, -- 销售数量
+            ifnull(omp.materiel_num,0) fulfillNum, -- 已送货数量
+            ifnull(omp.order_num,0)-ifnull(omp.materiel_num,0) surplusNum, -- 剩余数量
+            omp.plan_id planId,
+            0 thisNum
+
+        FROM
+            brt_sales_order so
+                inner join brt_customer_delivery cd on cd.order_id = so.order_id
+                inner join brt_sales_order_details sod on sod.order_id = so.order_id
+                inner join brt_order_materiel_plan omp on omp.order_details_id = sod.details_id and omp.order_node_id = cd.order_node_id
+                left JOIN brt_materiel m on m.materiel_id = omp.materiel_id
+                left join brt_customer c on so.customer_id = c.customer_id
+
+        where so.order_id = #{orderId}
+
+    </select>
+
+    <select id="getCustomerData" parameterType="String" resultType="java.util.Map">
+        SELECT
+           o.delivery_address address,
+           o.order_remark remark,
+           c.customer_name customerName
+        FROM
+            brt_sales_order o
+            left join brt_customer c on c.customer_id = o.customer_id
+            where o.order_id = #{orderId}
+    </select>
+
+    <select id="updateMaterielNum">
+        update brt_order_materiel_plan set materiel_num = materiel_num+#{deliveryRemindVo.thisNum} where plan_id = #{deliveryRemindVo.planId}
+    </select>
+
+    <select id="queryMaterielNum" parameterType="String" resultType="String">
+        select ifnull(order_num,0)-ifnull(materiel_num,0) from brt_order_materiel_plan where plan_id = #{planId}
+    </select>
+
+    <select id="getDeliveryNum" resultType="java.util.Map">
+        SELECT
+            ifnull(omp.materiel_num,0) fulfillNum, -- 已送货数量
+            ifnull(omp.order_num,0)-ifnull(omp.materiel_num,0) surplusNum -- 剩余数量
+        FROM
+        brt_sales_order so
+        inner join brt_customer_delivery cd on cd.order_id = so.order_id
+        inner join brt_sales_order_details sod on sod.order_id = so.order_id
+        inner join brt_order_materiel_plan omp on omp.order_details_id = sod.details_id and omp.order_node_id = cd.order_node_id
+        where so.order_id = #{orderId}
+    </select>
+
+    <select id="getPrint" resultType="java.util.Map">
+        SELECT
+            so.order_no orderNo,
+            so.delivery_time deliveryTime, -- 计划送货日期
+            c.customer_name customerName, -- 客户名称
+            so.order_remark remark, -- 备注
+            so.delivery_address address, -- 送货地址
+            so.order_time orderTime,
+            so.contact
+        FROM
+            brt_sales_order so
+                inner join brt_customer_delivery cd on cd.order_id = so.order_id
+                left join brt_customer c on so.customer_id = c.customer_id
+        where so.order_id = #{orderId}
+        limit 0,1
+    </select>
+
+    <select id="getPrintTable" resultType="java.util.Map">
+        SELECT
+            ifnull(m.materiel_name,omp.materiel_id) materielName, -- 产品名称
+            sod.materiel_unit unit, -- 单位
+            ifnull(omp.order_num,0) detailsNum, -- 销售数量
+            sod.details_remark remark, -- 备注
+            sod.details_price price, -- 单价
+            sod.details_amount amount, -- 总价
+            m.materiel_spec spec
+        FROM
+            brt_sales_order so
+                inner join brt_customer_delivery cd on cd.order_id = so.order_id
+                inner join brt_sales_order_details sod on sod.order_id = so.order_id
+                inner join brt_order_materiel_plan omp on omp.order_details_id = sod.details_id and omp.order_node_id = cd.order_node_id
+                left JOIN brt_materiel m on m.materiel_id = omp.materiel_id
+                left join brt_customer c on so.customer_id = c.customer_id
+        where so.order_id = #{orderId}
+    </select>
+
+</mapper>

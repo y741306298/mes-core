@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtMarketMaterielMapper">
+
+    <resultMap type="com.brt.order.vo.BrtMarketMaterielVo" id="BrtMarketMaterielResult">
+        <result property="recordId"    column="record_id"    />
+        <result property="nodeId"    column="node_id"    />
+        <result property="orderNodeId"    column="order_node_id"    />
+        <result property="orderId"    column="order_id"    />
+        <result property="orderType"    column="order_type"    />
+        <result property="materielId"    column="materiel_id"    />
+        <result property="materielNum"    column="materiel_num"    />
+        <result property="surplusNum"    column="surplus_num"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="updateBy"    column="update_by"    />
+    </resultMap>
+
+    <sql id="brtMarketMaterielAllField">
+        A.record_id,
+            A.node_id,
+            A.order_node_id,
+            A.order_id,
+            A.order_type,
+            A.materiel_id,
+            A.materiel_num,
+            A.surplus_num,
+            A.create_time,
+            A.create_by,
+            A.update_time,
+        A.update_by
+    </sql>
+
+    <sql id="brtMarketMaterielQuerySql">
+        select <include refid="brtMarketMaterielAllField"/>
+        from brt_order_materiel_record A
+    </sql>
+
+    <select id="queryBrtMarketMaterielList" parameterType="com.brt.order.vo.BrtMarketMaterielVo" resultMap="BrtMarketMaterielResult">
+        <include refid="brtMarketMaterielQuerySql"/>
+        <where>
+            <if test="brtMarketMaterielVo.nodeId != null  and brtMarketMaterielVo.nodeId != ''"> and A.node_id = #{brtMarketMaterielVo.nodeId}</if>
+            <if test="brtMarketMaterielVo.orderNodeId != null  and brtMarketMaterielVo.orderNodeId != ''"> and A.order_node_id = #{brtMarketMaterielVo.orderNodeId}</if>
+            <if test="brtMarketMaterielVo.orderId != null  and brtMarketMaterielVo.orderId != ''"> and A.order_id = #{brtMarketMaterielVo.orderId}</if>
+            <if test="brtMarketMaterielVo.orderType != null  and brtMarketMaterielVo.orderType != ''"> and A.order_type = #{brtMarketMaterielVo.orderType}</if>
+            <if test="brtMarketMaterielVo.materielId != null  and brtMarketMaterielVo.materielId != ''"> and A.materiel_id = #{brtMarketMaterielVo.materielId}</if>
+            <if test="brtMarketMaterielVo.materielNum != null "> and A.materiel_num = #{brtMarketMaterielVo.materielNum}</if>
+            <if test="brtMarketMaterielVo.surplusNum != null "> and A.surplus_num = #{brtMarketMaterielVo.surplusNum}</if>
+        </where>
+        order by A.create_time desc
+    </select>
+
+    <select id="queryBrtMarketMaterielByRecordId" resultMap="BrtMarketMaterielResult">
+        <include refid="brtMarketMaterielQuerySql"/>
+        where A.record_id = #{RecordId}
+    </select>
+</mapper>

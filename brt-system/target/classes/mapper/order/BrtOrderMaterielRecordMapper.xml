@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtOrderMaterielRecordMapper">
+
+    <resultMap type="com.brt.order.vo.BrtOrderMaterielRecordVo" id="BrtOrderMaterielRecordResult">
+        <result property="recordId"    column="record_id"    />
+        <result property="nodeId"    column="node_id"    />
+        <result property="orderNodeId"    column="order_node_id"    />
+        <result property="orderId"    column="order_id"    />
+        <result property="orderType"    column="order_type"    />
+        <result property="materielId"    column="materiel_id"    />
+        <result property="materielNum"    column="materiel_num"    />
+        <result property="surplusNum"    column="surplus_num"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <association property="materielVo" javaType="com.brt.order.vo.BrtMaterielVo" column="materiel_id" select="com.brt.order.mapper.BrtMaterielMapper.queryBrtMaterielByMaterielId" />
+    </resultMap>
+
+    <sql id="brtOrderMaterielRecordAllField">
+            A.record_id,
+            A.node_id,
+            A.order_node_id,
+            A.order_id,
+            A.order_type,
+            A.materiel_id,
+            A.materiel_num,
+            A.surplus_num,
+            A.create_time,
+            A.create_by,
+            A.update_time,
+        A.update_by
+    </sql>
+
+    <sql id="brtOrderMaterielRecordQuerySql">
+        select <include refid="brtOrderMaterielRecordAllField"/>
+        from brt_order_materiel_record A
+    </sql>
+
+    <select id="queryBrtOrderMaterielRecordList" parameterType="com.brt.order.vo.BrtOrderMaterielRecordVo" resultMap="BrtOrderMaterielRecordResult">
+        <include refid="brtOrderMaterielRecordQuerySql"/>
+        <where>
+            <if test="brtOrderMaterielRecordVo.nodeId != null  and brtOrderMaterielRecordVo.nodeId != ''"> and A.node_id = #{brtOrderMaterielRecordVo.nodeId}</if>
+            <if test="brtOrderMaterielRecordVo.orderNodeId != null  and brtOrderMaterielRecordVo.orderNodeId != ''"> and A.order_node_id = #{brtOrderMaterielRecordVo.orderNodeId}</if>
+            <if test="brtOrderMaterielRecordVo.orderId != null  and brtOrderMaterielRecordVo.orderId != ''"> and A.order_id = #{brtOrderMaterielRecordVo.orderId}</if>
+            <if test="brtOrderMaterielRecordVo.orderType != null  and brtOrderMaterielRecordVo.orderType != ''"> and A.order_type = #{brtOrderMaterielRecordVo.orderType}</if>
+            <if test="brtOrderMaterielRecordVo.materielId != null  and brtOrderMaterielRecordVo.materielId != ''"> and A.materiel_id = #{brtOrderMaterielRecordVo.materielId}</if>
+            <if test="brtOrderMaterielRecordVo.materielNum != null "> and A.materiel_num = #{brtOrderMaterielRecordVo.materielNum}</if>
+            <if test="brtOrderMaterielRecordVo.surplusNum != null "> and A.surplus_num = #{brtOrderMaterielRecordVo.surplusNum}</if>
+        </where>
+        order by A.create_time desc
+    </select>
+
+    <select id="queryBrtOrderMaterielRecordByRecordId" resultMap="BrtOrderMaterielRecordResult">
+        <include refid="brtOrderMaterielRecordQuerySql"/>
+        where A.record_id = #{RecordId}
+    </select>
+</mapper>

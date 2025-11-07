@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtMaterielMapper">
+
+    <resultMap type="com.brt.order.vo.BrtMaterielVo" id="BrtMaterielResult">
+        <result property="materielId"    column="materiel_id"    />
+        <result property="materielNo"    column="materiel_no"    />
+        <result property="typeId"    column="type_id"    />
+        <result property="materielName"    column="materiel_name"    />
+        <result property="materielSpec"    column="materiel_spec"    />
+        <result property="materielSize"    column="materiel_size"    />
+        <result property="materielNum"    column="materiel_num"    />
+        <result property="warningNum"    column="warning_num"    />
+        <result property="lockNum"    column="lock_num"    />
+        <result property="sellPrice"    column="sell_price"    />
+        <result property="purchasePrice"    column="purchase_price"    />
+        <result property="totalPrice"    column="total_price"    />
+        <result property="materielRemark"    column="materiel_remark"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="files"    column="files"    />
+        <result property="boom"    column="boom"    />
+        <result property="otherFields"    column="other_fields"    />
+        <result property="materielUnit"    column="materiel_unit"    />
+        <result property="location"    column="location"    />
+        <result property="supplier"    column="supplier"    />
+        <association property="materielTypeVo" javaType="com.brt.order.vo.BrtMaterielTypeVo" column="type_id" select="com.brt.order.mapper.BrtMaterielTypeMapper.queryBrtMaterielTypeByTypeId" />
+    </resultMap>
+
+    <sql id="brtMaterielAllField">
+            A.materiel_id,
+            A.materiel_no,
+            A.type_id,
+            A.materiel_name,
+            A.materiel_spec,
+            A.materiel_size,
+            A.materiel_num,
+            A.warning_num,
+            A.materiel_unit,
+            A.lock_num,
+            A.sell_price,
+            A.purchase_price,
+            A.total_price,
+            A.materiel_remark,
+            A.create_time,
+            A.create_by,
+            A.update_time,
+            A.update_by,
+            A.files,
+            A.boom,
+            A.other_fields,
+            A.location,
+            A.supplier
+    </sql>
+
+    <sql id="brtMaterielQuerySql">
+        select <include refid="brtMaterielAllField"/>
+        from brt_materiel A
+    </sql>
+
+    <select id="queryBrtMaterielList" parameterType="com.brt.order.vo.BrtMaterielVo" resultMap="BrtMaterielResult">
+        <include refid="brtMaterielQuerySql"/>
+        <where>
+            <if test="brtMaterielVo.materielNo != null  and brtMaterielVo.materielNo != ''"> and A.materiel_no = #{brtMaterielVo.materielNo}</if>
+            <if test="brtMaterielVo.typeId != null  and brtMaterielVo.typeId != ''"> and A.type_id = #{brtMaterielVo.typeId}</if>
+            <if test="brtMaterielVo.materielName != null  and brtMaterielVo.materielName != ''"> and A.materiel_name like concat('%', #{brtMaterielVo.materielName}, '%')</if>
+            <if test="brtMaterielVo.materielSpec != null  and brtMaterielVo.materielSpec != ''"> and A.materiel_spec = #{brtMaterielVo.materielSpec}</if>
+            <if test="brtMaterielVo.materielNum != null "> and A.materiel_num = #{brtMaterielVo.materielNum}</if>
+            <if test="brtMaterielVo.warningNum != null "> and A.warning_num = #{brtMaterielVo.warningNum}</if>
+            <if test="brtMaterielVo.lockNum != null "> and A.lock_num = #{brtMaterielVo.lockNum}</if>
+            <if test="brtMaterielVo.sellPrice != null "> and A.sell_price = #{brtMaterielVo.sellPrice}</if>
+            <if test="brtMaterielVo.purchasePrice != null "> and A.purchase_price = #{brtMaterielVo.purchasePrice}</if>
+            <if test="brtMaterielVo.totalPrice != null "> and A.total_price = #{brtMaterielVo.totalPrice}</if>
+            <if test="brtMaterielVo.materielRemark != null  and brtMaterielVo.materielRemark != ''"> and A.materiel_remark = #{brtMaterielVo.materielRemark}</if>
+            <if test="brtMaterielVo.ids!=null">
+                and materiel_id in
+                <foreach collection="brtMaterielVo.ids" item="item" open="(" separator="," close=")">
+                    #{item}
+                </foreach>
+            </if>
+        </where>
+        order by A.create_time desc
+    </select>
+
+    <select id="queryBrtMaterielByMaterielId" resultMap="BrtMaterielResult">
+        <include refid="brtMaterielQuerySql"/>
+        where A.materiel_id = #{MaterielId}
+    </select>
+
+    <select id="queryByName" resultMap="BrtMaterielResult">
+        <include refid="brtMaterielQuerySql"/>
+        where A.materiel_name = #{name}
+    </select>
+
+    <select id="addNum" parameterType="com.brt.order.vo.BrtInInventoryMaterielVo">
+        update brt_materiel set materiel_num = materiel_num+#{inInventoryNum} WHERE materiel_id = #{materielId}
+    </select>
+
+    <select id="reduceNum" parameterType="com.brt.order.vo.BrtOutInventoryMaterielVo">
+        update brt_materiel set materiel_num = materiel_num-#{outInventoryNum} WHERE materiel_id = #{materielId}
+    </select>
+
+    <select id="selectRecord" parameterType="com.brt.order.vo.BrtMaterielRecordVo" resultType="com.brt.order.vo.BrtMaterielRecordVo">
+        select
+            p.*
+        from (
+                 SELECT
+                     '入库' type,
+                     ii.in_inventory_no orderNo,
+                     iim.update_time updateTime,
+                     iim.in_inventory_num num,
+                     iim.residue_num residueNum,
+                     u.nick_name userName,
+                     u.user_id userId,
+                     iim.materiel_id materielId
+                 FROM
+                     brt_in_inventory ii
+                         inner JOIN brt_in_inventory_materiel iim on iim.in_inventory_id = ii.in_inventory_id
+                         left join sys_user u on u.user_id = ii.applicat
+                 where ii.in_inventory_status = '1'
+
+                 union all
+
+                 SELECT
+                     '出库' type,
+                     ii.out_inventory_no orderNo,
+                     iim.update_time updateTime,
+                     iim.out_inventory_num num,
+                     iim.residue_num residueNum,
+                     u.nick_name nickName,
+                     u.user_id userId,
+                     iim.materiel_id materielId
+                 FROM
+                     brt_out_inventory ii
+                         inner JOIN brt_out_inventory_materiel iim on iim.out_inventory_id = ii.out_inventory_id
+                         left join sys_user u on u.user_id = ii.applicat
+                 where ii.out_inventory_status = '1'
+             )p
+            <where>
+                <if test="materielRecordVo.materielId!=null and materielRecordVo.materielId!=''">
+                    and p.materielId = #{materielRecordVo.materielId}
+                </if>
+                <if test="materielRecordVo.userId!=null and materielRecordVo.userId!=''">
+                    and p.userId = #{materielRecordVo.userId}
+                </if>
+                <if test="materielRecordVo.type!=null and materielRecordVo.type!=''">
+                    and p.type = #{materielRecordVo.type}
+                </if>
+                <if test="materielRecordVo.timeStart!=null">
+                    and date_format(p.updateTime,'%Y-%m-%d')  > date_format(#{materielRecordVo.timeStart},'%Y-%m-%d')
+                </if>
+                <if test="materielRecordVo.timeEnd!=null">
+                    and date_format(p.updateTime,'%Y-%m-%d')  > date_format(#{materielRecordVo.timeEnd},'%Y-%m-%d')
+                </if>
+            </where>
+        order by p.updateTime desc
+    </select>
+</mapper>

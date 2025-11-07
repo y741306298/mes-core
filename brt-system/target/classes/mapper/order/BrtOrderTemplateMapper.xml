@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtOrderTemplateMapper">
+
+    <resultMap type="com.brt.order.vo.BrtOrderTemplateVo" id="BrtOrderTemplateResult">
+        <result property="orderTemplateId"    column="order_template_id"    />
+        <result property="orderId"    column="order_id"    />
+        <result property="orderNo"    column="order_no"    />
+        <result property="orderType"    column="order_type"    />
+        <result property="childId"    column="child_id"    />
+        <result property="customerId"    column="customer_id"    />
+        <result property="supplierId"    column="supplier_id"    />
+        <result property="templateId"    column="template_id"    />
+        <result property="orderTemplateStatus"    column="order_template_status"    />
+        <result property="auditStatus"    column="audit_status"    />
+        <result property="detailsDesc"    column="details_desc"    />
+        <result property="userId"    column="user_id"    />
+        <result property="orderNum"    column="order_num"    />
+        <result property="orderAmount"    column="order_amount"    />
+        <result property="orderDate"    column="order_date"    />
+        <result property="deliveryDate"    column="delivery_date"    />
+        <result property="templateType"    column="template_type"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="status"    column="status"    />
+        <association property="flowTemplateVo" javaType="com.brt.order.vo.BrtFlowTemplateVo" column="template_id" select="com.brt.order.mapper.BrtFlowTemplateMapper.queryNotOtherFlowTemplateByTemplateId" />
+        <association property="customerVo" javaType="com.brt.order.vo.BrtCustomerVo" column="customer_id" select="com.brt.order.mapper.BrtCustomerMapper.queryBrtCustomerByCustomerId" />
+        <association property="supplierVo" javaType="com.brt.order.vo.BrtSupplierVo" column="supplier_id" select="com.brt.order.mapper.BrtSupplierMapper.queryBrtSupplierBySupplierId" />
+        <collection property="orderNodeVoList" ofType="com.brt.order.vo.BrtOrderNodeVo" column="order_template_id" select="com.brt.order.mapper.BrtOrderNodeMapper.queryBrtOrderNodeListByOrderTemplateId" />
+    </resultMap>
+
+    <sql id="brtOrderTemplateAllField">
+            A.order_template_id,
+            A.order_id,
+            A.order_no,
+            A.order_type,
+            A.child_id,
+            A.customer_id,
+            A.supplier_id,
+            A.template_id,
+            A.order_template_status,
+            A.audit_status,
+            A.details_desc,
+            A.user_id,
+            A.order_num,
+            A.order_amount,
+            A.order_date,
+            A.delivery_date,
+            A.template_type,
+            A.create_time,
+            A.create_by,
+            A.update_time,
+            A.update_by,
+            A.status
+    </sql>
+
+    <sql id="brtOrderTemplateQuerySql">
+        select <include refid="brtOrderTemplateAllField"/>
+        from brt_order_template A
+    </sql>
+
+    <select id="queryBrtOrderTemplateList" parameterType="com.brt.order.vo.BrtOrderTemplateVo" resultMap="BrtOrderTemplateResult">
+        <include refid="brtOrderTemplateQuerySql"/>
+        <where>
+            <if test="brtOrderTemplateVo.orderId != null  and brtOrderTemplateVo.orderId != ''"> and A.order_id = #{brtOrderTemplateVo.orderId}</if>
+            <if test="brtOrderTemplateVo.orderNo != null  and brtOrderTemplateVo.orderNo != ''"> and A.order_no like concat('%',#{brtOrderTemplateVo.orderNo},'%')</if>
+            <if test="brtOrderTemplateVo.childId != null  and brtOrderTemplateVo.childId != ''"> and A.child_id = #{brtOrderTemplateVo.childId}</if>
+            <if test="brtOrderTemplateVo.customerId != null  and brtOrderTemplateVo.customerId != ''"> and A.customer_id = #{brtOrderTemplateVo.customerId}</if>
+            <if test="brtOrderTemplateVo.supplierId != null  and brtOrderTemplateVo.supplierId != ''"> and A.supplier_id = #{brtOrderTemplateVo.supplierId}</if>
+            <if test="brtOrderTemplateVo.templateId != null  and brtOrderTemplateVo.templateId != ''"> and A.template_id = #{brtOrderTemplateVo.templateId}</if>
+            <if test="brtOrderTemplateVo.orderTemplateStatus != null  and brtOrderTemplateVo.orderTemplateStatus != ''"> and A.order_template_status = #{brtOrderTemplateVo.orderTemplateStatus}</if>
+            <if test="brtOrderTemplateVo.auditStatus != null and brtOrderTemplateVo.auditStatus != ''"> and A.audit_status = #{brtOrderTemplateVo.auditStatus}</if>
+            <if test="brtOrderTemplateVo.templateType != null and brtOrderTemplateVo.templateType != ''"> and A.template_type = #{brtOrderTemplateVo.templateType}</if>
+            <if test="brtOrderTemplateVo.thisUserId!=null and brtOrderTemplateVo.thisUserId!=''">
+                and A.order_template_id in (
+                    select DISTINCT order_template_id FROM brt_order_node where user_id = #{brtOrderTemplateVo.thisUserId} or principal = #{brtOrderTemplateVo.thisUserId}
+                )
+            </if>
+            <if test="brtOrderTemplateVo.flowQueryAudit!=null and brtOrderTemplateVo.flowQueryAudit!=''">
+                <if test="brtOrderTemplateVo.flowQueryAudit=='0'.toString()">
+                    and A.status in ('0','1','2') and (A.order_template_status in ('0','') or A.order_template_status is null )
+                </if>
+                <if test="brtOrderTemplateVo.flowQueryAudit=='1'.toString()">
+                    and A.status in ('5') and (A.order_template_status in ('0','') or A.order_template_status is null )
+                </if>
+                <if test="brtOrderTemplateVo.flowQueryAudit=='2'.toString()">
+                    and A.order_template_status = '1'
+                </if>
+                <if test="brtOrderTemplateVo.flowQueryAudit=='3'.toString()">
+                    and A.order_template_status = '2'
+                </if>
+            </if>
+        </where>
+        order by A.create_time desc
+    </select>
+
+    <select id="queryBrtOrderTemplateByOrderTemplateId" resultMap="BrtOrderTemplateResult">
+        <include refid="brtOrderTemplateQuerySql"/>
+        where A.order_template_id = #{OrderTemplateId}
+    </select>
+
+    <select id="getOrderType" resultType="String" parameterType="String">
+        SELECT
+            ot.order_type
+        FROM
+            brt_order_node odn
+                INNER JOIN brt_order_template ot on ot.order_template_id = odn.order_template_id
+        where odn.order_node_id =#{orderNodeId}
+        limit 0,1
+    </select>
+
+    <select id="getOrderId" resultType="String">
+        SELECT
+            o.order_id
+        FROM
+            brt_order_template t
+                <if test="orderType=='0'.toString()">
+                    INNER JOIN brt_price_sheet_order o ON t.order_id = o.order_id
+                </if>
+                <if test="orderType=='1'.toString()">
+                    INNER JOIN brt_sales_order o ON t.order_id = o.order_id
+                </if>
+                <if test="orderType=='2'.toString()">
+                    INNER JOIN brt_market_order o ON t.order_id = o.order_id
+                </if>
+
+        where t.order_template_id = #{orderTemplateId}
+    </select>
+</mapper>

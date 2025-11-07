@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtPriceSheetOrderDetailsMapper">
+
+    <resultMap type="com.brt.order.vo.BrtPriceSheetOrderDetailsVo" id="BrtPriceSheetOrderDetailsResult">
+        <result property="detailsId"    column="details_id"    />
+        <result property="detailsNo"    column="details_no"    />
+        <result property="orderId"    column="order_id"    />
+        <result property="materielId"    column="materiel_id"    />
+        <result property="materielType"    column="materiel_type"    />
+        <result property="materielSize"    column="materiel_size"    />
+        <result property="yieldNo"    column="yield_no"    />
+        <result property="drawingNo"    column="drawing_no"    />
+        <result property="customerPn"    column="customer_pn"    />
+        <result property="detailsNum"    column="details_num"    />
+        <result property="materielUnit"    column="materiel_unit"    />
+        <result property="detailsPrice"    column="details_price"    />
+        <result property="detailsAmount"    column="details_amount"    />
+        <result property="packageModel"    column="package_model"    />
+        <result property="packageTypeId"    column="package_type_id"    />
+        <result property="packageSize"    column="package_size"    />
+        <result property="pagkageNum"    column="pagkage_num"    />
+        <result property="testTypeId"    column="test_type_id"    />
+        <result property="testMode"    column="test_mode"    />
+        <result property="detailsRemark"    column="details_remark"    />
+        <result property="attachments"    column="attachments"    />
+        <result property="boomFile"    column="boom_file"    />
+        <result property="jobDrawing"    column="job_drawing"    />
+        <result property="jobProgram"    column="job_program"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <association property="materielVo" javaType="com.brt.order.vo.BrtMaterielVo" column="materiel_id" select="com.brt.order.mapper.BrtMaterielMapper.queryBrtMaterielByMaterielId" />
+        <collection property="boomVoList" ofType="com.brt.order.vo.BrtOrderBoomVo" column="details_id" select="com.brt.order.mapper.BrtOrderBoomMapper.queryBrtOrderBoomByOrderDetailsId" />
+    </resultMap>
+
+    <resultMap type="com.brt.order.vo.BrtPriceSheetOrderDetailsVo" id="statementBrtPriceSheetOrderDetailsResult" extends="BrtPriceSheetOrderDetailsResult">
+        <result column="customer_name" property="customerName"/>
+        <association property="priceSheetOrderVo" javaType="com.brt.order.vo.BrtPriceSheetOrderVo">
+            <result column="order_id" property="orderId"/>
+            <result column="order_no" property="orderNo"/>
+            <result column="order_time" property="orderTime"/>
+            <result column="total_num" property="totalNum"/>
+            <result column="total_amount" property="totalAmount"/>
+        </association>
+        <association property="user" javaType="com.brt.common.core.domain.entity.SysUser" column="user_id" select="com.brt.system.mapper.SysUserMapper.selectUserById" />
+    </resultMap>
+
+    <sql id="brtPriceSheetOrderDetailsAllField">
+        A.details_id,
+            A.details_no,
+            A.order_id,
+            A.materiel_id,
+            A.materiel_type,
+            A.materiel_size,
+            A.yield_no,
+            A.drawing_no,
+            A.customer_pn,
+            A.details_num,
+            A.materiel_unit,
+            A.details_price,
+            A.details_amount,
+            A.package_model,
+            A.package_type_id,
+            A.package_size,
+            A.pagkage_num,
+            A.test_type_id,
+            A.test_mode,
+            A.details_remark,
+            A.attachments,
+            A.boom_file,
+            A.job_drawing,
+            A.job_program,
+            A.create_time,
+            A.create_by,
+            A.update_time,
+        A.update_by
+    </sql>
+
+    <sql id="brtPriceSheetOrderDetailsQuerySql">
+        select <include refid="brtPriceSheetOrderDetailsAllField"/>
+        from brt_price_sheet_order_details A
+    </sql>
+
+    <sql id="brtPriceSheetOrderDetailsWhereSql">
+        <if test="brtPriceSheetOrderDetailsVo.detailsNo != null  and brtPriceSheetOrderDetailsVo.detailsNo != ''"> and A.details_no = #{brtPriceSheetOrderDetailsVo.detailsNo}</if>
+        <if test="brtPriceSheetOrderDetailsVo.orderId != null  and brtPriceSheetOrderDetailsVo.orderId != ''"> and A.order_id = #{brtPriceSheetOrderDetailsVo.orderId}</if>
+        <if test="brtPriceSheetOrderDetailsVo.materielId != null  and brtPriceSheetOrderDetailsVo.materielId != ''"> and A.materiel_id = #{brtPriceSheetOrderDetailsVo.materielId}</if>
+        <if test="brtPriceSheetOrderDetailsVo.materielType != null  and brtPriceSheetOrderDetailsVo.materielType != ''"> and A.materiel_type = #{brtPriceSheetOrderDetailsVo.materielType}</if>
+        <if test="brtPriceSheetOrderDetailsVo.materielSize != null  and brtPriceSheetOrderDetailsVo.materielSize != ''"> and A.materiel_size = #{brtPriceSheetOrderDetailsVo.materielSize}</if>
+        <if test="brtPriceSheetOrderDetailsVo.yieldNo != null  and brtPriceSheetOrderDetailsVo.yieldNo != ''"> and A.yield_no = #{brtPriceSheetOrderDetailsVo.yieldNo}</if>
+        <if test="brtPriceSheetOrderDetailsVo.drawingNo != null  and brtPriceSheetOrderDetailsVo.drawingNo != ''"> and A.drawing_no = #{brtPriceSheetOrderDetailsVo.drawingNo}</if>
+        <if test="brtPriceSheetOrderDetailsVo.customerPn != null  and brtPriceSheetOrderDetailsVo.customerPn != ''"> and A.customer_pn = #{brtPriceSheetOrderDetailsVo.customerPn}</if>
+        <if test="brtPriceSheetOrderDetailsVo.detailsNum != null "> and A.details_num = #{brtPriceSheetOrderDetailsVo.detailsNum}</if>
+        <if test="brtPriceSheetOrderDetailsVo.materielUnit != null  and brtPriceSheetOrderDetailsVo.materielUnit != ''"> and A.materiel_unit = #{brtPriceSheetOrderDetailsVo.materielUnit}</if>
+        <if test="brtPriceSheetOrderDetailsVo.detailsPrice != null "> and A.details_price = #{brtPriceSheetOrderDetailsVo.detailsPrice}</if>
+        <if test="brtPriceSheetOrderDetailsVo.detailsAmount != null "> and A.details_amount = #{brtPriceSheetOrderDetailsVo.detailsAmount}</if>
+        <if test="brtPriceSheetOrderDetailsVo.packageModel != null  and brtPriceSheetOrderDetailsVo.packageModel != ''"> and A.package_model = #{brtPriceSheetOrderDetailsVo.packageModel}</if>
+        <if test="brtPriceSheetOrderDetailsVo.packageTypeId != null  and brtPriceSheetOrderDetailsVo.packageTypeId != ''"> and A.package_type_id = #{brtPriceSheetOrderDetailsVo.packageTypeId}</if>
+        <if test="brtPriceSheetOrderDetailsVo.packageSize != null  and brtPriceSheetOrderDetailsVo.packageSize != ''"> and A.package_size = #{brtPriceSheetOrderDetailsVo.packageSize}</if>
+        <if test="brtPriceSheetOrderDetailsVo.pagkageNum != null "> and A.pagkage_num = #{brtPriceSheetOrderDetailsVo.pagkageNum}</if>
+        <if test="brtPriceSheetOrderDetailsVo.testTypeId != null  and brtPriceSheetOrderDetailsVo.testTypeId != ''"> and A.test_type_id = #{brtPriceSheetOrderDetailsVo.testTypeId}</if>
+        <if test="brtPriceSheetOrderDetailsVo.testMode != null  and brtPriceSheetOrderDetailsVo.testMode != ''"> and A.test_mode = #{brtPriceSheetOrderDetailsVo.testMode}</if>
+        <if test="brtPriceSheetOrderDetailsVo.detailsRemark != null  and brtPriceSheetOrderDetailsVo.detailsRemark != ''"> and A.details_remark = #{brtPriceSheetOrderDetailsVo.detailsRemark}</if>
+    </sql>
+
+    <select id="queryBrtPriceSheetOrderDetailsList" parameterType="com.brt.order.vo.BrtPriceSheetOrderDetailsVo" resultMap="BrtPriceSheetOrderDetailsResult">
+        <include refid="brtPriceSheetOrderDetailsQuerySql"/>
+        <where>
+            <include refid="brtPriceSheetOrderDetailsWhereSql" />
+        </where>
+        order by A.create_time desc
+    </select>
+
+    <select id="queryBrtPriceSheetOrderDetailsByDetailsId" resultMap="BrtPriceSheetOrderDetailsResult">
+        <include refid="brtPriceSheetOrderDetailsQuerySql"/>
+        where A.details_id = #{DetailsId}
+    </select>
+
+    <select id="statementList" resultMap="statementBrtPriceSheetOrderDetailsResult">
+        select <include refid="brtPriceSheetOrderDetailsAllField"/>,
+        o.order_no,o.order_time,o.total_num,o.total_amount,o.user_id,
+        c.customer_name
+        from brt_priceSheet_order_details A
+        inner join brt_priceSheet_order o on A.order_id = o.order_id
+        left join brt_customer c on o.customer_id = c.customer_id
+        <where>
+            <include refid="brtPriceSheetOrderDetailsWhereSql" />
+            <if test="brtPriceSheetOrderDetailsVo.dateType != null and brtPriceSheetOrderDetailsVo.dateType != ''">
+                <choose>
+                    <when test="brtPriceSheetOrderDetailsVo.dateType == '0'.toString() ">
+                        and date_format(o.order_time,'%y%m%d') = date_format(now(),'%y%m%d')
+                    </when>
+                    <when test="brtPriceSheetOrderDetailsVo.dateType == '1'.toString() ">
+                        and DATE(o.order_time) = CURDATE() - INTERVAL 1 DAY
+                    </when>
+                    <when test="brtPriceSheetOrderDetailsVo.dateType == '2'.toString() ">
+                        and date_format(o.order_time,'%y%m') = date_format(now(),'%y%m')
+                    </when>
+                    <when test="brtPriceSheetOrderDetailsVo.dateType == '3'.toString() ">
+                        and QUARTER(o.order_time) = QUARTER(CURDATE()) and YEAR(o.order_time) = YEAR(CURDATE())
+                    </when>
+                    <when test="brtPriceSheetOrderDetailsVo.dateType == '4'.toString() ">
+                        and YEAR(o.order_time) = YEAR(CURDATE())
+                    </when>
+                </choose>
+            </if>
+            <if test="brtPriceSheetOrderDetailsVo.createTimeStart != null and brtPriceSheetOrderDetailsVo.createTimeStart != '' and brtPriceSheetOrderDetailsVo.createTimeEnd != null and brtPriceSheetOrderDetailsVo.createTimeEnd != ''">
+                and date_format(o.order_time,'%y%m%d') between date_format(#{brtPriceSheetOrderDetailsVo.createTimeStart},'%y%m%d') and date_format(#{brtPriceSheetOrderDetailsVo.createTimeEnd},'%y%m%d')
+            </if>
+            <if test="brtPriceSheetOrderDetailsVo.customerId != null and brtPriceSheetOrderDetailsVo.customerId != ''">
+                and o.customer_id = #{brtPriceSheetOrderDetailsVo.customerId}
+            </if>
+            <if test="brtPriceSheetOrderDetailsVo.customerTypeId != null and brtPriceSheetOrderDetailsVo.customerTypeId != ''">
+                and c.type_id = #{brtPriceSheetOrderDetailsVo.customerTypeId}
+            </if>
+            <if test="brtPriceSheetOrderDetailsVo.userId != null and brtPriceSheetOrderDetailsVo.userId != ''">
+                and o.user_id = #{brtPriceSheetOrderDetailsVo.userId}
+            </if>
+        </where>
+        order by A.create_time desc
+    </select>
+
+    <select id="listAllByOrderId" parameterType="String" resultType="com.brt.order.domain.BrtPriceSheetOrderDetails">
+        select
+            A.details_no detailsNo,
+            A.materiel_id materielId,
+            A.materiel_type materielType,
+            A.materiel_size materielSize,
+            A.yield_no yieldNo,
+            A.drawing_no drawingNo,
+            A.customer_pn customerPn,
+            A.details_num detailsNum,
+            A.materiel_unit materielUnit,
+            A.details_price detailsPrice,
+            A.details_amount detailsAmount,
+            A.package_model packageModel,
+            A.package_type_id packageTypeId,
+            A.package_size packageSize,
+            A.pagkage_num pagkageNum,
+            A.test_type_id testTypeId,
+            A.test_mode testMode,
+            A.details_remark detailsRemark,
+            A.attachments,
+            A.job_drawing jobdrawing,
+            A.job_program jobprogram
+            from brt_price_sheet_order_details A
+            where order_id = #{orderId}
+    </select>
+
+    <select id="queryByOrderId" resultMap="BrtPriceSheetOrderDetailsResult">
+        <include refid="brtPriceSheetOrderDetailsQuerySql"/>
+        where A.order_id = #{orderId}
+    </select>
+
+</mapper>
