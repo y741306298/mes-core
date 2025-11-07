@@ -7,8 +7,8 @@
            <el-button type="primary" icon="el-icon-plus" size="mini" @click="handleAdd">新增设备</el-button>
          </div>
        </div>
-       <el-table ref="deviceTable" :data="deviceList" border highlight-current-row :current-row="selectedDevice"
-         @current-change="handleCurrentChange" size="small">
+      <el-table ref="deviceTable" :data="deviceList" border highlight-current-row :current-row="selectedDevice"
+        row-key="deviceId" v-loading="loading" @current-change="handleCurrentChange" size="small">
          <el-table-column type="index" label="#" width="50" align="center" />
          <el-table-column prop="assetNumber" label="资产编号" min-width="160" show-overflow-tooltip />
          <el-table-column prop="deviceName" label="设备名称" min-width="160" show-overflow-tooltip />
@@ -411,135 +411,106 @@
    </div>
  </template>
 
- <script>
-   const createEmptyDevice = () => ({
-     assetNumber: '',
-     deviceName: '',
-     model: '',
-     category: '',
-     brand: '',
-     serialNumber: '',
-     workshop: '',
-     location: '',
-     supplier: '',
-     purchaseDate: '',
-     startDate: '',
-     value: '',
-     ratedPower: '',
-     machiningRange: '',
-     voltage: '',
-     airPressure: '',
-     positioningAccuracy: '',
-     repeatability: '',
-     spindleSpeed: '',
-     cncSystem: '',
-     currentStatus: '',
-     statusColor: '#67C23A',
-     operator: '',
-     productionTask: '',
-     shift: '',
-     totalRuntime: '',
-     monthlyRuntime: '',
-     maintenanceStrategy: '',
-     maintenanceCycle: '',
-     lastMaintenance: '',
-     nextMaintenance: '',
-     maintenanceContent: '',
-     maintenanceOwner: '',
-     timeAvailability: '',
-     performance: '',
-     qualityRate: '',
-     oee: '',
-     plannedTime: '',
-     actualRuntime: '',
-     downtime: '',
-     changeover: '',
-     monthlyOutput: '',
-     history: []
-   })
+<script>
+  import {
+    listProdDevice,
+    getProdDevice,
+    addProdDevice,
+    updateProdDevice,
+    deleteProdDevice
+  } from '@/api/productionflow/device'
 
-   export default {
-     name: 'ProductionDeviceManagement',
-     data() {
-       return {
-         deviceList: [{
-           assetNumber: 'PE-ASSET-2024-001',
-           deviceName: '五轴立式加工中心',
-           model: 'VM-850',
-           category: '加工中心',
-           brand: '发那科',
-           serialNumber: 'FAN-8X5A-2024-001',
-           workshop: '一车间A生产线',
-           location: 'A区-05工位',
-           supplier: '某某精密设备有限公司',
-           purchaseDate: '2024-01-15',
-           startDate: '2024-02-01',
-           value: '¥1,850,000',
-           ratedPower: '15 kW',
-           machiningRange: 'X-800mm Y-500mm Z-450mm',
-           voltage: '380V ±5%',
-           airPressure: '0.7MPa',
-           positioningAccuracy: '±0.005mm',
-           repeatability: '±0.003mm',
-           spindleSpeed: '50-12,000 rpm',
-           cncSystem: '发那科 31i-B',
-           currentStatus: '运行中',
-           statusColor: '#67C23A',
-           operator: '张三',
-           productionTask: 'WO-20240520-008',
-           shift: '白班',
-           totalRuntime: '1,258 小时',
-           monthlyRuntime: '186 小时',
-           maintenanceStrategy: '按运行时长维护',
-           maintenanceCycle: '每 500 运行小时',
-           lastMaintenance: '2024-05-01 (1,000小时)',
-           nextMaintenance: '2024-06-15 (1,500小时)',
-           maintenanceContent: '更换主轴润滑油、清理导轨、检查刀具库',
-           maintenanceOwner: '李四',
-           timeAvailability: '92%',
-           performance: '88%',
-           qualityRate: '99%',
-           oee: '80.3%',
-           plannedTime: '720小时/月',
-           actualRuntime: '662小时/月',
-           downtime: '28小时',
-           changeover: '30小时',
-           monthlyOutput: '8,500件',
-           history: [{
-               date: '2024-05-10',
-               symptom: '主轴异响',
-               cause: '轴承磨损',
-               action: '更换主轴轴承',
-               duration: '4小时',
-               person: '李四'
-             },
-             {
-               date: '2024-04-05',
-               symptom: '刀具库卡刀',
-               cause: '传感器故障',
-               action: '更换接近传感器',
-               duration: '2小时',
-               person: '王五'
-             },
-             {
-               date: '2024-03-15',
-               symptom: '冷却液泄漏',
-               cause: '管路接头松动',
-               action: '紧固接头，更换密封圈',
-               duration: '1.5小时',
-               person: '李四'
-             }
-           ]
-         }],
-         selectedDevice: null,
-         selectedIndex: -1,
-         dialogVisible: false,
-         dialogTitle: '新增设备',
-         formActiveTab: 'basic',
-         form: createEmptyDevice(),
-         editingIndex: -1,
-         predefineColors: ['#67C23A', '#E6A23C', '#F56C6C', '#909399'],
-         rules: {
+  const createEmptyDevice = () => ({
+    deviceId: null,
+    assetNumber: '',
+    deviceName: '',
+    model: '',
+    category: '',
+    brand: '',
+    serialNumber: '',
+    workshop: '',
+    location: '',
+    supplier: '',
+    purchaseDate: '',
+    startDate: '',
+    value: '',
+    ratedPower: '',
+    machiningRange: '',
+    voltage: '',
+    airPressure: '',
+    positioningAccuracy: '',
+    repeatability: '',
+    spindleSpeed: '',
+    cncSystem: '',
+    currentStatus: '',
+    statusColor: '#67C23A',
+    operator: '',
+    productionTask: '',
+    shift: '',
+    totalRuntime: '',
+    monthlyRuntime: '',
+    maintenanceStrategy: '',
+    maintenanceCycle: '',
+    lastMaintenance: '',
+    nextMaintenance: '',
+    maintenanceContent: '',
+    maintenanceOwner: '',
+    timeAvailability: '',
+    performance: '',
+    qualityRate: '',
+    oee: '',
+    plannedTime: '',
+    actualRuntime: '',
+    downtime: '',
+    changeover: '',
+    monthlyOutput: '',
+    remark: '',
+    history: []
+  })
+
+  const normalizeHistoryDate = value => {
+    if (!value) {
+      return ''
+    }
+    if (Object.prototype.toString.call(value) === '[object Date]') {
+      return value.toISOString().slice(0, 10)
+    }
+    return value
+  }
+
+  const normalizeDevice = (data = {}) => {
+    const device = createEmptyDevice()
+    Object.assign(device, data || {})
+    device.history = Array.isArray(device.history)
+      ? device.history.map(item => ({
+        historyId: item.historyId || null,
+        deviceId: item.deviceId || device.deviceId || null,
+        date: normalizeHistoryDate(item.date || item.maintenanceDate),
+        symptom: item.symptom || '',
+        cause: item.cause || '',
+        action: item.action || '',
+        duration: item.duration || '',
+        person: item.person || '',
+        remark: item.remark || ''
+      }))
+      : []
+    return device
+  }
+
+  export default {
+    name: 'ProductionDeviceManagement',
+    data() {
+      return {
+        loading: false,
+        deviceList: [],
+        selectedDevice: null,
+        selectedIndex: -1,
+        dialogVisible: false,
+        dialogTitle: '新增设备',
+        formActiveTab: 'basic',
+        form: createEmptyDevice(),
+        predefineColors: ['#67C23A', '#E6A23C', '#F56C6C', '#909399'],
+        rules: {
            assetNumber: [{
              required: true,
              message: '请输入资产编号',
@@ -645,117 +616,158 @@
              message: '请输入当前状态',
              trigger: 'blur'
            }]
-         }
-       }
-     },
-     created() {
-       if (this.deviceList.length > 0) {
-         this.selectedIndex = 0
-         this.selectedDevice = this.deviceList[0]
-       }
-     },
-     methods: {
-       handleAdd() {
-         this.dialogTitle = '新增设备'
-         this.dialogVisible = true
-         this.formActiveTab = 'basic'
-         this.form = createEmptyDevice()
-         this.editingIndex = -1
-         this.$nextTick(() => {
-           this.$refs.deviceForm && this.$refs.deviceForm.clearValidate()
-         })
-       },
-       handleEdit(row, index) {
-         this.dialogTitle = '编辑设备'
-         this.dialogVisible = true
-         this.formActiveTab = 'basic'
-         this.form = JSON.parse(JSON.stringify(row))
-         this.editingIndex = index
-         this.$nextTick(() => {
-           this.$refs.deviceForm && this.$refs.deviceForm.clearValidate()
-         })
-       },
-       handleView(row) {
-         this.selectedDevice = row
-         this.selectedIndex = this.deviceList.indexOf(row)
-         this.$nextTick(() => {
-           this.$refs.deviceTable && this.$refs.deviceTable.setCurrentRow(row)
-         })
-       },
-       handleDelete(row, index) {
-         this.$confirm(`确认删除设备【${row.deviceName || row.assetNumber}】吗？`, '提示', {
-             confirmButtonText: '确 定',
-             cancelButtonText: '取 消',
-             type: 'warning'
-           })
-           .then(() => {
-             this.deviceList.splice(index, 1)
-             if (this.deviceList.length === 0) {
-               this.selectedDevice = null
-               this.selectedIndex = -1
-             } else if (index === this.selectedIndex) {
-               const newIndex = index >= this.deviceList.length ? this.deviceList.length - 1 : index
-               this.selectedIndex = newIndex
-               this.selectedDevice = this.deviceList[newIndex]
-               this.$nextTick(() => {
-                 this.$refs.deviceTable && this.$refs.deviceTable.setCurrentRow(this.selectedDevice)
-               })
-             }
-             this.$message.success('删除成功')
-           })
-           .catch(() => {})
-       },
-       handleCurrentChange(row) {
-         if (!row) {
-           this.selectedDevice = null
-           this.selectedIndex = -1
-           return
-         }
-         this.selectedDevice = row
-         this.selectedIndex = this.deviceList.indexOf(row)
-       },
-       addHistoryRow() {
-         this.form.history.push({
-           date: '',
-           symptom: '',
-           cause: '',
-           action: '',
-           duration: '',
-           person: ''
-         })
-       },
-       removeHistoryRow(index) {
-         this.form.history.splice(index, 1)
-       },
-       submitForm() {
-         this.$refs.deviceForm.validate(valid => {
-           if (!valid) {
-             return
-           }
-           const payload = JSON.parse(JSON.stringify(this.form))
-           if (!Array.isArray(payload.history)) {
-             payload.history = []
-           }
-           if (this.editingIndex > -1) {
-             this.$set(this.deviceList, this.editingIndex, payload)
-             this.selectedIndex = this.editingIndex
-           } else {
-             this.deviceList.push(payload)
-             this.selectedIndex = this.deviceList.length - 1
-           }
-           this.selectedDevice = this.deviceList[this.selectedIndex] || null
-           this.dialogVisible = false
-           this.$nextTick(() => {
-             if (this.selectedDevice) {
-               this.$refs.deviceTable && this.$refs.deviceTable.setCurrentRow(this.selectedDevice)
-             }
-           })
-           this.$message.success('保存成功')
-         })
-       }
-     }
-   }
- </script>
+        }
+      }
+    },
+    created() {
+      this.fetchDeviceList()
+    },
+    methods: {
+      fetchDeviceList(focusId = null) {
+        this.loading = true
+        const currentId = focusId || (this.selectedDevice ? this.selectedDevice.deviceId : null)
+        listProdDevice()
+          .then(response => {
+            const list = Array.isArray(response.data) ? response.data.map(item => normalizeDevice(item)) : []
+            this.deviceList = list
+            if (list.length === 0) {
+              this.selectedDevice = null
+              this.selectedIndex = -1
+              return
+            }
+            let targetIndex = -1
+            if (currentId) {
+              targetIndex = list.findIndex(item => item.deviceId === currentId)
+            }
+            if (targetIndex === -1) {
+              targetIndex = 0
+            }
+            this.selectedIndex = targetIndex
+            this.selectedDevice = this.deviceList[targetIndex]
+            this.$nextTick(() => {
+              if (this.$refs.deviceTable) {
+                this.$refs.deviceTable.setCurrentRow(this.selectedDevice)
+              }
+            })
+          })
+          .catch(() => {
+            this.deviceList = []
+            this.selectedDevice = null
+            this.selectedIndex = -1
+            this.$message.error('获取设备列表失败')
+          })
+          .finally(() => {
+            this.loading = false
+          })
+      },
+      handleAdd() {
+        this.dialogTitle = '新增设备'
+        this.dialogVisible = true
+        this.formActiveTab = 'basic'
+        this.form = createEmptyDevice()
+        this.$nextTick(() => {
+          this.$refs.deviceForm && this.$refs.deviceForm.clearValidate()
+        })
+      },
+      async handleEdit(row) {
+        if (!row || !row.deviceId) {
+          return
+        }
+        this.dialogTitle = '编辑设备'
+        this.dialogVisible = true
+        this.formActiveTab = 'basic'
+        try {
+          const response = await getProdDevice(row.deviceId)
+          this.form = normalizeDevice(response.data || {})
+        } catch (error) {
+          this.form = normalizeDevice(row)
+          this.$message.error('获取设备详情失败，已使用当前数据')
+        }
+        this.$nextTick(() => {
+          this.$refs.deviceForm && this.$refs.deviceForm.clearValidate()
+        })
+      },
+      handleView(row) {
+        if (!row) {
+          return
+        }
+        const index = this.deviceList.findIndex(item => item.deviceId === row.deviceId)
+        if (index !== -1) {
+          this.selectedIndex = index
+          this.selectedDevice = this.deviceList[index]
+          this.$nextTick(() => {
+            this.$refs.deviceTable && this.$refs.deviceTable.setCurrentRow(this.selectedDevice)
+          })
+        } else {
+          this.selectedIndex = -1
+          this.selectedDevice = null
+        }
+      },
+      handleDelete(row) {
+        if (!row || !row.deviceId) {
+          return
+        }
+        this.$confirm(`确认删除设备【${row.deviceName || row.assetNumber}】吗？`, '提示', {
+            confirmButtonText: '确 定',
+            cancelButtonText: '取 消',
+            type: 'warning'
+          })
+          .then(() => {
+            deleteProdDevice(row.deviceId)
+              .then(() => {
+                this.$message.success('删除成功')
+                this.fetchDeviceList()
+              })
+              .catch(() => {
+                this.$message.error('删除失败')
+              })
+          })
+          .catch(() => {})
+      },
+      handleCurrentChange(row) {
+        if (!row) {
+          this.selectedDevice = null
+          this.selectedIndex = -1
+          return
+        }
+        this.handleView(row)
+      },
+      addHistoryRow() {
+        this.form.history.push({
+          historyId: null,
+          deviceId: this.form.deviceId,
+          date: '',
+          symptom: '',
+          cause: '',
+          action: '',
+          duration: '',
+          person: '',
+          remark: ''
+        })
+      },
+      removeHistoryRow(index) {
+        this.form.history.splice(index, 1)
+      },
+      submitForm() {
+        this.$refs.deviceForm.validate(valid => {
+          if (!valid) {
+            return
+          }
+          const payload = normalizeDevice(this.form)
+          const request = payload.deviceId ? updateProdDevice(payload) : addProdDevice(payload)
+          request
+            .then(response => {
+              this.dialogVisible = false
+              this.$message.success('保存成功')
+              const focusId = (response && response.data && response.data.deviceId) || payload.deviceId || null
+              this.fetchDeviceList(focusId)
+            })
+            .catch(() => {})
+        })
+      }
+    }
+  }
+</script>
 
  <style lang="scss" scoped>
    .device-management {
