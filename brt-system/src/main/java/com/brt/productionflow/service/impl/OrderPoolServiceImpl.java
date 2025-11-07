@@ -11,13 +11,16 @@ import com.brt.productionflow.domain.OrderPool;
 import com.brt.productionflow.domain.ProductionFlow;
 import com.brt.productionflow.domain.ProductionFlowMaterial;
 import com.brt.productionflow.domain.ProductionFlowOrderRel;
+import com.brt.productionflow.domain.ProductionFlowStep;
 import com.brt.productionflow.mapper.OrderPoolMapper;
 import com.brt.productionflow.mapper.ProductionFlowMapper;
 import com.brt.productionflow.mapper.ProductionFlowMaterialMapper;
 import com.brt.productionflow.mapper.ProductionFlowOrderRelMapper;
+import com.brt.productionflow.mapper.ProductionFlowStepMapper;
 import com.brt.productionflow.service.IOrderPoolService;
 import com.brt.productionflow.vo.OrderPoolQuery;
 import com.brt.productionflow.vo.OrderPoolVo;
+import com.brt.productionflow.vo.ProductionFlowQuery;
 import com.brt.productionflow.vo.ProductionFlowVo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,6 +52,7 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
     private final ProductionFlowMapper productionFlowMapper;
     private final ProductionFlowMaterialMapper productionFlowMaterialMapper;
     private final ProductionFlowOrderRelMapper productionFlowOrderRelMapper;
+    private final ProductionFlowStepMapper productionFlowStepMapper;
     private final IBrtFlowTemplateService flowTemplateService;
 
     @Override
@@ -121,9 +125,20 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
     }
 
     @Override
-    public List<ProductionFlowVo> selectProductionFlowList() {
-        List<ProductionFlow> flows = productionFlowMapper.selectList(Wrappers.<ProductionFlow>lambdaQuery()
-            .orderByDesc(ProductionFlow::getCreatedAt));
+    public List<ProductionFlowVo> selectProductionFlowList(ProductionFlowQuery query) {
+        LambdaQueryWrapper<ProductionFlow> wrapper = Wrappers.lambdaQuery();
+        if (query != null) {
+            if (StringUtils.isNotBlank(query.getKeyword())) {
+                String keyword = query.getKeyword();
+                wrapper.and(w -> w.like(ProductionFlow::getFlowId, keyword)
+                    .or().like(ProductionFlow::getAssignedOperator, keyword));
+            }
+            wrapper.eq(StringUtils.isNotBlank(query.getStatus()), ProductionFlow::getFlowStatus, query.getStatus());
+            wrapper.eq(StringUtils.isNotBlank(query.getPriority()), ProductionFlow::getPriority, query.getPriority());
+            wrapper.eq(StringUtils.isNotBlank(query.getTemplateId()), ProductionFlow::getTemplateId, query.getTemplateId());
+        }
+        wrapper.orderByDesc(ProductionFlow::getCreatedAt);
+        List<ProductionFlow> flows = productionFlowMapper.selectList(wrapper);
         return attachFlowDetails(flows);
     }
 
@@ -198,6 +213,8 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
             .in(ProductionFlowMaterial::getFlowId, ids));
         productionFlowOrderRelMapper.delete(Wrappers.<ProductionFlowOrderRel>lambdaQuery()
             .in(ProductionFlowOrderRel::getFlowId, ids));
+        productionFlowStepMapper.delete(Wrappers.<ProductionFlowStep>lambdaQuery()
+            .in(ProductionFlowStep::getFlowId, ids));
         int rows = productionFlowMapper.deleteBatchIds(ids);
         Set<String> orderIds = flowOrders.values().stream()
             .flatMap(List::stream)
@@ -252,9 +269,11 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
         }
         Map<String, List<ProductionFlowMaterial>> materialMap = loadFlowMaterials(flowIds);
         Map<String, List<String>> orderMap = loadFlowOrderIds(flowIds);
+        Map<String, List<ProductionFlowStep>> stepMap = loadFlowSteps(flowIds);
         flowMap.forEach((flowId, vo) -> {
             vo.setMaterialsSummary(new ArrayList<>(materialMap.getOrDefault(flowId, Collections.emptyList())));
             vo.setOrderIds(new ArrayList<>(orderMap.getOrDefault(flowId, Collections.emptyList())));
+            vo.setProcess(new ArrayList<>(stepMap.getOrDefault(flowId, Collections.emptyList())));
         });
     }
 
@@ -283,6 +302,7 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
     private void saveFlowRelations(String flowId, ProductionFlowVo flowVo) {
         saveMaterials(flowId, flowVo.getMaterialsSummary());
         saveOrderRelations(flowId, flowVo.getOrderIds());
+        saveSteps(flowId, flowVo.getProcess());
     }
 
     private void clearFlowRelations(String flowId) {
@@ -290,6 +310,8 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
             .eq(ProductionFlowMaterial::getFlowId, flowId));
         productionFlowOrderRelMapper.delete(Wrappers.<ProductionFlowOrderRel>lambdaQuery()
             .eq(ProductionFlowOrderRel::getFlowId, flowId));
+        productionFlowStepMapper.delete(Wrappers.<ProductionFlowStep>lambdaQuery()
+            .eq(ProductionFlowStep::getFlowId, flowId));
     }
 
     private void saveMaterials(String flowId, List<ProductionFlowMaterial> materials) {
@@ -320,6 +342,46 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
                 .setFlowId(flowId)
                 .setOrderId(orderId))
             .forEach(productionFlowOrderRelMapper::insert);
+    }
+
+    private void saveSteps(String flowId, List<ProductionFlowStep> steps) {
+        if (StringUtils.isBlank(flowId) || CollectionUtils.isEmpty(steps)) {
+            return;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        AtomicInteger index = new AtomicInteger(0);
+        steps.stream()
+            .filter(step -> step != null && (StringUtils.isNotBlank(step.getNodeId())
+                || StringUtils.isNotBlank(step.getStepName())
+                || StringUtils.isNotBlank(step.getRemark())))
+            .map(step -> {
+                int position = index.getAndIncrement();
+                String stepName = step.getStepName();
+                if (StringUtils.isBlank(stepName)) {
+                    stepName = StringUtils.isNotBlank(step.getRemark()) ? step.getRemark() : "步骤" + (position + 1);
+                }
+                return new ProductionFlowStep()
+                    .setStepId(null)
+                    .setFlowId(flowId)
+                    .setNodeId(step.getNodeId())
+                    .setStepName(stepName)
+                    .setStepStatus(StringUtils.isNotBlank(step.getStepStatus()) ? step.getStepStatus() : "pending")
+                    .setRemark(step.getRemark())
+                    .setSortOrder(step.getSortOrder() != null ? step.getSortOrder() : position)
+                    .setUpdatedAt(now);
+            })
+            .forEach(productionFlowStepMapper::insert);
+    }
+
+    private Map<String, List<ProductionFlowStep>> loadFlowSteps(Set<String> flowIds) {
+        if (CollectionUtils.isEmpty(flowIds)) {
+            return Collections.emptyMap();
+        }
+        List<ProductionFlowStep> steps = productionFlowStepMapper.selectList(Wrappers.<ProductionFlowStep>lambdaQuery()
+            .in(ProductionFlowStep::getFlowId, flowIds)
+            .orderByAsc(ProductionFlowStep::getSortOrder)
+            .orderByAsc(ProductionFlowStep::getStepId));
+        return steps.stream().collect(Collectors.groupingBy(ProductionFlowStep::getFlowId));
     }
 
     private void updateOrdersStatus(Collection<String> orderIds, String status, LocalDateTime now) {

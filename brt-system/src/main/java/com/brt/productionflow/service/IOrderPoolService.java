@@ -2,6 +2,7 @@ package com.brt.productionflow.service;
 
 import com.brt.productionflow.vo.OrderPoolQuery;
 import com.brt.productionflow.vo.OrderPoolVo;
+import com.brt.productionflow.vo.ProductionFlowQuery;
 import com.brt.productionflow.vo.ProductionFlowVo;
 
 import java.util.List;
@@ -39,7 +40,7 @@ public interface IOrderPoolService {
     /**
      * 查询生产流列表
      */
-    List<ProductionFlowVo> selectProductionFlowList();
+    List<ProductionFlowVo> selectProductionFlowList(ProductionFlowQuery query);
 
     /**
      * 查询生产流详情

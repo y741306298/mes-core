@@ -5,8 +5,6 @@ import com.brt.common.core.controller.BaseController;
 import com.brt.common.core.domain.AjaxResult;
 import com.brt.common.enums.BusinessType;
 import com.brt.productionflow.service.IOrderPoolService;
-import com.brt.productionflow.vo.OrderPoolQuery;
-import com.brt.productionflow.vo.OrderPoolVo;
 import com.brt.productionflow.vo.ProductionFlowQuery;
 import com.brt.productionflow.vo.ProductionFlowVo;
 import lombok.RequiredArgsConstructor;
@@ -23,64 +21,20 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 订单池管理
+ * 生产池管理
  */
 @RestController
-@RequestMapping("/productionflow/orderPool")
+@RequestMapping("/productionflow/flowPool")
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
-public class OrderPoolController extends BaseController {
+public class FlowPoolController extends BaseController {
 
     private final IOrderPoolService orderPoolService;
 
     /**
-     * 查询订单池列表
-     */
-    @GetMapping("/list")
-    public AjaxResult list(OrderPoolQuery query) {
-        List<OrderPoolVo> data = orderPoolService.selectOrderPoolList(query);
-        return AjaxResult.success(data);
-    }
-
-    /**
-     * 查询订单详情
-     */
-    @GetMapping("/{orderId}")
-    public AjaxResult getInfo(@PathVariable String orderId) {
-        return AjaxResult.success(orderPoolService.selectOrderPoolById(orderId));
-    }
-
-    /**
-     * 新增订单
-     */
-    @Log(title = "订单池", businessType = BusinessType.INSERT)
-    @PostMapping
-    public AjaxResult add(@RequestBody OrderPoolVo orderPoolVo) {
-        return AjaxResult.success(orderPoolService.insertOrderPool(orderPoolVo));
-    }
-
-    /**
-     * 修改订单
-     */
-    @Log(title = "订单池", businessType = BusinessType.UPDATE)
-    @PutMapping
-    public AjaxResult edit(@RequestBody OrderPoolVo orderPoolVo) {
-        return AjaxResult.success(orderPoolService.updateOrderPool(orderPoolVo));
-    }
-
-    /**
-     * 删除订单
-     */
-    @Log(title = "订单池", businessType = BusinessType.DELETE)
-    @DeleteMapping("/{orderIds}")
-    public AjaxResult remove(@PathVariable String[] orderIds) {
-        return toAjax(orderPoolService.deleteOrderPoolByIds(orderIds));
-    }
-
-    /**
      * 查询生产流列表
      */
-    @GetMapping("/flow/list")
-    public AjaxResult flowList(ProductionFlowQuery query) {
+    @GetMapping("/list")
+    public AjaxResult list(ProductionFlowQuery query) {
         List<ProductionFlowVo> data = orderPoolService.selectProductionFlowList(query);
         return AjaxResult.success(data);
     }
@@ -88,8 +42,8 @@ public class OrderPoolController extends BaseController {
     /**
      * 查询生产流详情
      */
-    @GetMapping("/flow/{flowId}")
-    public AjaxResult getFlow(@PathVariable String flowId) {
+    @GetMapping("/{flowId}")
+    public AjaxResult getInfo(@PathVariable String flowId) {
         return AjaxResult.success(orderPoolService.selectProductionFlowById(flowId));
     }
 
@@ -97,8 +51,8 @@ public class OrderPoolController extends BaseController {
      * 新增生产流
      */
     @Log(title = "生产流", businessType = BusinessType.INSERT)
-    @PostMapping("/flow")
-    public AjaxResult addFlow(@RequestBody ProductionFlowVo productionFlowVo) {
+    @PostMapping
+    public AjaxResult add(@RequestBody ProductionFlowVo productionFlowVo) {
         return AjaxResult.success(orderPoolService.insertProductionFlow(productionFlowVo));
     }
 
@@ -106,8 +60,8 @@ public class OrderPoolController extends BaseController {
      * 修改生产流
      */
     @Log(title = "生产流", businessType = BusinessType.UPDATE)
-    @PutMapping("/flow")
-    public AjaxResult editFlow(@RequestBody ProductionFlowVo productionFlowVo) {
+    @PutMapping
+    public AjaxResult edit(@RequestBody ProductionFlowVo productionFlowVo) {
         return AjaxResult.success(orderPoolService.updateProductionFlow(productionFlowVo));
     }
 
@@ -115,8 +69,8 @@ public class OrderPoolController extends BaseController {
      * 删除生产流
      */
     @Log(title = "生产流", businessType = BusinessType.DELETE)
-    @DeleteMapping("/flow/{flowIds}")
-    public AjaxResult removeFlow(@PathVariable String[] flowIds) {
+    @DeleteMapping("/{flowIds}")
+    public AjaxResult remove(@PathVariable String[] flowIds) {
         return toAjax(orderPoolService.deleteProductionFlowByIds(flowIds));
     }
 }
