@@ -35,7 +35,6 @@ public class BrtTaskTemplateServiceImpl extends ServiceImpl<BrtTaskTemplateMappe
     public TableDataInfo<BrtTaskTemplateVo> queryTaskTemplateList(BrtTaskTemplateVo query) {
         LambdaQueryWrapper<BrtTaskTemplate> wrapper = buildQueryWrapper(query);
         Page<BrtTaskTemplate> page = this.page(PageUtils.buildPage(), wrapper);
-        Page<BrtTaskTemplateVo> voPage = page.convert(item -> BeanUtil.copyProperties(item, BrtTaskTemplateVo.class));
         return PageUtils.buildDataInfo(voPage);
     }
 
