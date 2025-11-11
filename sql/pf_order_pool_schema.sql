@@ -61,3 +61,17 @@ CREATE TABLE IF NOT EXISTS `pf_production_flow_order` (
   CONSTRAINT `fk_flow_order_flow` FOREIGN KEY (`flow_id`) REFERENCES `pf_production_flow` (`flow_id`) ON DELETE CASCADE,
   CONSTRAINT `fk_flow_order_order` FOREIGN KEY (`order_id`) REFERENCES `pf_order_pool` (`order_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='生产流与订单关联';
+
+CREATE TABLE IF NOT EXISTS `pf_production_flow_step` (
+  `step_id` bigint NOT NULL AUTO_INCREMENT COMMENT '步骤ID',
+  `flow_id` varchar(64) NOT NULL COMMENT '生产流ID',
+  `node_id` varchar(64) DEFAULT NULL COMMENT '模板节点ID',
+  `step_name` varchar(128) NOT NULL COMMENT '步骤名称',
+  `step_status` varchar(32) NOT NULL DEFAULT 'pending' COMMENT '步骤状态',
+  `remark` varchar(512) DEFAULT NULL COMMENT '备注',
+  `sort_order` int DEFAULT 0 COMMENT '显示顺序',
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`step_id`),
+  KEY `idx_flow_step_flow` (`flow_id`),
+  CONSTRAINT `fk_flow_step_flow` FOREIGN KEY (`flow_id`) REFERENCES `pf_production_flow` (`flow_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='生产流执行步骤';
