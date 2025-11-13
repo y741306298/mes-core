@@ -162,7 +162,7 @@
                 <template slot-scope="scope">
                   <el-input v-model="scope.row.paramName" placeholder="请输入参数名称" size="mini" />
                 </template>
-              </el-table列>
+              </el-table-column>
               <el-table-column label="参数编码" align="center" min-width="150">
                 <template slot-scope="scope">
                   <el-input v-model="scope.row.paramKey" placeholder="请输入参数编码" size="mini" />
