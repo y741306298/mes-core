@@ -11,7 +11,6 @@ CREATE TABLE `brt_task_template` (
   `result_statuses` longtext COMMENT '结果状态配置(JSON)',
   `query_sql` longtext COMMENT '查询SQL',
   `storage_sql` longtext COMMENT '存储SQL',
-  `create_table_sql` longtext COMMENT '建表语句',
   `status` char(1) NOT NULL DEFAULT '0' COMMENT '状态(0=正常,1=停用)',
   `remark` varchar(512) DEFAULT NULL COMMENT '备注',
   `create_by` varchar(64) DEFAULT NULL COMMENT '创建者',

@@ -65,11 +65,6 @@ public class BrtTaskTemplate extends BaseEntity {
     private String storageSql;
 
     /**
-     * 建表语句
-     */
-    private String createTableSql;
-
-    /**
      * 状态(0=正常,1=停用)
      */
     private String status;

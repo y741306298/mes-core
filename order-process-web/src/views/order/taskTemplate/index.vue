@@ -105,20 +105,6 @@
           />
         </el-form-item>
 
-        <el-form-item label="建表语句" prop="createTableSql">
-          <div class="create-table-toolbar">
-            <el-button type="primary" size="mini" plain @click="handleGenerateCreateTableSql">自动生成建表语句</el-button>
-            <span class="toolbar-tip">将根据模板名称和结果状态自动生成建表语句，可在此基础上调整。</span>
-          </div>
-          <el-input
-            v-model="form.createTableSql"
-            type="textarea"
-            :rows="6"
-            placeholder="请输入或生成用于初始化结果表的建表语句"
-            @input="handleCreateTableSqlInput"
-          />
-        </el-form-item>
-
         <template v-if="isApiTemplate">
            <el-form-item label="请求接口URL" prop="requestUrl">
              <el-input v-model="form.requestUrl" placeholder="请输入接口URL" />
@@ -364,13 +350,11 @@ const PRIORITY_LABELS = {
         templateType: [{ required: true, message: '请选择模板类型', trigger: 'change' }],
         triggerMode: [{ required: true, message: '请选择触发模式', trigger: 'change' }],
         querySql: [{ required: true, message: '查询SQL不能为空', trigger: 'blur' }],
-        storageSql: [{ required: true, message: '存储SQL不能为空', trigger: 'blur' }],
-        createTableSql: [{ required: true, message: '请生成建表语句', trigger: 'blur' }]
+        storageSql: [{ required: true, message: '存储SQL不能为空', trigger: 'blur' }]
       },
       functionCardOptions: [],
       flowStatusLabels: FLOW_STATUS_LABELS,
-      priorityLabels: PRIORITY_LABELS,
-      autoCreateTableSql: true
+      priorityLabels: PRIORITY_LABELS
     }
   },
    computed: {
@@ -388,22 +372,6 @@ const PRIORITY_LABELS = {
       } else {
         this.form.functionCards = []
       }
-      if (this.autoCreateTableSql) {
-        this.generateCreateTableSql(true)
-      }
-    },
-    'form.templateName'(value) {
-      if (this.autoCreateTableSql) {
-        this.generateCreateTableSql(true)
-      }
-    },
-    'form.resultStatuses': {
-      handler() {
-        if (this.autoCreateTableSql) {
-          this.generateCreateTableSql(true)
-        }
-      },
-      deep: true
     }
   },
    created() {
@@ -482,11 +450,8 @@ const PRIORITY_LABELS = {
         functionCards: [],
         resultStatuses: defaultResultStatuses(),
         querySql: '',
-        storageSql: '',
-        createTableSql: ''
+        storageSql: ''
       }
-      this.autoCreateTableSql = true
-      this.generateCreateTableSql(true)
       if (this.$refs.form) {
         this.resetForm('form')
       }
@@ -516,7 +481,6 @@ const PRIORITY_LABELS = {
       this.form.triggerMode = data.triggerMode || 'AUTO'
       this.form.querySql = data.querySql || ''
       this.form.storageSql = data.storageSql || ''
-      this.autoCreateTableSql = !data.createTableSql
       if (this.form.templateType === 'API') {
         this.form.requestUrl = config.requestUrl || ''
         this.form.requestParams = Array.isArray(config.requestParams) ? config.requestParams : []
@@ -549,11 +513,6 @@ const PRIORITY_LABELS = {
           statusValue: item.statusValue || item.value || item.code
         }))
         : defaultResultStatuses()
-      if (data.createTableSql) {
-        this.form.createTableSql = data.createTableSql
-      } else {
-        this.generateCreateTableSql(true)
-      }
     },
      parseJsonField(value, allowArray = false) {
        if (value == null) return allowArray ? [] : {}
@@ -580,9 +539,6 @@ const PRIORITY_LABELS = {
         if (this.isApiTemplate && !this.form.requestUrl) {
           this.$modal.msgError('请填写请求接口URL')
           return
-        }
-        if (!this.form.createTableSql) {
-          this.generateCreateTableSql(true)
         }
         const config = this.isApiTemplate
           ? {
@@ -617,8 +573,7 @@ const PRIORITY_LABELS = {
           config: JSON.stringify(config),
           resultStatuses: JSON.stringify(resultStatusesPayload),
           querySql: (this.form.querySql || '').trim(),
-          storageSql: (this.form.storageSql || '').trim(),
-          createTableSql: this.form.createTableSql
+          storageSql: (this.form.storageSql || '').trim()
         }
         const request = payload.templateId ? updateTaskTemplate : addTaskTemplate
         request(payload).then(() => {
@@ -661,12 +616,6 @@ const PRIORITY_LABELS = {
       }
       this.form.resultStatuses.splice(index, 1)
     },
-    handleGenerateCreateTableSql() {
-      this.generateCreateTableSql()
-    },
-    handleCreateTableSqlInput() {
-      this.autoCreateTableSql = false
-    },
     toggleFunctionCard(card) {
       if (!card || !card.cardId) {
         return
@@ -692,63 +641,6 @@ const PRIORITY_LABELS = {
      },
     isCardSelected(cardId) {
       return this.form.functionCards.some(item => item.cardId === cardId)
-    },
-    generateCreateTableSql(silent = false) {
-      this.form.createTableSql = this.buildCreateTableSql(
-        this.form.templateName,
-        this.form.resultStatuses
-      )
-      this.autoCreateTableSql = true
-      if (!silent) {
-        this.$message.success('已生成建表语句')
-      }
-    },
-    buildCreateTableSql(name, statuses = []) {
-      const fallback = 'task_template'
-      const cleaned = (name || fallback).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || fallback
-      const tableSuffix = cleaned.length > 32 ? cleaned.slice(0, 32) : cleaned
-      const tableName = `task_tpl_${tableSuffix}`
-      const safeCommentName = (name || '').replace(/'/g, "''")
-      const commentSuffix = safeCommentName ? `-${safeCommentName}` : ''
-      const normalizeStatusItem = (item = {}) => {
-        if (!item) return null
-        if (typeof item === 'string' || typeof item === 'number') {
-          const raw = String(item).trim()
-          return raw.length ? raw : null
-        }
-        const value = (item.statusValue || item.value || item.code || '').toString().trim()
-        const label = (item.statusLabel || item.label || item.name || '').toString().trim()
-        if (!value && !label) {
-          return null
-        }
-        if (value && label) {
-          return `${value}(${label})`
-        }
-        return value || label
-      }
-      const escapeComment = text => String(text || '').replace(/'/g, "''")
-      const statusOptions = Array.isArray(statuses)
-        ? statuses
-          .map(normalizeStatusItem)
-          .filter(item => item && item.length)
-        : []
-      const statusCommentBase = statusOptions.length
-        ? `结果状态编码(可选: ${statusOptions.join('、')})`
-        : '结果状态编码'
-      const statusComment = escapeComment(statusCommentBase)
-      const columns = [
-        "  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键',",
-        "  `template_id` varchar(64) NOT NULL COMMENT '任务模板ID',",
-        `  \`status_code\` varchar(64) NOT NULL COMMENT '${statusComment}',`,
-        "  `status_label` varchar(128) DEFAULT NULL COMMENT '结果状态名称',",
-        "  `result_payload` json DEFAULT NULL COMMENT '执行结果内容',",
-        "  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',",
-        "  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',",
-        "  PRIMARY KEY (`id`),",
-        "  KEY `idx_template_status` (`template_id`,`status_code`)"
-      ]
-      const comment = `任务模板${commentSuffix}执行结果表`
-      return `CREATE TABLE IF NOT EXISTS \`${tableName}\` (\n${columns.join('\n')}\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='${comment}';`
     },
     renderFlowStatus(value) {
       return this.flowStatusLabels[value] || value || '-'
@@ -828,18 +720,6 @@ const PRIORITY_LABELS = {
   .status-tip {
     font-size: 12px;
     color: #909399;
-  }
-
-  .create-table-toolbar {
-    display: flex;
-    align-items: center;
-    margin-bottom: 8px;
-
-    .toolbar-tip {
-      margin-left: 12px;
-      font-size: 12px;
-      color: #909399;
-    }
   }
 
   .function-card-gallery {

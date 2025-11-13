@@ -7,6 +7,11 @@
           v-hasPermi="['order:flowTemplate:add']">新增进度模板</el-button>
       </el-col>
       <el-col :span="1.5">
+        <el-button type="success" plain icon="el-icon-collection" size="mini" @click="openTaskSelector">
+          选择任务模板
+        </el-button>
+      </el-col>
+      <el-col :span="1.5">
         <el-dropdown split-button type="primary" @command="handleDropdownClick" size="mini">
           批量操作
           <el-dropdown-menu slot="dropdown">
@@ -22,6 +27,31 @@
         </el-input>
       </el-col>
     </el-row>
+
+    <div class="selected-task-wrapper" v-if="selectedTaskTemplates.length">
+      <div class="selected-task-header">
+        <span>已选择的任务模板</span>
+        <el-button type="text" size="mini" @click="clearAllSelectedTasks">清空</el-button>
+      </div>
+      <div class="selected-task-grid">
+        <el-card v-for="item in selectedTaskTemplates" :key="item.templateId" class="selected-task-card" shadow="hover">
+          <div class="card-title-row">
+            <span class="card-title" :title="item.templateName">{{ item.templateName }}</span>
+            <el-tag size="mini" type="info">{{ renderTaskTemplateType(item.templateType) }}</el-tag>
+          </div>
+          <div class="card-body">
+            <div class="card-desc">{{ item.remark || '暂无描述' }}</div>
+            <div class="card-meta">触发方式：{{ renderTriggerMode(item.triggerMode) }}</div>
+            <div class="card-status" v-if="item.statusLabels && item.statusLabels.length">
+              状态：{{ item.statusLabels.join(' / ') }}
+            </div>
+          </div>
+          <div class="card-actions">
+            <el-button type="text" size="mini" @click="removeSelectedTask(item.templateId)">移除</el-button>
+          </div>
+        </el-card>
+      </div>
+    </div>
 
     <div @click="handleTemplateClick(item)" v-for="(item,index) in flowTemplateList"
       :class="selectTemplateId == item.templateId?'marquee-border':''">
@@ -102,6 +132,52 @@
     <pagination v-show="total>0" :total="total" :page.sync="queryParams.pageNum" :limit.sync="queryParams.pageSize"
       @pagination="getList" />
 
+    <el-dialog title="选择任务模板" :visible.sync="taskSelectorVisible" width="960px" append-to-body>
+      <div class="task-selector-dialog" v-loading="taskSelectorLoading">
+        <div class="task-selector-toolbar">
+          <el-input
+            v-model="taskSelectorKeyword"
+            size="small"
+            clearable
+            placeholder="输入模板名称或备注搜索">
+            <i slot="prefix" class="el-icon-search"></i>
+          </el-input>
+        </div>
+        <div class="task-selector-grid" v-if="filteredTaskTemplates.length">
+          <el-card
+            v-for="item in filteredTaskTemplates"
+            :key="item.templateId"
+            shadow="hover"
+            class="task-selector-card"
+            :class="{ 'is-selected': isTaskSelected(item.templateId) }"
+            @click="toggleTaskSelection(item)"
+          >
+            <div class="card-title-row">
+              <span class="card-title" :title="item.templateName">{{ item.templateName }}</span>
+              <el-tag size="mini" :type="item.templateType === 'FUNCTION' ? 'success' : 'info'">
+                {{ renderTaskTemplateType(item.templateType) }}
+              </el-tag>
+            </div>
+            <div class="card-body">
+              <div class="card-desc">{{ item.remark || '暂无描述' }}</div>
+              <div class="card-meta">触发方式：{{ renderTriggerMode(item.triggerMode) }}</div>
+              <div class="card-status" v-if="item.statusLabels && item.statusLabels.length">
+                状态：{{ item.statusLabels.join(' / ') }}
+              </div>
+            </div>
+            <div class="card-actions">
+              <el-checkbox :value="isTaskSelected(item.templateId)">已选择</el-checkbox>
+            </div>
+          </el-card>
+        </div>
+        <el-empty v-else description="暂无可用任务模板" />
+      </div>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="taskSelectorVisible = false">取 消</el-button>
+        <el-button type="primary" @click="confirmTaskSelection">确 定</el-button>
+      </div>
+    </el-dialog>
+
     <!-- 节点设置 -->
     <flow-setting ref="flowSettingRef"></flow-setting>
 
@@ -127,7 +203,19 @@
     delFlowNode
   } from "@/api/order/flowNode";
 
+  import { listTaskTemplateAll } from "@/api/order/taskTemplate";
+
   import flowSetting from "@/views/order/flowNode/setting"
+
+  const TASK_TEMPLATE_TYPE_LABELS = {
+    API: 'API调用任务模板',
+    FUNCTION: '功能组合模板'
+  }
+
+  const TRIGGER_MODE_LABELS = {
+    AUTO: '自动触发',
+    MANUAL: '人工触发'
+  }
 
   export default {
     name: "FlowTemplate",
@@ -166,7 +254,14 @@
         // 表单校验
         rules: {},
         // 选中的模板ID
-        selectTemplateId: null
+        selectTemplateId: null,
+        // 任务模板选择器
+        selectedTaskTemplates: [],
+        taskTemplateOptions: [],
+        taskSelectorVisible: false,
+        taskSelectorLoading: false,
+        taskSelectorKeyword: '',
+        taskSelectorSelectedIds: []
       };
     },
     watch: {
@@ -174,11 +269,113 @@
         this.getList();
       }
     },
+    computed: {
+      filteredTaskTemplates() {
+        const keyword = (this.taskSelectorKeyword || '').trim().toLowerCase();
+        if (!keyword) {
+          return this.taskTemplateOptions;
+        }
+        return this.taskTemplateOptions.filter(item => {
+          const name = (item.templateName || '').toLowerCase();
+          const remark = (item.remark || '').toLowerCase();
+          return name.includes(keyword) || remark.includes(keyword);
+        });
+      }
+    },
     created() {
       this.getList();
       this.getUserList();
     },
     methods: {
+      openTaskSelector() {
+        this.taskSelectorVisible = true;
+        this.taskSelectorKeyword = '';
+        if (!this.taskTemplateOptions.length) {
+          this.fetchTaskTemplates();
+        } else {
+          this.syncTaskSelectorSelection();
+        }
+      },
+      fetchTaskTemplates() {
+        this.taskSelectorLoading = true;
+        listTaskTemplateAll({ templateType: 'FUNCTION' }).then(res => {
+          const list = res.data || res.rows || [];
+          this.taskTemplateOptions = list.map(item => this.normalizeTaskTemplate(item));
+          this.syncTaskSelectorSelection();
+          this.taskSelectorLoading = false;
+        }).catch(() => {
+          this.taskSelectorLoading = false;
+        });
+      },
+      normalizeTaskTemplate(item = {}) {
+        const clone = { ...item };
+        clone.statusLabels = this.safeParseStatuses(clone.resultStatuses);
+        return clone;
+      },
+      safeParseStatuses(value) {
+        if (!value) {
+          return [];
+        }
+        let parsed = value;
+        if (typeof value === 'string') {
+          try {
+            parsed = JSON.parse(value);
+          } catch (e) {
+            return [];
+          }
+        }
+        if (!Array.isArray(parsed)) {
+          return [];
+        }
+        return parsed.map(item => {
+          if (!item) {
+            return '';
+          }
+          if (typeof item === 'string') {
+            return item;
+          }
+          return item.statusLabel || item.label || item.name || item.statusValue || item.value || '';
+        }).filter(text => !!text);
+      },
+      toggleTaskSelection(item) {
+        const templateId = item.templateId;
+        if (!templateId) {
+          return;
+        }
+        const index = this.taskSelectorSelectedIds.indexOf(templateId);
+        if (index > -1) {
+          this.taskSelectorSelectedIds.splice(index, 1);
+        } else {
+          this.taskSelectorSelectedIds.push(templateId);
+        }
+      },
+      isTaskSelected(templateId) {
+        return this.taskSelectorSelectedIds.includes(templateId);
+      },
+      confirmTaskSelection() {
+        this.selectedTaskTemplates = this.taskTemplateOptions.filter(item =>
+          this.taskSelectorSelectedIds.includes(item.templateId)
+        );
+        this.taskSelectorVisible = false;
+      },
+      removeSelectedTask(templateId) {
+        this.selectedTaskTemplates = this.selectedTaskTemplates.filter(item => item.templateId !== templateId);
+        this.taskSelectorSelectedIds = this.taskSelectorSelectedIds.filter(id => id !== templateId);
+      },
+      clearAllSelectedTasks() {
+        this.selectedTaskTemplates = [];
+        this.taskSelectorSelectedIds = [];
+      },
+      syncTaskSelectorSelection() {
+        const ids = this.selectedTaskTemplates.map(item => item.templateId);
+        this.taskSelectorSelectedIds = [...new Set(ids)];
+      },
+      renderTaskTemplateType(value) {
+        return TASK_TEMPLATE_TYPE_LABELS[value] || value || '-';
+      },
+      renderTriggerMode(value) {
+        return TRIGGER_MODE_LABELS[value] || value || '-';
+      },
       /**
        * 复制模板
        */
@@ -315,6 +512,94 @@
   };
 </script>
 <style>
+  .selected-task-wrapper {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f9fafc;
+    border: 1px solid #ebeef5;
+    border-radius: 6px;
+  }
+
+  .selected-task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+
+  .selected-task-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+  }
+
+  .selected-task-card {
+    min-height: 140px;
+  }
+
+  .card-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .card-title {
+    font-weight: 600;
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 8px;
+  }
+
+  .card-body {
+    font-size: 12px;
+    color: #606266;
+    line-height: 1.6;
+  }
+
+  .card-desc {
+    margin-bottom: 6px;
+  }
+
+  .card-meta,
+  .card-status {
+    color: #909399;
+    font-size: 12px;
+  }
+
+  .card-actions {
+    text-align: right;
+    margin-top: 10px;
+  }
+
+  .task-selector-dialog {
+    min-height: 240px;
+  }
+
+  .task-selector-toolbar {
+    margin-bottom: 15px;
+  }
+
+  .task-selector-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+  }
+
+  .task-selector-card {
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .task-selector-card.is-selected {
+    border-color: #409eff;
+    box-shadow: 0 0 6px rgba(64, 158, 255, 0.4);
+  }
+
   .template-name {
     font-weight: 700;
   }
