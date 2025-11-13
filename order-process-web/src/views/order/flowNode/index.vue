@@ -18,10 +18,31 @@
       </el-table-column>
       <el-table-column label="任务名称" align="center">
         <template slot-scope="scope">
-          <el-select v-model="scope.row.nodeType" :disabled="scope.row.nodeType == '0'" class="drag-screenful-contnet"
-            placeholder="请选择">
-            <el-option v-for="dict in dict.type.node_type" :key="dict.value" :label="dict.label" :value="dict.value"
-              :disabled="dict.value == '0'"></el-option>
+          <el-select
+            v-model="scope.row.nodeType"
+            :disabled="scope.row.nodeType == '0'"
+            class="drag-screenful-contnet"
+            placeholder="请选择"
+            filterable
+            :loading="taskTemplateLoading"
+          >
+            <el-option-group label="系统任务" v-if="dict.type.node_type && dict.type.node_type.length">
+              <el-option
+                v-for="dict in dict.type.node_type"
+                :key="dict.value"
+                :label="dict.label"
+                :value="dict.value"
+                :disabled="dict.value == '0'"
+              ></el-option>
+            </el-option-group>
+            <el-option-group label="任务模板" v-if="taskTemplateOptions.length">
+              <el-option
+                v-for="item in taskTemplateOptions"
+                :key="item.templateId"
+                :label="renderTaskTemplateLabel(item)"
+                :value="item.templateId"
+              ></el-option>
+            </el-option-group>
           </el-select>
         </template>
       </el-table-column>
@@ -45,6 +66,13 @@
     updateFlowNode
   } from "@/api/order/flowNode";
 
+  import { listTaskTemplateAll } from "@/api/order/taskTemplate"
+
+  const TASK_TEMPLATE_TYPE_LABELS = {
+    API: 'API调用任务模板',
+    FUNCTION: '功能组合模板'
+  }
+
   export default {
     name: "FlowNode",
     dicts: ['node_type', 'yes_no'],
@@ -55,6 +83,9 @@
         loading: true,
         // 模板节点表格数据
         flowNodeList: [],
+        // 任务模板
+        taskTemplateOptions: [],
+        taskTemplateLoading: false,
         // 查询参数
         queryParams: {
           templateId: null,
@@ -71,6 +102,7 @@
     },
     created() {
       this.getList();
+      this.fetchTaskTemplates();
     },
     methods: {
       /**
@@ -88,6 +120,16 @@
           this.flowNodeList.unshift(item)
         }
 
+      },
+      fetchTaskTemplates() {
+        this.taskTemplateLoading = true
+        listTaskTemplateAll().then(res => {
+          const list = res.data || res.rows || []
+          this.taskTemplateOptions = list
+          this.taskTemplateLoading = false
+        }).catch(() => {
+          this.taskTemplateLoading = false
+        })
       },
       /**
        * 删除审批节点
@@ -188,6 +230,11 @@
           this.flowNodeList.splice(index, 1)
         }
 
+      },
+      renderTaskTemplateLabel(item = {}) {
+        const name = item.templateName || '未命名模板'
+        const typeLabel = TASK_TEMPLATE_TYPE_LABELS[item.templateType] || item.templateType || '模板'
+        return `${name}（${typeLabel}）`
       },
     }
   };
