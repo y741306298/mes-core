@@ -22,6 +22,14 @@
             placeholder="请选择">
             <el-option v-for="dict in dict.type.node_type" :key="dict.value" :label="dict.label" :value="dict.value"
               :disabled="dict.value == '0'"></el-option>
+            <el-option-group v-if="taskTemplateOptions.length" label="任务模板">
+              <el-option
+                v-for="item in taskTemplateOptions"
+                :key="`task-template-${item.templateId}`"
+                :label="renderTaskTemplateLabel(item)"
+                :value="item.templateId"
+              ></el-option>
+            </el-option-group>
           </el-select>
         </template>
       </el-table-column>
@@ -45,6 +53,8 @@
     updateFlowNode
   } from "@/api/order/flowNode";
 
+  import { listTaskTemplateAll } from "@/api/order/taskTemplate";
+
   export default {
     name: "FlowNode",
     dicts: ['node_type', 'yes_no'],
@@ -55,6 +65,8 @@
         loading: true,
         // 模板节点表格数据
         flowNodeList: [],
+        // 任务模板
+        taskTemplateOptions: [],
         // 查询参数
         queryParams: {
           templateId: null,
@@ -71,6 +83,7 @@
     },
     created() {
       this.getList();
+      this.getTaskTemplateOptions();
     },
     methods: {
       /**
@@ -120,6 +133,21 @@
           }
           this.loading = false;
         });
+      },
+      /** 查询任务模板 */
+      getTaskTemplateOptions() {
+        listTaskTemplateAll().then(response => {
+          const list = response.data || response.rows || []
+          this.taskTemplateOptions = list.map(item => this.normalizeTaskTemplate(item))
+        })
+      },
+      normalizeTaskTemplate(item = {}) {
+        return {
+          templateId: item.templateId || item.id,
+          templateName: item.templateName || '',
+          templateType: item.templateType || '',
+          triggerMode: item.triggerMode || ''
+        }
       },
       // 取消按钮
       cancel() {
@@ -189,6 +217,26 @@
         }
 
       },
+      renderTaskTemplateLabel(item) {
+        if (!item) {
+          return ''
+        }
+        const typeMap = {
+          API: 'API调用',
+          FUNCTION: '功能组合'
+        }
+        const triggerMap = {
+          AUTO: '自动触发',
+          MANUAL: '人工触发'
+        }
+        const typeLabel = typeMap[item.templateType] || item.templateType || ''
+        const triggerLabel = triggerMap[item.triggerMode] || item.triggerMode || ''
+        const meta = [typeLabel, triggerLabel].filter(Boolean)
+        if (!meta.length) {
+          return item.templateName || ''
+        }
+        return `${item.templateName || ''}（${meta.join('/')}）`
+      }
     }
   };
 </script>
