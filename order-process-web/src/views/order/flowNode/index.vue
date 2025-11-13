@@ -163,6 +163,21 @@
           this.loading = false;
         });
       },
+      /** 查询任务模板 */
+      getTaskTemplateOptions() {
+        listTaskTemplateAll().then(response => {
+          const list = response.data || response.rows || []
+          this.taskTemplateOptions = list.map(item => this.normalizeTaskTemplate(item))
+        })
+      },
+      normalizeTaskTemplate(item = {}) {
+        return {
+          templateId: item.templateId || item.id,
+          templateName: item.templateName || '',
+          templateType: item.templateType || '',
+          triggerMode: item.triggerMode || ''
+        }
+      },
       // 取消按钮
       cancel() {
         this.open = false;
