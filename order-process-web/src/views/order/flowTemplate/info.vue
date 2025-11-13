@@ -31,11 +31,6 @@
         </el-col>
       </el-row>
     </el-form>
-    <div class="formHeader flow-progress-header">
-      <div class="formTitle">流程进度</div>
-    </div>
-    <el-divider></el-divider>
-
     <flow-node ref="flowNodeRef" :templateId="this.form.templateId"></flow-node>
 
 
@@ -111,7 +106,7 @@
             desc: "在流程进度条上通过记录金额体现其进度，适用于收款、入账、开票等对金额分配处理的环节。",
             img: require("../../../assets/images/amountTask.png")
           }
-        ]
+        ],
       };
     },
     created() {
@@ -125,7 +120,7 @@
         immediate: true
       }
     },
-    
+
     methods: {
 
       onLoad(){
@@ -274,12 +269,6 @@
   };
 </script>
 <style lang="scss">
-  .flow-progress-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
   .post-list {
     display: flex;
 
