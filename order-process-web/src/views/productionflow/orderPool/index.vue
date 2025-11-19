@@ -1368,12 +1368,35 @@ export default {
       }
       return config.default
     },
+    isSameFlowNode(nodeA, nodeB) {
+      if (!nodeA || !nodeB) {
+        return false
+      }
+      const extractKey = node =>
+        node.nodeId ||
+        node.id ||
+        (node.taskTemplate && node.taskTemplate.taskTemplateId) ||
+        node.taskTemplateId ||
+        node.nodeName ||
+        node.name ||
+        ''
+      const keyA = extractKey(nodeA)
+      const keyB = extractKey(nodeB)
+      if (keyA && keyB) {
+        return keyA === keyB
+      }
+      return nodeA === nodeB
+    },
     shouldShowManualButton(node, orderId) {
       if (!node || !orderId) {
         return false
       }
       const state = this.orderAutomationState[orderId]
-      return Boolean(state && state.status === 'failed' && state.failedNode === node)
+      return Boolean(
+        state &&
+        state.status === 'failed' &&
+        this.isSameFlowNode(state.failedNode, node)
+      )
     },
     openManualTaskDialogForOrder(orderId) {
       if (!orderId) {
