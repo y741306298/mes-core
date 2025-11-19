@@ -9,6 +9,14 @@ export function listOrderPool(query) {
   })
 }
 
+// 查询订单详情
+export function getOrderPool(orderId) {
+  return request({
+    url: `/productionflow/orderPool/${orderId}`,
+    method: 'get'
+  })
+}
+
 // 新增订单
 export function addOrderPool(data) {
   return request({
