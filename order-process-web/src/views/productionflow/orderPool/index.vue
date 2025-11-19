@@ -519,7 +519,13 @@
       </div>
       <span slot="footer" class="dialog-footer">
         <el-button @click="manualTaskDialog.visible = false">取 消</el-button>
-        <el-button type="primary" @click="confirmManualTaskHandling">已人工处理</el-button>
+        <el-button
+          type="primary"
+          :loading="manualTaskDialog.submitting"
+          @click="confirmManualTaskHandling"
+        >
+          已人工处理
+        </el-button>
       </span>
     </el-dialog>
   </div>
@@ -538,6 +544,7 @@ import {
 } from '@/api/productionflow/orderPool'
 import { listFlowTemplateAll, getFlowTemplate } from '@/api/order/flowTemplate'
 import { listTaskTemplateAll } from '@/api/order/taskTemplate'
+import { submitRemark } from '@/api/order/orderNode'
 import request from '@/utils/request'
 
  const PRIORITY_WEIGHT = {
@@ -639,7 +646,8 @@ export default {
         errorMessage: '',
         responsePreview: '',
         remark: '',
-        orderId: ''
+        orderId: '',
+        submitting: false
       },
       orderAutomationState: {},
        flowStatusOptions: [
@@ -1234,12 +1242,17 @@ export default {
       this.manualTaskDialog.responsePreview = ''
       this.manualTaskDialog.remark = ''
       this.manualTaskDialog.orderId = ''
+      this.manualTaskDialog.submitting = false
     },
     async confirmManualTaskHandling() {
+      if (this.manualTaskDialog.submitting) {
+        return
+      }
       if (!this.manualTaskDialog.node) {
         this.resetManualTaskDialog()
         return
       }
+      this.manualTaskDialog.submitting = true
       const templateId = this.manualTaskDialog.templateId
       const template = this.manualTaskDialog.template
       const orderForm = this.manualTaskDialog.orderForm
@@ -1248,6 +1261,18 @@ export default {
         : []
       const orderId = this.manualTaskDialog.orderId
       const remark = (this.manualTaskDialog.remark || '').trim() || '人工处理完成'
+      const orderNodeId = this.manualTaskDialog.node.orderNodeId || ''
+      if (orderId && orderNodeId) {
+        try {
+          await submitRemark({ orderId, orderNodeId, remark })
+          this.$message.success('人工处理已提交')
+        } catch (error) {
+          console.error('人工处理提交失败', error)
+          this.$message.error('人工处理提交失败，请稍后重试')
+          this.manualTaskDialog.submitting = false
+          return
+        }
+      }
       this.updateNodeExecutionState(this.manualTaskDialog.node, {
         success: true,
         manual: true,
