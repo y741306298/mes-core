@@ -461,7 +461,9 @@ import {
   addProductionFlow,
   updateProductionFlow
 } from '@/api/productionflow/orderPool'
-import { listFlowTemplateAll } from '@/api/order/flowTemplate'
+import { listFlowTemplateAll, getFlowTemplate } from '@/api/order/flowTemplate'
+import { listTaskTemplateAll } from '@/api/order/taskTemplate'
+import request from '@/utils/request'
 
  const PRIORITY_WEIGHT = {
    low: 1,
@@ -486,16 +488,25 @@ import { listFlowTemplateAll } from '@/api/order/flowTemplate'
 
  const nowDateTimeHelper = () => formatDateHelper(new Date())
 
- const nowDateStampHelper = () => {
-   const date = new Date()
-   const y = date.getFullYear()
-   const m = pad(date.getMonth() + 1)
-   const d = pad(date.getDate())
-   const h = pad(date.getHours())
-   const min = pad(date.getMinutes())
-   const s = pad(date.getSeconds())
-   return `${y}${m}${d}-${h}${min}${s}`
- }
+const nowDateStampHelper = () => {
+  const date = new Date()
+  const y = date.getFullYear()
+  const m = pad(date.getMonth() + 1)
+  const d = pad(date.getDate())
+  const h = pad(date.getHours())
+  const min = pad(date.getMinutes())
+  const s = pad(date.getSeconds())
+  return `${y}${m}${d}-${h}${min}${s}`
+}
+
+const SYSTEM_NODE_TYPES = new Set(['0', '1', '2', '3', '4', '5', '6', '7'])
+
+const deepClone = data => {
+  if (data === null || data === undefined) {
+    return data
+  }
+  return JSON.parse(JSON.stringify(data))
+}
 
 export default {
   name: 'ProductionFlowOrderPool',
@@ -517,6 +528,8 @@ export default {
       orderList: [],
       flowList: [],
       flowTemplateOptions: [],
+      flowTemplateDetailMap: {},
+      taskTemplateMap: {},
       selectedOrders: [],
       orderDialog: {
         visible: false,
@@ -630,16 +643,46 @@ export default {
    },
   methods: {
     async initializeData() {
-      await Promise.all([this.fetchFlowTemplates(), this.fetchOrders(), this.fetchFlows()])
+      await Promise.all([
+        this.fetchFlowTemplates(),
+        this.fetchOrders(),
+        this.fetchFlows(),
+        this.fetchTaskTemplates()
+      ])
     },
     async fetchFlowTemplates() {
       try {
         const response = await listFlowTemplateAll({})
         const list = Array.isArray(response.data) ? response.data : []
-        this.flowTemplateOptions = list
+        this.flowTemplateOptions = list.map(item => deepClone(item))
+        this.flowTemplateOptions.forEach(item => {
+          if (item && item.templateId && Array.isArray(item.flowNodeList) && item.flowNodeList.length) {
+            this.cacheTemplateDetail(item)
+          }
+        })
       } catch (error) {
         this.flowTemplateOptions = []
         this.$message.error('获取流程模板失败')
+      }
+    },
+    async fetchTaskTemplates() {
+      try {
+        const response = await listTaskTemplateAll({})
+        const list = Array.isArray(response.data) ? response.data : (Array.isArray(response.rows) ? response.rows : [])
+        const map = {}
+        list.forEach(item => {
+          if (item && item.templateId) {
+            map[item.templateId] = {
+              ...item,
+              parsedConfig: this.parseTaskTemplateConfig(item.config || item.parsedConfig)
+            }
+          }
+        })
+        this.taskTemplateMap = map
+      } catch (error) {
+        this.taskTemplateMap = {}
+        console.error(error)
+        this.$message.error('加载任务模板失败')
       }
     },
     async fetchOrders() {
@@ -726,6 +769,198 @@ export default {
         updatedAt: this.formatDateValue(flow.updatedAt) || ''
       }
     },
+    parseTaskTemplateConfig(rawConfig) {
+      if (!rawConfig) {
+        return { requestUrl: '', requestParams: [], responseParams: [] }
+      }
+      if (typeof rawConfig === 'string') {
+        try {
+          return this.parseTaskTemplateConfig(JSON.parse(rawConfig))
+        } catch (error) {
+          return { requestUrl: '', requestParams: [], responseParams: [] }
+        }
+      }
+      return {
+        requestUrl: rawConfig.requestUrl || '',
+        requestParams: Array.isArray(rawConfig.requestParams) ? rawConfig.requestParams : [],
+        responseParams: Array.isArray(rawConfig.responseParams) ? rawConfig.responseParams : [],
+        requestMethod: (rawConfig.requestMethod || rawConfig.method || 'POST').toUpperCase()
+      }
+    },
+    cacheTemplateDetail(template) {
+      if (!template || !template.templateId) {
+        return
+      }
+      this.$set(this.flowTemplateDetailMap, template.templateId, deepClone(template))
+    },
+    async ensureFlowTemplateDetails(templateId) {
+      if (!templateId) {
+        return null
+      }
+      const cached = this.flowTemplateDetailMap[templateId]
+      if (cached && Array.isArray(cached.flowNodeList) && cached.flowNodeList.length) {
+        return deepClone(cached)
+      }
+      const fromOptions = this.flowTemplateOptions.find(item => item.templateId === templateId)
+      if (fromOptions && Array.isArray(fromOptions.flowNodeList) && fromOptions.flowNodeList.length) {
+        this.cacheTemplateDetail(fromOptions)
+        return deepClone(fromOptions)
+      }
+      try {
+        const { data } = await getFlowTemplate(templateId)
+        if (data) {
+          this.cacheTemplateDetail(data)
+          return deepClone(data)
+        }
+      } catch (error) {
+        console.error(error)
+        this.$message.error('获取流程模板详情失败')
+      }
+      return null
+    },
+    applyTemplateDetailUpdate(templateId, templateData) {
+      if (!templateId || !templateData) {
+        return
+      }
+      const cloned = deepClone(templateData)
+      this.$set(this.flowTemplateDetailMap, templateId, cloned)
+      const optionIndex = this.flowTemplateOptions.findIndex(item => item.templateId === templateId)
+      if (optionIndex !== -1) {
+        const updatedOption = Object.assign({}, this.flowTemplateOptions[optionIndex], {
+          flowNodeList: deepClone(templateData.flowNodeList || [])
+        })
+        this.$set(this.flowTemplateOptions, optionIndex, updatedOption)
+      }
+      if (this.orderDialog.form && this.orderDialog.form.templateId === templateId) {
+        this.$set(this.orderDialog.form, 'flowTemplate', deepClone(templateData))
+      }
+    },
+    isTaskTemplateNode(node) {
+      if (!node || node.nodeType == null) {
+        return false
+      }
+      const nodeType = `${node.nodeType}`
+      if (SYSTEM_NODE_TYPES.has(nodeType)) {
+        return false
+      }
+      return Boolean(this.taskTemplateMap[nodeType])
+    },
+    buildTaskRequestPayload(config = {}, orderForm = {}) {
+      const payload = {}
+      const params = Array.isArray(config.requestParams) ? config.requestParams : []
+      params.forEach(param => {
+        if (!param || !param.paramKey) {
+          return
+        }
+        const value = this.resolveOrderValue(orderForm, param.paramKey)
+        if (value !== undefined) {
+          payload[param.paramKey] = value
+        }
+      })
+      if (orderForm.orderId && payload.orderId == null) {
+        payload.orderId = orderForm.orderId
+      }
+      return payload
+    },
+    resolveOrderValue(source, path) {
+      if (!path) {
+        return undefined
+      }
+      const segments = path.split('.').filter(Boolean)
+      return segments.reduce((current, key) => {
+        if (current === undefined || current === null) {
+          return undefined
+        }
+        return current[key]
+      }, source)
+    },
+    updateNodeExecutionState(node, result = {}) {
+      if (!node) {
+        return
+      }
+      const execution = Object.assign({}, node.taskExecution || {}, {
+        lastTriggeredAt: this.nowDateTime(),
+        ...result
+      })
+      this.$set(node, 'taskExecution', execution)
+      if (result.response) {
+        const status = result.response.nodeStatus || result.response.status || result.response.statusValue
+        if (status !== undefined) {
+          this.$set(node, 'nodeStatus', status)
+        }
+        if (result.response.nodeRemark || result.response.remark) {
+          this.$set(node, 'nodeRemark', result.response.nodeRemark || result.response.remark)
+        }
+      }
+    },
+    async executeTaskNode(node, orderForm) {
+      const nodeType = node && node.nodeType != null ? `${node.nodeType}` : ''
+      if (!nodeType) {
+        return
+      }
+      const taskTemplate = this.taskTemplateMap[nodeType]
+      if (!taskTemplate) {
+        this.updateNodeExecutionState(node, { success: false, message: '未找到任务模板配置' })
+        return
+      }
+      if (taskTemplate.triggerMode && taskTemplate.triggerMode !== 'AUTO') {
+        this.updateNodeExecutionState(node, { success: false, message: '任务模板未设置为自动触发' })
+        return
+      }
+      try {
+        await this.executeTaskTemplate(taskTemplate, orderForm, node)
+      } catch (error) {
+        console.error(`任务节点【${node.nodeName || nodeType}】执行失败`, error)
+        this.$message.error(`任务节点【${node.nodeName || nodeType}】执行失败`)
+      }
+    },
+    async executeTaskTemplate(taskTemplate, orderForm, node) {
+      const config = taskTemplate.parsedConfig || this.parseTaskTemplateConfig(taskTemplate.config)
+      if (!config.requestUrl) {
+        this.updateNodeExecutionState(node, { success: false, message: '任务模板未配置接口URL' })
+        return
+      }
+      const payload = this.buildTaskRequestPayload(config, orderForm)
+      const method = (config.requestMethod || 'POST').toLowerCase()
+      const requestOptions = {
+        url: config.requestUrl,
+        method
+      }
+      if (method === 'get' || method === 'delete') {
+        requestOptions.params = payload
+      } else {
+        requestOptions.data = payload
+      }
+      try {
+        const response = await request(requestOptions)
+        const responseData = response && response.data !== undefined ? response.data : response
+        this.updateNodeExecutionState(node, { success: true, response: responseData })
+        return responseData
+      } catch (error) {
+        this.updateNodeExecutionState(node, { success: false, error: error.message || '接口调用失败' })
+        throw error
+      }
+    },
+    async triggerTemplateTasksForOrder(templateId, orderForm) {
+      if (!templateId || !orderForm) {
+        return
+      }
+      try {
+        const template = await this.ensureFlowTemplateDetails(templateId)
+        if (!template || !Array.isArray(template.flowNodeList)) {
+          return
+        }
+        const nodes = template.flowNodeList.filter(node => this.isTaskTemplateNode(node))
+        if (!nodes.length) {
+          return
+        }
+        await Promise.all(nodes.map(node => this.executeTaskNode(node, orderForm)))
+        this.applyTemplateDetailUpdate(templateId, template)
+      } catch (error) {
+        console.error('自动任务执行失败', error)
+        this.$message.error('自动任务执行失败')
+      }
+    },
     statusTagType(status) {
       const mapping = {
         待处理: 'info',
@@ -782,6 +1017,13 @@ export default {
           flowTemplate: this.findTemplateById(defaultTemplateId)
         }
       }
+      if (this.orderDialog.form.templateId) {
+        this.ensureFlowTemplateDetails(this.orderDialog.form.templateId).then(template => {
+          if (template) {
+            this.$set(this.orderDialog.form, 'flowTemplate', template)
+          }
+        })
+      }
       this.orderDialog.submitting = false
       this.$nextTick(() => {
         if (this.$refs.orderForm) {
@@ -795,12 +1037,17 @@ export default {
       this.$refs.orderForm.validate(async valid => {
         if (!valid) return
         const payload = this.buildOrderPayload(this.orderDialog.form)
+        const orderFormSnapshot = deepClone(this.orderDialog.form)
         this.orderDialog.submitting = true
         try {
           if (this.orderDialog.isEdit) {
             await updateOrderPool(payload)
           } else {
             await addOrderPool(payload)
+          }
+          if (!this.orderDialog.isEdit) {
+            this.triggerTemplateTasksForOrder(payload.templateId, orderFormSnapshot)
+              .catch(error => console.error('自动任务执行失败', error))
           }
           this.$message.success('保存成功')
           this.orderDialog.visible = false
@@ -970,24 +1217,29 @@ export default {
         productionNotes: form.productionNotes || ''
       }
     },
-    handleFlowTemplateChange(templateId) {
+    async handleFlowTemplateChange(templateId) {
       this.flowCreationDialog.form.templateId = templateId
-      this.flowCreationDialog.form.flowTemplate = this.findTemplateById(templateId)
+      const template = await this.ensureFlowTemplateDetails(templateId)
+      this.flowCreationDialog.form.flowTemplate = template || this.findTemplateById(templateId)
     },
-    handleOrderTemplateSelect(templateId) {
+    async handleOrderTemplateSelect(templateId) {
       this.orderDialog.form.templateId = templateId
-      this.orderDialog.form.flowTemplate = this.findTemplateById(templateId)
+      const template = await this.ensureFlowTemplateDetails(templateId)
+      this.orderDialog.form.flowTemplate = template || this.findTemplateById(templateId)
     },
     findTemplateById(templateId) {
       if (!templateId) {
         return null
       }
+      if (this.flowTemplateDetailMap[templateId]) {
+        return deepClone(this.flowTemplateDetailMap[templateId])
+      }
       const fromOptions = this.flowTemplateOptions.find(item => item.templateId === templateId)
       if (fromOptions) {
-        return fromOptions
+        return deepClone(fromOptions)
       }
       const fromOrders = this.orderList.find(item => item.templateId === templateId && item.flowTemplate)
-      return fromOrders ? fromOrders.flowTemplate : null
+      return fromOrders && fromOrders.flowTemplate ? deepClone(fromOrders.flowTemplate) : null
     },
     formatDateDisplay(value) {
       const result = this.formatDateValue(value)
