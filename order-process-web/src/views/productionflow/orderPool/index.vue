@@ -1070,8 +1070,11 @@ export default {
           return
         }
         const templateInstance = deepClone(template)
-        const nodes = templateInstance.flowNodeList.filter(node => this.isTaskTemplateNode(node))
-        if (!nodes.length) {
+        const flowNodes = Array.isArray(templateInstance.flowNodeList)
+          ? templateInstance.flowNodeList
+          : []
+        const hasAutoNodes = flowNodes.some(node => this.isTaskTemplateNode(node))
+        if (!hasAutoNodes) {
           return
         }
         this.setOrderAutomationState(orderForm.orderId, {
@@ -1087,7 +1090,7 @@ export default {
         await this.runTaskNodesSequence({
           templateId,
           template: templateInstance,
-          nodes,
+          nodes: flowNodes,
           orderForm,
           orderId: orderForm.orderId
         })
@@ -1112,7 +1115,16 @@ export default {
       const queue = nodes.slice()
       while (queue.length) {
         const currentNode = queue.shift()
-        const result = await this.executeTaskNode(currentNode, orderForm)
+        let result
+        if (this.isTaskTemplateNode(currentNode)) {
+          result = await this.executeTaskNode(currentNode, orderForm)
+        } else {
+          result = {
+            success: false,
+            message: '节点需人工处理（未配置自动触发）'
+          }
+          this.updateNodeExecutionState(currentNode, result)
+        }
         if (!result || result.success !== true) {
           this.handleTaskNodeFailure({
             templateId,
