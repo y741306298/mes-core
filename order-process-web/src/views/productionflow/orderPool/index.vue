@@ -249,88 +249,90 @@
        </span>
      </el-dialog>
 
-     <!-- 订单详情 -->
-     <el-dialog :title="viewOrderDialog.title" :visible.sync="viewOrderDialog.visible" width="800px">
-       <div v-if="viewOrderDialog.record">
-         <el-descriptions :column="2" border label-class-name="desc-label">
-           <el-descriptions-item label="订单编号">{{ viewOrderDialog.record.orderId }}</el-descriptions-item>
-           <el-descriptions-item label="订单状态">{{ viewOrderDialog.record.orderStatus }}</el-descriptions-item>
-           <el-descriptions-item label="客户信息">{{ viewOrderDialog.record.customerInfo }}</el-descriptions-item>
-           <el-descriptions-item label="优先级">{{ priorityLabels[viewOrderDialog.record.priority] }}</el-descriptions-item>
-           <el-descriptions-item label="数量">{{ viewOrderDialog.record.quantity }}</el-descriptions-item>
-           <el-descriptions-item label="主材料">{{ viewOrderDialog.record.mainMaterial }}</el-descriptions-item>
-           <el-descriptions-item label="交付日期">{{ formatDateDisplay(viewOrderDialog.record.deliveryDate) }}</el-descriptions-item>
-           <el-descriptions-item label="颜色要求">{{ viewOrderDialog.record.colorRequirement }}</el-descriptions-item>
-           <el-descriptions-item label="尺寸规格">{{ viewOrderDialog.record.sizeRequirement }}</el-descriptions-item>
-           <el-descriptions-item label="文件格式">{{ viewOrderDialog.record.fileFormat }}</el-descriptions-item>
-           <el-descriptions-item label="创建时间">{{ formatDateDisplay(viewOrderDialog.record.createdAt) }}</el-descriptions-item>
-           <el-descriptions-item label="更新时间">{{ formatDateDisplay(viewOrderDialog.record.updatedAt) }}</el-descriptions-item>
-           <el-descriptions-item label="备注" :span="2">{{ viewOrderDialog.record.remark || '—' }}</el-descriptions-item>
-         </el-descriptions>
+    <!-- 订单详情 -->
+    <el-dialog :title="viewOrderDialog.title" :visible.sync="viewOrderDialog.visible" width="800px">
+      <div class="order-detail-body" v-loading="viewOrderDialog.loading">
+        <div v-if="viewOrderDialog.record">
+          <el-descriptions :column="2" border label-class-name="desc-label">
+            <el-descriptions-item label="订单编号">{{ viewOrderDialog.record.orderId }}</el-descriptions-item>
+            <el-descriptions-item label="订单状态">{{ viewOrderDialog.record.orderStatus }}</el-descriptions-item>
+            <el-descriptions-item label="客户信息">{{ viewOrderDialog.record.customerInfo }}</el-descriptions-item>
+            <el-descriptions-item label="优先级">{{ priorityLabels[viewOrderDialog.record.priority] }}</el-descriptions-item>
+            <el-descriptions-item label="数量">{{ viewOrderDialog.record.quantity }}</el-descriptions-item>
+            <el-descriptions-item label="主材料">{{ viewOrderDialog.record.mainMaterial }}</el-descriptions-item>
+            <el-descriptions-item label="交付日期">{{ formatDateDisplay(viewOrderDialog.record.deliveryDate) }}</el-descriptions-item>
+            <el-descriptions-item label="颜色要求">{{ viewOrderDialog.record.colorRequirement }}</el-descriptions-item>
+            <el-descriptions-item label="尺寸规格">{{ viewOrderDialog.record.sizeRequirement }}</el-descriptions-item>
+            <el-descriptions-item label="文件格式">{{ viewOrderDialog.record.fileFormat }}</el-descriptions-item>
+            <el-descriptions-item label="创建时间">{{ formatDateDisplay(viewOrderDialog.record.createdAt) }}</el-descriptions-item>
+            <el-descriptions-item label="更新时间">{{ formatDateDisplay(viewOrderDialog.record.updatedAt) }}</el-descriptions-item>
+            <el-descriptions-item label="备注" :span="2">{{ viewOrderDialog.record.remark || '—' }}</el-descriptions-item>
+          </el-descriptions>
 
-        <h4 class="section-title">流程模板</h4>
-        <div v-if="viewOrderFlowNodes.length">
-          <div class="template-summary">
-            模板：{{ viewOrderDialog.record.flowTemplate.templateName }}
-          </div>
-          <div class="flow-template-visual">
-            <div class="flow-track">
-              <div
-                class="flow-node-wrapper"
-                v-for="(node, nodeIndex) in viewOrderFlowNodes"
-                :key="node.nodeId || node.nodeName || nodeIndex"
-              >
-                <div v-if="nodeIndex === 0" class="arrow-first">
-                  <div :class="flowNodeSegmentClass(node, 'firstCenter')">
-                    <span class="flow-node-name">{{ node.nodeName }}</span>
-                  </div>
-                  <div :class="flowNodeSegmentClass(node, 'firstRight')"></div>
-                </div>
+          <h4 class="section-title">流程模板</h4>
+          <div v-if="viewOrderFlowNodes.length">
+            <div class="template-summary">
+              模板：{{ viewOrderDialog.record.flowTemplate.templateName }}
+            </div>
+            <div class="flow-template-visual">
+              <div class="flow-track">
                 <div
-                  v-else-if="nodeIndex === viewOrderFlowNodes.length - 1"
-                  class="arrow-last"
+                  class="flow-node-wrapper"
+                  v-for="(node, nodeIndex) in viewOrderFlowNodes"
+                  :key="node.nodeId || node.nodeName || nodeIndex"
                 >
-                  <div :class="flowNodeSegmentClass(node, 'lastLeft')"></div>
-                  <div :class="flowNodeSegmentClass(node, 'lastCenter')">
-                    <span class="flow-node-name">{{ node.nodeName }}</span>
+                  <div v-if="nodeIndex === 0" class="arrow-first">
+                    <div :class="flowNodeSegmentClass(node, 'firstCenter')">
+                      <span class="flow-node-name">{{ node.nodeName }}</span>
+                    </div>
+                    <div :class="flowNodeSegmentClass(node, 'firstRight')"></div>
                   </div>
-                  <div class="last-right"></div>
-                </div>
-                <div v-else class="arrow">
-                  <div :class="flowNodeSegmentClass(node, 'arrowLeft')"></div>
-                  <div :class="flowNodeSegmentClass(node, 'arrowCenter')">
-                    <span class="flow-node-name">{{ node.nodeName }}</span>
-                  </div>
-                  <div :class="flowNodeSegmentClass(node, 'arrowRight')"></div>
-                </div>
-                <div class="node-extra">
-                  <div class="node-status-text">{{ renderNodeStatusText(node) }}</div>
                   <div
-                    class="node-meta"
-                    v-if="node.taskExecution && node.taskExecution.lastTriggeredAt"
+                    v-else-if="nodeIndex === viewOrderFlowNodes.length - 1"
+                    class="arrow-last"
                   >
-                    最近执行：{{ node.taskExecution.lastTriggeredAt }}
+                    <div :class="flowNodeSegmentClass(node, 'lastLeft')"></div>
+                    <div :class="flowNodeSegmentClass(node, 'lastCenter')">
+                      <span class="flow-node-name">{{ node.nodeName }}</span>
+                    </div>
+                    <div class="last-right"></div>
                   </div>
-                  <el-button
-                    v-if="shouldShowManualButton(node, viewOrderDialog.record.orderId)"
-                    type="text"
-                    size="mini"
-                    class="manual-handle-btn"
-                    @click="openManualTaskDialogForOrder(viewOrderDialog.record.orderId)"
-                  >
-                    人工处理
-                  </el-button>
+                  <div v-else class="arrow">
+                    <div :class="flowNodeSegmentClass(node, 'arrowLeft')"></div>
+                    <div :class="flowNodeSegmentClass(node, 'arrowCenter')">
+                      <span class="flow-node-name">{{ node.nodeName }}</span>
+                    </div>
+                    <div :class="flowNodeSegmentClass(node, 'arrowRight')"></div>
+                  </div>
+                  <div class="node-extra">
+                    <div class="node-status-text">{{ renderNodeStatusText(node) }}</div>
+                    <div
+                      class="node-meta"
+                      v-if="node.taskExecution && node.taskExecution.lastTriggeredAt"
+                    >
+                      最近执行：{{ node.taskExecution.lastTriggeredAt }}
+                    </div>
+                    <el-button
+                      v-if="shouldShowManualButton(node, viewOrderDialog.record.orderId)"
+                      type="text"
+                      size="mini"
+                      class="manual-handle-btn"
+                      @click="openManualTaskDialogForOrder(viewOrderDialog.record.orderId)"
+                    >
+                      人工处理
+                    </el-button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+          <div v-else class="template-empty">未绑定流程模板</div>
         </div>
-        <div v-else class="template-empty">未绑定流程模板</div>
-       </div>
-       <span slot="footer" class="dialog-footer">
-         <el-button @click="viewOrderDialog.visible = false">关 闭</el-button>
-       </span>
-     </el-dialog>
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="viewOrderDialog.visible = false">关 闭</el-button>
+      </span>
+    </el-dialog>
 
      <!-- 入池创建生产流 -->
      <el-dialog :title="flowCreationDialog.title" :visible.sync="flowCreationDialog.visible" width="780px">
@@ -524,6 +526,7 @@
 <script>
 import {
   listOrderPool,
+  getOrderPool,
   addOrderPool,
   updateOrderPool,
   removeOrderPool,
@@ -621,7 +624,8 @@ export default {
       viewOrderDialog: {
         visible: false,
         title: '订单详情',
-        record: null
+        record: null,
+        loading: false
       },
       manualTaskDialog: {
         visible: false,
@@ -805,6 +809,51 @@ export default {
             this.$refs.orderTable.clearSelection()
           }
         })
+      }
+    },
+    async refreshOrderRecord(orderId, { silent = true, updateDialog = true, withLoading = false } = {}) {
+      if (!orderId) {
+        return null
+      }
+      const shouldToggleLoading = withLoading
+        && this.viewOrderDialog.visible
+        && this.viewOrderDialog.record
+        && this.viewOrderDialog.record.orderId === orderId
+      if (shouldToggleLoading) {
+        this.$set(this.viewOrderDialog, 'loading', true)
+      }
+      try {
+        const response = await getOrderPool(orderId)
+        const data = response && response.data ? response.data : null
+        if (!data) {
+          return null
+        }
+        const normalized = this.normalizeOrder(data)
+        const index = this.orderList.findIndex(item => item.orderId === orderId)
+        if (index !== -1) {
+          this.$set(this.orderList, index, normalized)
+        } else {
+          this.orderList.unshift(normalized)
+        }
+        if (
+          updateDialog
+          && this.viewOrderDialog.visible
+          && this.viewOrderDialog.record
+          && this.viewOrderDialog.record.orderId === orderId
+        ) {
+          this.viewOrderDialog.record = this.buildViewOrderRecord(normalized)
+        }
+        return normalized
+      } catch (error) {
+        console.error('刷新订单详情失败', error)
+        if (!silent) {
+          this.$message.error('刷新订单详情失败')
+        }
+        return null
+      } finally {
+        if (shouldToggleLoading) {
+          this.$set(this.viewOrderDialog, 'loading', false)
+        }
       }
     },
     async fetchFlows() {
@@ -995,47 +1044,45 @@ export default {
     },
     async executeTaskNode(node, orderForm) {
       const nodeType = node && node.nodeType != null ? `${node.nodeType}` : ''
+      const orderId = orderForm && orderForm.orderId ? orderForm.orderId : ''
+      const finalizeResult = async result => {
+        this.updateNodeExecutionState(node, result)
+        if (orderId) {
+          await this.refreshOrderRecord(orderId, { silent: true, updateDialog: true })
+        }
+        return result
+      }
       if (!nodeType) {
-        return { success: false, message: '节点类型为空' }
+        return finalizeResult({ success: false, message: '节点类型为空' })
       }
       const taskTemplate = this.taskTemplateMap[nodeType]
       if (!taskTemplate) {
-        const result = { success: false, message: '未找到任务模板配置' }
-        this.updateNodeExecutionState(node, result)
-        return result
+        return finalizeResult({ success: false, message: '未找到任务模板配置' })
       }
       if (taskTemplate.triggerMode && taskTemplate.triggerMode !== 'AUTO') {
-        const result = { success: false, message: '任务模板未设置为自动触发' }
-        this.updateNodeExecutionState(node, result)
-        return result
+        return finalizeResult({ success: false, message: '任务模板未设置为自动触发' })
       }
       const config = taskTemplate.parsedConfig || this.parseTaskTemplateConfig(taskTemplate.config)
       if (!config.requestUrl) {
-        const result = { success: false, message: '任务模板未配置接口URL' }
-        this.updateNodeExecutionState(node, result)
-        return result
+        return finalizeResult({ success: false, message: '任务模板未配置接口URL' })
       }
       try {
         const responseData = await this.executeTaskTemplate(taskTemplate, orderForm, config)
         const success = this.isTaskResponseSuccess(responseData)
-        const result = {
+        return finalizeResult({
           success,
           response: responseData,
           message: success ? '任务执行成功' : '接口返回未满足成功条件'
-        }
-        this.updateNodeExecutionState(node, result)
-        return result
+        })
       } catch (error) {
         const errorMessage = (error && error.responseData && (error.responseData.message || error.responseData.msg))
           || (error && error.message)
           || '接口调用失败'
-        const result = {
+        return finalizeResult({
           success: false,
           error: errorMessage,
           response: (error && (error.responseData || (error.response && error.response.data))) || null
-        }
-        this.updateNodeExecutionState(node, result)
-        return result
+        })
       }
     },
     async executeTaskTemplate(taskTemplate, orderForm, config = {}) {
@@ -1100,9 +1147,10 @@ export default {
       }
     },
     async runTaskNodesSequence({ templateId, template, nodes, orderForm, orderId }) {
+      const targetOrderId = orderId || (orderForm && orderForm.orderId) || ''
       if (!template || !Array.isArray(nodes) || !nodes.length) {
-        if (orderId) {
-          this.setOrderAutomationState(orderId, {
+        if (targetOrderId) {
+          this.setOrderAutomationState(targetOrderId, {
             templateId,
             templateInstance: template,
             status: 'success',
@@ -1124,6 +1172,9 @@ export default {
             message: '节点需人工处理（未配置自动触发）'
           }
           this.updateNodeExecutionState(currentNode, result)
+          if (targetOrderId) {
+            await this.refreshOrderRecord(targetOrderId, { silent: true, updateDialog: true })
+          }
         }
         if (!result || result.success !== true) {
           this.handleTaskNodeFailure({
@@ -1133,13 +1184,13 @@ export default {
             orderForm,
             pendingNodes: queue.slice(),
             result: result || { success: false, message: '任务执行失败' },
-            orderId
+            orderId: targetOrderId
           })
           return
         }
       }
-      if (orderId) {
-        this.setOrderAutomationState(orderId, {
+      if (targetOrderId) {
+        this.setOrderAutomationState(targetOrderId, {
           templateId,
           templateInstance: template,
           status: 'success',
@@ -1182,7 +1233,7 @@ export default {
       this.manualTaskDialog.remark = ''
       this.manualTaskDialog.orderId = ''
     },
-    confirmManualTaskHandling() {
+    async confirmManualTaskHandling() {
       if (!this.manualTaskDialog.node) {
         this.resetManualTaskDialog()
         return
@@ -1211,6 +1262,7 @@ export default {
           errorMessage: '',
           responsePreview: ''
         })
+        await this.refreshOrderRecord(orderId, { silent: true, updateDialog: true })
       }
       this.resetManualTaskDialog()
       if (templateId && template && orderForm && pendingNodes.length) {
@@ -1518,17 +1570,14 @@ export default {
           })
       }).catch(() => {})
     },
-    viewOrder(order) {
-      const record = { ...order }
-      if (!record.flowTemplate && record.templateId) {
-        record.flowTemplate = this.findTemplateById(record.templateId)
+    async viewOrder(order) {
+      if (!order || !order.orderId) {
+        this.$message.warning('订单数据异常，请稍后重试')
+        return
       }
-      const automationState = order && order.orderId ? this.orderAutomationState[order.orderId] : null
-      if (automationState && automationState.templateInstance) {
-        record.flowTemplate = automationState.templateInstance
-      }
-      this.viewOrderDialog.record = record
+      this.viewOrderDialog.record = this.buildViewOrderRecord(order)
       this.viewOrderDialog.visible = true
+      await this.refreshOrderRecord(order.orderId, { silent: true, updateDialog: true, withLoading: true })
     },
     openFlowCreationDialog() {
       if (!this.selectedOrders.length) {
@@ -1656,6 +1705,24 @@ export default {
       }
       const fromOrders = this.orderList.find(item => item.templateId === templateId && item.flowTemplate)
       return fromOrders && fromOrders.flowTemplate ? deepClone(fromOrders.flowTemplate) : null
+    },
+    buildViewOrderRecord(order) {
+      if (!order) {
+        return null
+      }
+      const record = deepClone(order)
+      if (!record.flowTemplate && record.templateId) {
+        record.flowTemplate = this.findTemplateById(record.templateId)
+      }
+      const automationState = record.orderId ? this.orderAutomationState[record.orderId] : null
+      if (
+        (!record.flowTemplate || !Array.isArray(record.flowTemplate.flowNodeList) || !record.flowTemplate.flowNodeList.length)
+        && automationState
+        && automationState.templateInstance
+      ) {
+        record.flowTemplate = automationState.templateInstance
+      }
+      return record
     },
     formatDateDisplay(value) {
       const result = this.formatDateValue(value)
@@ -1804,6 +1871,10 @@ export default {
   .template-empty {
     color: #909399;
     font-size: 13px;
+  }
+
+  .order-detail-body {
+    min-height: 200px;
   }
 
   .mr5 {
