@@ -784,7 +784,7 @@ export default {
         requestUrl: rawConfig.requestUrl || '',
         requestParams: Array.isArray(rawConfig.requestParams) ? rawConfig.requestParams : [],
         responseParams: Array.isArray(rawConfig.responseParams) ? rawConfig.responseParams : [],
-        requestMethod: rawConfig.requestMethod || rawConfig.method || 'GET'
+        requestMethod: (rawConfig.requestMethod || rawConfig.method || 'POST').toUpperCase()
       }
     },
     cacheTemplateDetail(template) {
@@ -921,7 +921,7 @@ export default {
         return
       }
       const payload = this.buildTaskRequestPayload(config, orderForm)
-      const method = (config.requestMethod || 'GET').toLowerCase()
+      const method = (config.requestMethod || 'POST').toLowerCase()
       const requestOptions = {
         url: config.requestUrl,
         method
