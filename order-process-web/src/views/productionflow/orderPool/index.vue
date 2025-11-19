@@ -278,8 +278,10 @@
               <div class="flow-track">
                 <div
                   class="flow-node-wrapper"
+                  :class="{ 'manual-node-clickable': isManualOnlyFlowNode(node) }"
                   v-for="(node, nodeIndex) in viewOrderFlowNodes"
                   :key="node.nodeId || node.nodeName || nodeIndex"
+                  @click="handleFlowNodeClick(node)"
                 >
                   <div v-if="nodeIndex === 0" class="arrow-first">
                     <div :class="flowNodeSegmentClass(node, 'firstCenter')">
@@ -317,7 +319,7 @@
                       type="text"
                       size="mini"
                       class="manual-handle-btn"
-                      @click="openManualTaskDialogForOrder(viewOrderDialog.record.orderId)"
+                      @click.stop="openManualTaskDialogForOrder(viewOrderDialog.record.orderId)"
                     >
                       人工处理
                     </el-button>
@@ -1398,6 +1400,51 @@ export default {
         this.isSameFlowNode(state.failedNode, node)
       )
     },
+    isManualOnlyFlowNode(node) {
+      if (!node) {
+        return false
+      }
+      return !this.isTaskTemplateNode(node)
+    },
+    handleFlowNodeClick(node) {
+      if (!node) {
+        return
+      }
+      const record = this.viewOrderDialog.record
+      const orderId = record && record.orderId
+      if (!orderId) {
+        return
+      }
+      const state = this.orderAutomationState[orderId]
+      if (state && state.failedNode && this.isSameFlowNode(state.failedNode, node)) {
+        this.openManualTaskDialogForOrder(orderId)
+        return
+      }
+      if (!this.isManualOnlyFlowNode(node)) {
+        return
+      }
+      this.openManualDialogForManualNode({ node, record })
+    },
+    openManualDialogForManualNode({ node, record }) {
+      if (!node || !record || !record.flowTemplate) {
+        return
+      }
+      const template = record.flowTemplate
+      const templateId = template.templateId || ''
+      const defaultMessage = '节点需人工处理（未配置自动触发）'
+      this.manualTaskDialog.visible = true
+      this.manualTaskDialog.node = node
+      this.manualTaskDialog.template = template
+      this.manualTaskDialog.templateId = templateId
+      this.manualTaskDialog.orderForm = deepClone(record)
+      this.manualTaskDialog.pendingNodes = []
+      this.manualTaskDialog.errorMessage =
+        (node.taskExecution && (node.taskExecution.error || node.taskExecution.message)) ||
+        defaultMessage
+      this.manualTaskDialog.responsePreview = ''
+      this.manualTaskDialog.remark = ''
+      this.manualTaskDialog.orderId = record.orderId || ''
+    },
     openManualTaskDialogForOrder(orderId) {
       if (!orderId) {
         return
@@ -1840,6 +1887,14 @@ export default {
   .flow-node-wrapper {
     margin-right: 10px;
     min-width: 140px;
+  }
+
+  .flow-node-wrapper.manual-node-clickable {
+    cursor: pointer;
+  }
+
+  .flow-node-wrapper.manual-node-clickable .flow-node-name {
+    text-decoration: underline;
   }
 
   .flow-node-name {
