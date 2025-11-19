@@ -276,6 +276,7 @@
             <el-timeline-item
               v-for="node in (viewOrderDialog.record.flowTemplate.flowNodeList || [])"
               :key="node.nodeId || node.nodeName"
+              :color="renderNodeTimelineColor(node)"
             >
               <div class="template-node">
                 <span class="node-name">{{ node.nodeName }}</span>
@@ -285,6 +286,20 @@
                   type="info"
                   class="node-type-tag"
                 >系统</el-tag>
+                <el-tag
+                  v-if="node.taskExecution"
+                  size="mini"
+                  :type="renderNodeStatusTagType(node)"
+                  class="node-status-tag"
+                >
+                  {{ renderNodeStatusText(node) }}
+                </el-tag>
+              </div>
+              <div class="node-status-message" v-if="node.taskExecution && node.taskExecution.message">
+                {{ node.taskExecution.message }}
+              </div>
+              <div class="node-status-message" v-if="node.taskExecution && node.taskExecution.lastTriggeredAt">
+                最近执行：{{ node.taskExecution.lastTriggeredAt }}
               </div>
             </el-timeline-item>
           </el-timeline>
@@ -443,13 +458,47 @@
         <div v-else class="template-empty">请选择流程模板</div>
        </div>
 
-       <span slot="footer" class="dialog-footer">
-        <el-button @click="flowCreationDialog.visible = false">取 消</el-button>
-        <el-button type="primary" :loading="flowCreationDialog.submitting" @click="submitFlow">生 成</el-button>
-       </span>
-     </el-dialog>
-   </div>
- </template>
+      <span slot="footer" class="dialog-footer">
+       <el-button @click="flowCreationDialog.visible = false">取 消</el-button>
+       <el-button type="primary" :loading="flowCreationDialog.submitting" @click="submitFlow">生 成</el-button>
+      </span>
+    </el-dialog>
+
+    <el-dialog
+      title="任务人工处理"
+      :visible.sync="manualTaskDialog.visible"
+      width="520px"
+      @close="resetManualTaskDialog"
+    >
+      <div class="manual-task-dialog">
+        <p class="manual-tip">
+          节点「{{ manualTaskDialog.node && manualTaskDialog.node.nodeName }}」自动执行失败，请人工确认后继续。
+        </p>
+        <el-alert
+          v-if="manualTaskDialog.errorMessage"
+          :title="manualTaskDialog.errorMessage"
+          type="error"
+          :closable="false"
+          class="mb12"
+        />
+        <el-input
+          v-model="manualTaskDialog.remark"
+          type="textarea"
+          :rows="3"
+          placeholder="请填写人工处理备注"
+        />
+        <div v-if="manualTaskDialog.responsePreview" class="response-preview">
+          <div class="preview-title">接口返回</div>
+          <pre>{{ manualTaskDialog.responsePreview }}</pre>
+        </div>
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="manualTaskDialog.visible = false">取 消</el-button>
+        <el-button type="primary" @click="confirmManualTaskHandling">已人工处理</el-button>
+      </span>
+    </el-dialog>
+  </div>
+</template>
 
 <script>
 import {
@@ -542,6 +591,17 @@ export default {
         visible: false,
         title: '订单详情',
         record: null
+      },
+      manualTaskDialog: {
+        visible: false,
+        node: null,
+        template: null,
+        templateId: '',
+        orderForm: null,
+        pendingNodes: [],
+        errorMessage: '',
+        responsePreview: '',
+        remark: ''
       },
        flowStatusOptions: [
          'pending',
@@ -896,30 +956,49 @@ export default {
     async executeTaskNode(node, orderForm) {
       const nodeType = node && node.nodeType != null ? `${node.nodeType}` : ''
       if (!nodeType) {
-        return
+        return { success: false, message: '节点类型为空' }
       }
       const taskTemplate = this.taskTemplateMap[nodeType]
       if (!taskTemplate) {
-        this.updateNodeExecutionState(node, { success: false, message: '未找到任务模板配置' })
-        return
+        const result = { success: false, message: '未找到任务模板配置' }
+        this.updateNodeExecutionState(node, result)
+        return result
       }
       if (taskTemplate.triggerMode && taskTemplate.triggerMode !== 'AUTO') {
-        this.updateNodeExecutionState(node, { success: false, message: '任务模板未设置为自动触发' })
-        return
+        const result = { success: false, message: '任务模板未设置为自动触发' }
+        this.updateNodeExecutionState(node, result)
+        return result
       }
-      try {
-        await this.executeTaskTemplate(taskTemplate, orderForm, node)
-      } catch (error) {
-        console.error(`任务节点【${node.nodeName || nodeType}】执行失败`, error)
-        this.$message.error(`任务节点【${node.nodeName || nodeType}】执行失败`)
-      }
-    },
-    async executeTaskTemplate(taskTemplate, orderForm, node) {
       const config = taskTemplate.parsedConfig || this.parseTaskTemplateConfig(taskTemplate.config)
       if (!config.requestUrl) {
-        this.updateNodeExecutionState(node, { success: false, message: '任务模板未配置接口URL' })
-        return
+        const result = { success: false, message: '任务模板未配置接口URL' }
+        this.updateNodeExecutionState(node, result)
+        return result
       }
+      try {
+        const responseData = await this.executeTaskTemplate(taskTemplate, orderForm, config)
+        const success = this.isTaskResponseSuccess(responseData)
+        const result = {
+          success,
+          response: responseData,
+          message: success ? '任务执行成功' : '接口返回未满足成功条件'
+        }
+        this.updateNodeExecutionState(node, result)
+        return result
+      } catch (error) {
+        const errorMessage = (error && error.responseData && (error.responseData.message || error.responseData.msg))
+          || (error && error.message)
+          || '接口调用失败'
+        const result = {
+          success: false,
+          error: errorMessage,
+          response: (error && (error.responseData || (error.response && error.response.data))) || null
+        }
+        this.updateNodeExecutionState(node, result)
+        return result
+      }
+    },
+    async executeTaskTemplate(taskTemplate, orderForm, config = {}) {
       const payload = this.buildTaskRequestPayload(config, orderForm)
       const method = (config.requestMethod || 'POST').toLowerCase()
       const requestOptions = {
@@ -933,11 +1012,11 @@ export default {
       }
       try {
         const response = await request(requestOptions)
-        const responseData = response && response.data !== undefined ? response.data : response
-        this.updateNodeExecutionState(node, { success: true, response: responseData })
-        return responseData
+        return response && response.data !== undefined ? response.data : response
       } catch (error) {
-        this.updateNodeExecutionState(node, { success: false, error: error.message || '接口调用失败' })
+        if (error && error.response && error.response.data) {
+          error.responseData = error.response.data
+        }
         throw error
       }
     },
@@ -954,12 +1033,174 @@ export default {
         if (!nodes.length) {
           return
         }
-        await Promise.all(nodes.map(node => this.executeTaskNode(node, orderForm)))
-        this.applyTemplateDetailUpdate(templateId, template)
+        await this.runTaskNodesSequence(templateId, template, nodes, orderForm)
       } catch (error) {
         console.error('自动任务执行失败', error)
         this.$message.error('自动任务执行失败')
       }
+    },
+    async runTaskNodesSequence(templateId, template, nodes, orderForm) {
+      if (!template || !Array.isArray(nodes) || !nodes.length) {
+        return
+      }
+      const queue = nodes.slice()
+      while (queue.length) {
+        const currentNode = queue.shift()
+        const result = await this.executeTaskNode(currentNode, orderForm)
+        if (!result || result.success !== true) {
+          this.handleTaskNodeFailure({
+            templateId,
+            template,
+            failedNode: currentNode,
+            orderForm,
+            pendingNodes: queue.slice(),
+            result: result || { success: false, message: '任务执行失败' }
+          })
+          return
+        }
+      }
+      this.applyTemplateDetailUpdate(templateId, template)
+    },
+    handleTaskNodeFailure({ templateId, template, failedNode, orderForm, pendingNodes = [], result = {} }) {
+      this.manualTaskDialog.visible = true
+      this.manualTaskDialog.node = failedNode
+      this.manualTaskDialog.template = template
+      this.manualTaskDialog.templateId = templateId
+      this.manualTaskDialog.orderForm = orderForm
+      this.manualTaskDialog.pendingNodes = Array.isArray(pendingNodes) ? pendingNodes.slice() : []
+      this.manualTaskDialog.errorMessage = result.error || result.message || '任务执行失败'
+      this.manualTaskDialog.responsePreview = this.formatTaskResponsePreview(result.response)
+      this.manualTaskDialog.remark = ''
+      this.applyTemplateDetailUpdate(templateId, template)
+    },
+    resetManualTaskDialog() {
+      this.manualTaskDialog.visible = false
+      this.manualTaskDialog.node = null
+      this.manualTaskDialog.template = null
+      this.manualTaskDialog.templateId = ''
+      this.manualTaskDialog.orderForm = null
+      this.manualTaskDialog.pendingNodes = []
+      this.manualTaskDialog.errorMessage = ''
+      this.manualTaskDialog.responsePreview = ''
+      this.manualTaskDialog.remark = ''
+    },
+    confirmManualTaskHandling() {
+      if (!this.manualTaskDialog.node) {
+        this.resetManualTaskDialog()
+        return
+      }
+      const templateId = this.manualTaskDialog.templateId
+      const template = this.manualTaskDialog.template
+      const orderForm = this.manualTaskDialog.orderForm
+      const pendingNodes = Array.isArray(this.manualTaskDialog.pendingNodes)
+        ? this.manualTaskDialog.pendingNodes.slice()
+        : []
+      const remark = (this.manualTaskDialog.remark || '').trim() || '人工处理完成'
+      this.updateNodeExecutionState(this.manualTaskDialog.node, {
+        success: true,
+        manual: true,
+        message: remark
+      })
+      this.resetManualTaskDialog()
+      if (templateId && template) {
+        this.applyTemplateDetailUpdate(templateId, template)
+      }
+      if (templateId && template && orderForm && pendingNodes.length) {
+        this.runTaskNodesSequence(templateId, template, pendingNodes, orderForm)
+      }
+    },
+    formatTaskResponsePreview(value) {
+      if (value === undefined || value === null) {
+        return ''
+      }
+      if (typeof value === 'string') {
+        return value
+      }
+      try {
+        return JSON.stringify(value, null, 2)
+      } catch (error) {
+        return String(value)
+      }
+    },
+    isTaskResponseSuccess(response) {
+      if (response === undefined || response === null) {
+        return false
+      }
+      if (typeof response === 'boolean') {
+        return response
+      }
+      const direct = this.parseBooleanFlag(response.success)
+      if (direct !== null) {
+        return direct
+      }
+      if (response.data) {
+        const nested = this.parseBooleanFlag(response.data.success)
+        if (nested !== null) {
+          return nested
+        }
+      }
+      return false
+    },
+    parseBooleanFlag(value) {
+      if (value === undefined || value === null) {
+        return null
+      }
+      if (typeof value === 'boolean') {
+        return value
+      }
+      if (typeof value === 'number') {
+        if (value === 1) return true
+        if (value === 0) return false
+      }
+      if (typeof value === 'string') {
+        const lower = value.toLowerCase()
+        if (lower === 'true' || lower === 'success' || lower === 'y' || lower === 'yes') {
+          return true
+        }
+        if (lower === 'false' || lower === 'fail' || lower === 'failed' || lower === 'n' || lower === 'no') {
+          return false
+        }
+      }
+      return null
+    },
+    renderNodeStatusText(node) {
+      const execution = node && node.taskExecution
+      if (!execution) {
+        return '未执行'
+      }
+      if (execution.success) {
+        return execution.manual ? '人工完成' : '自动完成'
+      }
+      if (execution.error) {
+        return '执行失败'
+      }
+      return execution.message || '待确认'
+    },
+    renderNodeStatusTagType(node) {
+      const execution = node && node.taskExecution
+      if (!execution) {
+        return 'info'
+      }
+      if (execution.success) {
+        return 'success'
+      }
+      if (execution.error) {
+        return 'danger'
+      }
+      return 'warning'
+    },
+    renderNodeTimelineColor(node) {
+      const execution = node && node.taskExecution
+      if (!execution) {
+        return ''
+      }
+      if (execution.success) {
+        return '#67C23A'
+      }
+      if (execution.error) {
+        return '#F56C6C'
+      }
+      return '#E6A23C'
     },
     statusTagType(status) {
       const mapping = {
@@ -1334,6 +1575,16 @@ export default {
     .node-type-tag {
       margin-left: 4px;
     }
+
+    .node-status-tag {
+      margin-left: 8px;
+    }
+  }
+
+  .node-status-message {
+    font-size: 12px;
+    color: #909399;
+    margin-top: 4px;
   }
 
   .template-empty {
@@ -1341,9 +1592,43 @@ export default {
     font-size: 13px;
   }
 
-   .mr5 {
-     margin-right: 5px;
-     margin-bottom: 4px;
-   }
- }
+  .mr5 {
+    margin-right: 5px;
+    margin-bottom: 4px;
+  }
+}
+
+.manual-task-dialog {
+  .manual-tip {
+    font-size: 13px;
+    color: #606266;
+    margin-bottom: 10px;
+  }
+
+  .response-preview {
+    margin-top: 12px;
+    background: #f7f8fa;
+    border: 1px solid #ebeef5;
+    border-radius: 4px;
+    padding: 10px;
+
+    .preview-title {
+      font-size: 13px;
+      color: #909399;
+      margin-bottom: 6px;
+    }
+
+    pre {
+      margin: 0;
+      font-size: 12px;
+      color: #606266;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+  }
+}
+
+.mb12 {
+  margin-bottom: 12px;
+}
  </style>
