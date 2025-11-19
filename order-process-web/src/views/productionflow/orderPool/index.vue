@@ -79,15 +79,16 @@
          </el-button>
        </div>
 
-       <el-table
-         ref="orderTable"
-         :data="filteredOrders"
-         border
-         height="600"
-         stripe
-         @selection-change="handleOrderSelectionChange"
-         :row-key="row => row.orderId"
-       >
+      <el-table
+        ref="orderTable"
+        :data="filteredOrders"
+        border
+        height="600"
+        stripe
+        @selection-change="handleOrderSelectionChange"
+        :row-key="row => row.orderId"
+        :row-class-name="orderRowClassName"
+      >
          <el-table-column type="selection" width="50" />
          <el-table-column prop="orderId" label="订单编号" width="140" show-overflow-tooltip />
          <el-table-column label="预览图" width="110">
@@ -268,41 +269,61 @@
          </el-descriptions>
 
         <h4 class="section-title">流程模板</h4>
-        <div v-if="viewOrderDialog.record.flowTemplate">
+        <div v-if="viewOrderFlowNodes.length">
           <div class="template-summary">
             模板：{{ viewOrderDialog.record.flowTemplate.templateName }}
           </div>
-          <el-timeline>
-            <el-timeline-item
-              v-for="node in (viewOrderDialog.record.flowTemplate.flowNodeList || [])"
-              :key="node.nodeId || node.nodeName"
-              :color="renderNodeTimelineColor(node)"
-            >
-              <div class="template-node">
-                <span class="node-name">{{ node.nodeName }}</span>
-                <el-tag
-                  v-if="node.nodeType === '0'"
-                  size="mini"
-                  type="info"
-                  class="node-type-tag"
-                >系统</el-tag>
-                <el-tag
-                  v-if="node.taskExecution"
-                  size="mini"
-                  :type="renderNodeStatusTagType(node)"
-                  class="node-status-tag"
+          <div class="flow-template-visual">
+            <div class="flow-track">
+              <div
+                class="flow-node-wrapper"
+                v-for="(node, nodeIndex) in viewOrderFlowNodes"
+                :key="node.nodeId || node.nodeName || nodeIndex"
+              >
+                <div v-if="nodeIndex === 0" class="arrow-first">
+                  <div :class="flowNodeSegmentClass(node, 'firstCenter')">
+                    <span class="flow-node-name">{{ node.nodeName }}</span>
+                  </div>
+                  <div :class="flowNodeSegmentClass(node, 'firstRight')"></div>
+                </div>
+                <div
+                  v-else-if="nodeIndex === viewOrderFlowNodes.length - 1"
+                  class="arrow-last"
                 >
-                  {{ renderNodeStatusText(node) }}
-                </el-tag>
+                  <div :class="flowNodeSegmentClass(node, 'lastLeft')"></div>
+                  <div :class="flowNodeSegmentClass(node, 'lastCenter')">
+                    <span class="flow-node-name">{{ node.nodeName }}</span>
+                  </div>
+                  <div class="last-right"></div>
+                </div>
+                <div v-else class="arrow">
+                  <div :class="flowNodeSegmentClass(node, 'arrowLeft')"></div>
+                  <div :class="flowNodeSegmentClass(node, 'arrowCenter')">
+                    <span class="flow-node-name">{{ node.nodeName }}</span>
+                  </div>
+                  <div :class="flowNodeSegmentClass(node, 'arrowRight')"></div>
+                </div>
+                <div class="node-extra">
+                  <div class="node-status-text">{{ renderNodeStatusText(node) }}</div>
+                  <div
+                    class="node-meta"
+                    v-if="node.taskExecution && node.taskExecution.lastTriggeredAt"
+                  >
+                    最近执行：{{ node.taskExecution.lastTriggeredAt }}
+                  </div>
+                  <el-button
+                    v-if="shouldShowManualButton(node, viewOrderDialog.record.orderId)"
+                    type="text"
+                    size="mini"
+                    class="manual-handle-btn"
+                    @click="openManualTaskDialogForOrder(viewOrderDialog.record.orderId)"
+                  >
+                    人工处理
+                  </el-button>
+                </div>
               </div>
-              <div class="node-status-message" v-if="node.taskExecution && node.taskExecution.message">
-                {{ node.taskExecution.message }}
-              </div>
-              <div class="node-status-message" v-if="node.taskExecution && node.taskExecution.lastTriggeredAt">
-                最近执行：{{ node.taskExecution.lastTriggeredAt }}
-              </div>
-            </el-timeline-item>
-          </el-timeline>
+            </div>
+          </div>
         </div>
         <div v-else class="template-empty">未绑定流程模板</div>
        </div>
@@ -550,6 +571,16 @@ const nowDateStampHelper = () => {
 
 const SYSTEM_NODE_TYPES = new Set(['0', '1', '2', '3', '4', '5', '6', '7'])
 
+const FLOW_SEGMENT_CLASS_MAP = {
+  firstCenter: { default: 'first-center', success: 'first-center-active', failed: 'first-center-refuse' },
+  firstRight: { default: 'first-right', success: 'first-right-active', failed: 'first-right-refuse' },
+  arrowLeft: { default: 'arrow-left', success: 'arrow-left-active', failed: 'arrow-left-refuse' },
+  arrowCenter: { default: 'arrow-center', success: 'arrow-center-active', failed: 'arrow-center-refuse' },
+  arrowRight: { default: 'arrow-right', success: 'arrow-right-active', failed: 'arrow-right-refuse' },
+  lastLeft: { default: 'last-left', success: 'last-left-active', failed: 'last-left-refuse' },
+  lastCenter: { default: 'last-center', success: 'last-center-active', failed: 'last-center-refuse' }
+}
+
 const deepClone = data => {
   if (data === null || data === undefined) {
     return data
@@ -601,8 +632,10 @@ export default {
         pendingNodes: [],
         errorMessage: '',
         responsePreview: '',
-        remark: ''
+        remark: '',
+        orderId: ''
       },
+      orderAutomationState: {},
        flowStatusOptions: [
          'pending',
          'file_preparing',
@@ -697,10 +730,17 @@ export default {
        }
        if (this.orderSearch.priority) {
          list = list.filter(order => order.priority === this.orderSearch.priority)
-       }
-       return list
-     }
-   },
+      }
+      return list
+    },
+    viewOrderFlowNodes() {
+      if (!this.viewOrderDialog.record || !this.viewOrderDialog.record.flowTemplate) {
+        return []
+      }
+      const nodes = this.viewOrderDialog.record.flowTemplate.flowNodeList
+      return Array.isArray(nodes) ? nodes : []
+    }
+  },
   methods: {
     async initializeData() {
       await Promise.all([
@@ -1021,7 +1061,7 @@ export default {
       }
     },
     async triggerTemplateTasksForOrder(templateId, orderForm) {
-      if (!templateId || !orderForm) {
+      if (!templateId || !orderForm || !orderForm.orderId) {
         return
       }
       try {
@@ -1029,18 +1069,44 @@ export default {
         if (!template || !Array.isArray(template.flowNodeList)) {
           return
         }
-        const nodes = template.flowNodeList.filter(node => this.isTaskTemplateNode(node))
+        const templateInstance = deepClone(template)
+        const nodes = templateInstance.flowNodeList.filter(node => this.isTaskTemplateNode(node))
         if (!nodes.length) {
           return
         }
-        await this.runTaskNodesSequence(templateId, template, nodes, orderForm)
+        this.setOrderAutomationState(orderForm.orderId, {
+          templateId,
+          templateInstance,
+          orderForm: deepClone(orderForm),
+          status: 'running',
+          failedNode: null,
+          pendingNodes: [],
+          errorMessage: '',
+          responsePreview: ''
+        })
+        await this.runTaskNodesSequence({
+          templateId,
+          template: templateInstance,
+          nodes,
+          orderForm,
+          orderId: orderForm.orderId
+        })
       } catch (error) {
         console.error('自动任务执行失败', error)
         this.$message.error('自动任务执行失败')
       }
     },
-    async runTaskNodesSequence(templateId, template, nodes, orderForm) {
+    async runTaskNodesSequence({ templateId, template, nodes, orderForm, orderId }) {
       if (!template || !Array.isArray(nodes) || !nodes.length) {
+        if (orderId) {
+          this.setOrderAutomationState(orderId, {
+            templateId,
+            templateInstance: template,
+            status: 'success',
+            pendingNodes: [],
+            failedNode: null
+          })
+        }
         return
       }
       const queue = nodes.slice()
@@ -1054,24 +1120,43 @@ export default {
             failedNode: currentNode,
             orderForm,
             pendingNodes: queue.slice(),
-            result: result || { success: false, message: '任务执行失败' }
+            result: result || { success: false, message: '任务执行失败' },
+            orderId
           })
           return
         }
       }
-      this.applyTemplateDetailUpdate(templateId, template)
+      if (orderId) {
+        this.setOrderAutomationState(orderId, {
+          templateId,
+          templateInstance: template,
+          status: 'success',
+          pendingNodes: [],
+          failedNode: null,
+          errorMessage: '',
+          responsePreview: ''
+        })
+      }
     },
-    handleTaskNodeFailure({ templateId, template, failedNode, orderForm, pendingNodes = [], result = {} }) {
-      this.manualTaskDialog.visible = true
-      this.manualTaskDialog.node = failedNode
-      this.manualTaskDialog.template = template
-      this.manualTaskDialog.templateId = templateId
-      this.manualTaskDialog.orderForm = orderForm
-      this.manualTaskDialog.pendingNodes = Array.isArray(pendingNodes) ? pendingNodes.slice() : []
-      this.manualTaskDialog.errorMessage = result.error || result.message || '任务执行失败'
-      this.manualTaskDialog.responsePreview = this.formatTaskResponsePreview(result.response)
-      this.manualTaskDialog.remark = ''
-      this.applyTemplateDetailUpdate(templateId, template)
+    handleTaskNodeFailure({ templateId, template, failedNode, orderForm, pendingNodes = [], result = {}, orderId }) {
+      const errorMessage = result.error || result.message || '任务执行失败'
+      if (orderId) {
+        this.setOrderAutomationState(orderId, {
+          templateId,
+          templateInstance: template,
+          orderForm,
+          status: 'failed',
+          failedNode,
+          pendingNodes,
+          errorMessage,
+          responsePreview: this.formatTaskResponsePreview(result.response)
+        })
+      }
+      if (failedNode && failedNode.nodeName) {
+        this.$message.error(`节点「${failedNode.nodeName}」自动执行失败，请在订单详情中人工处理`)
+      } else {
+        this.$message.error('自动任务执行失败，请人工处理')
+      }
     },
     resetManualTaskDialog() {
       this.manualTaskDialog.visible = false
@@ -1083,6 +1168,7 @@ export default {
       this.manualTaskDialog.errorMessage = ''
       this.manualTaskDialog.responsePreview = ''
       this.manualTaskDialog.remark = ''
+      this.manualTaskDialog.orderId = ''
     },
     confirmManualTaskHandling() {
       if (!this.manualTaskDialog.node) {
@@ -1095,18 +1181,34 @@ export default {
       const pendingNodes = Array.isArray(this.manualTaskDialog.pendingNodes)
         ? this.manualTaskDialog.pendingNodes.slice()
         : []
+      const orderId = this.manualTaskDialog.orderId
       const remark = (this.manualTaskDialog.remark || '').trim() || '人工处理完成'
       this.updateNodeExecutionState(this.manualTaskDialog.node, {
         success: true,
         manual: true,
         message: remark
       })
-      this.resetManualTaskDialog()
-      if (templateId && template) {
-        this.applyTemplateDetailUpdate(templateId, template)
+      if (orderId) {
+        this.setOrderAutomationState(orderId, {
+          templateId,
+          templateInstance: template,
+          orderForm,
+          status: pendingNodes.length ? 'running' : 'success',
+          pendingNodes,
+          failedNode: null,
+          errorMessage: '',
+          responsePreview: ''
+        })
       }
+      this.resetManualTaskDialog()
       if (templateId && template && orderForm && pendingNodes.length) {
-        this.runTaskNodesSequence(templateId, template, pendingNodes, orderForm)
+        this.runTaskNodesSequence({
+          templateId,
+          template,
+          nodes: pendingNodes,
+          orderForm,
+          orderId
+        })
       }
     },
     formatTaskResponsePreview(value) {
@@ -1176,31 +1278,77 @@ export default {
       }
       return execution.message || '待确认'
     },
-    renderNodeStatusTagType(node) {
-      const execution = node && node.taskExecution
-      if (!execution) {
-        return 'info'
+    nodeVisualState(node) {
+      if (!node || !node.taskExecution) {
+        return 'pending'
       }
-      if (execution.success) {
+      if (node.taskExecution.success) {
         return 'success'
       }
-      if (execution.error) {
-        return 'danger'
+      if (node.taskExecution.success === false || node.taskExecution.error) {
+        return 'failed'
       }
-      return 'warning'
+      return 'pending'
     },
-    renderNodeTimelineColor(node) {
-      const execution = node && node.taskExecution
-      if (!execution) {
+    flowNodeSegmentClass(node, segment) {
+      const config = FLOW_SEGMENT_CLASS_MAP[segment]
+      if (!config) {
         return ''
       }
-      if (execution.success) {
-        return '#67C23A'
+      const state = this.nodeVisualState(node)
+      if (state === 'success' && config.success) {
+        return config.success
       }
-      if (execution.error) {
-        return '#F56C6C'
+      if (state === 'failed' && config.failed) {
+        return config.failed
       }
-      return '#E6A23C'
+      return config.default
+    },
+    shouldShowManualButton(node, orderId) {
+      if (!node || !orderId) {
+        return false
+      }
+      const state = this.orderAutomationState[orderId]
+      return Boolean(state && state.status === 'failed' && state.failedNode === node)
+    },
+    openManualTaskDialogForOrder(orderId) {
+      if (!orderId) {
+        return
+      }
+      const state = this.orderAutomationState[orderId]
+      if (!state || !state.failedNode) {
+        this.$message.warning('暂无需要人工处理的节点')
+        return
+      }
+      this.manualTaskDialog.visible = true
+      this.manualTaskDialog.node = state.failedNode
+      this.manualTaskDialog.template = state.templateInstance
+      this.manualTaskDialog.templateId = state.templateId || ''
+      this.manualTaskDialog.orderForm = state.orderForm || null
+      this.manualTaskDialog.pendingNodes = Array.isArray(state.pendingNodes) ? state.pendingNodes.slice() : []
+      this.manualTaskDialog.errorMessage = state.errorMessage || ''
+      this.manualTaskDialog.responsePreview = state.responsePreview || ''
+      this.manualTaskDialog.remark = ''
+      this.manualTaskDialog.orderId = orderId
+    },
+    setOrderAutomationState(orderId, payload = {}) {
+      if (!orderId) {
+        return
+      }
+      const previous = this.orderAutomationState[orderId] || {}
+      const next = {
+        templateId: payload.templateId !== undefined ? payload.templateId : previous.templateId,
+        templateInstance: payload.templateInstance || previous.templateInstance,
+        orderForm: payload.orderForm || previous.orderForm,
+        status: payload.status || previous.status || 'pending',
+        pendingNodes: payload.pendingNodes !== undefined
+          ? payload.pendingNodes.slice()
+          : (previous.pendingNodes ? previous.pendingNodes.slice() : []),
+        failedNode: payload.failedNode !== undefined ? payload.failedNode : previous.failedNode,
+        errorMessage: payload.errorMessage !== undefined ? payload.errorMessage : previous.errorMessage,
+        responsePreview: payload.responsePreview !== undefined ? payload.responsePreview : previous.responsePreview
+      }
+      this.$set(this.orderAutomationState, orderId, next)
     },
     statusTagType(status) {
       const mapping = {
@@ -1222,6 +1370,13 @@ export default {
         urgent: 'danger'
       }
       return mapping[priority] || 'info'
+    },
+    orderRowClassName({ row }) {
+      if (!row || !row.orderId) {
+        return ''
+      }
+      const state = this.orderAutomationState[row.orderId]
+      return state && state.status === 'failed' ? 'order-row-failed' : ''
     },
     handleOrderSelectionChange(val) {
       this.selectedOrders = val
@@ -1352,7 +1507,15 @@ export default {
       }).catch(() => {})
     },
     viewOrder(order) {
-      this.viewOrderDialog.record = { ...order }
+      const record = { ...order }
+      if (!record.flowTemplate && record.templateId) {
+        record.flowTemplate = this.findTemplateById(record.templateId)
+      }
+      const automationState = order && order.orderId ? this.orderAutomationState[order.orderId] : null
+      if (automationState && automationState.templateInstance) {
+        record.flowTemplate = automationState.templateInstance
+      }
+      this.viewOrderDialog.record = record
       this.viewOrderDialog.visible = true
     },
     openFlowCreationDialog() {
@@ -1551,16 +1714,55 @@ export default {
      }
    }
 
-   .section-title {
-     margin: 18px 0 10px;
-     font-size: 15px;
-     font-weight: 600;
-   }
+  .section-title {
+    margin: 18px 0 10px;
+    font-size: 15px;
+    font-weight: 600;
+  }
 
-  .template-summary {
+ .template-summary {
     margin-bottom: 12px;
     font-size: 14px;
     color: #606266;
+  }
+
+  .flow-template-visual {
+    overflow-x: auto;
+  }
+
+  .flow-track {
+    display: flex;
+    padding: 10px 0;
+  }
+
+  .flow-node-wrapper {
+    margin-right: 10px;
+    min-width: 140px;
+  }
+
+  .flow-node-name {
+    color: #fff;
+    font-size: 13px;
+  }
+
+  .node-extra {
+    font-size: 12px;
+    color: #606266;
+    margin-top: 6px;
+
+    .node-status-text {
+      font-weight: 500;
+    }
+
+    .node-meta {
+      color: #909399;
+      margin-top: 4px;
+    }
+
+    .manual-handle-btn {
+      padding: 0;
+      margin-top: 4px;
+    }
   }
 
   .template-node {
@@ -1596,6 +1798,151 @@ export default {
     margin-right: 5px;
     margin-bottom: 4px;
   }
+}
+
+::v-deep .order-row-failed td {
+  background-color: #fde2e2 !important;
+}
+
+.arrow-first {
+  display: flex;
+}
+
+.first-center,
+.first-center-active,
+.first-center-refuse {
+  width: 100px;
+  text-align: center;
+}
+
+.first-center {
+  background-color: #cbcdd4;
+}
+
+.first-center-active {
+  background-color: #70eaa9;
+}
+
+.first-center-refuse {
+  background-color: #ca5f41;
+}
+
+.first-right,
+.first-right-active,
+.first-right-refuse {
+  border-width: 19px;
+  border-style: solid;
+  border-color: transparent transparent transparent #cbcdd4;
+}
+
+.first-right-active {
+  border-color: transparent transparent transparent #70eaa9;
+}
+
+.first-right-refuse {
+  border-color: transparent transparent transparent #ca5f41;
+}
+
+.arrow {
+  display: flex;
+  margin-left: -25px;
+}
+
+.arrow-left,
+.arrow-left-active,
+.arrow-left-refuse {
+  border-width: 19px;
+  border-style: solid;
+  border-color: #cbcdd4 #cbcdd4 #cbcdd4 transparent;
+}
+
+.arrow-left-active {
+  border-color: #70eaa9 #70eaa9 #70eaa9 transparent;
+}
+
+.arrow-left-refuse {
+  border-color: #ca5f41 #ca5f41 #ca5f41 transparent;
+}
+
+.arrow-center,
+.arrow-center-active,
+.arrow-center-refuse {
+  width: 100px;
+  text-align: center;
+}
+
+.arrow-center {
+  background-color: #cbcdd4;
+}
+
+.arrow-center-active {
+  background-color: #70eaa9;
+}
+
+.arrow-center-refuse {
+  background-color: #ca5f41;
+}
+
+.arrow-right,
+.arrow-right-active,
+.arrow-right-refuse {
+  border-width: 19px;
+  border-style: solid;
+  border-color: transparent transparent transparent #cbcdd4;
+}
+
+.arrow-right-active {
+  border-color: transparent transparent transparent #70eaa9;
+}
+
+.arrow-right-refuse {
+  border-color: transparent transparent transparent #ca5f41;
+}
+
+.arrow-last {
+  display: flex;
+  margin-left: -25px;
+}
+
+.last-left,
+.last-left-active,
+.last-left-refuse {
+  border-width: 19px;
+  border-style: solid;
+  border-color: #cbcdd4 #cbcdd4 #cbcdd4 transparent;
+}
+
+.last-left-active {
+  border-color: #70eaa9 #70eaa9 #70eaa9 transparent;
+}
+
+.last-left-refuse {
+  border-color: #ca5f41 #ca5f41 #ca5f41 transparent;
+}
+
+.last-center,
+.last-center-active,
+.last-center-refuse {
+  width: 100px;
+  text-align: center;
+}
+
+.last-center {
+  background-color: #cbcdd4;
+}
+
+.last-center-active {
+  background-color: #70eaa9;
+}
+
+.last-center-refuse {
+  background-color: #ca5f41;
+}
+
+.last-right {
+  border-width: 19px;
+  border-style: solid;
+  border-color: transparent transparent transparent transparent;
 }
 
 .manual-task-dialog {
