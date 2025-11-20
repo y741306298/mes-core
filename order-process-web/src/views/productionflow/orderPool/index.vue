@@ -1457,13 +1457,24 @@ export default {
         this.$set(this.manualTaskDialog.node, 'orderNode', matchedOrderNode)
       }
       console.log("this.manualTaskDialog.node",this.manualTaskDialog.node)
-      const orderNodeId = this.manualTaskDialog.node.orderNodeId
-        || (this.manualTaskDialog.node.orderNode && this.manualTaskDialog.node.orderNode.orderNodeId)
-        || (matchedOrderNode && matchedOrderNode.orderNodeId)
-        || ''
-      const nodeId = this.manualTaskDialog.node.nodeId
-        || (this.manualTaskDialog.node.orderNode && this.manualTaskDialog.node.orderNode.nodeId)
-        || ''
+      const pickValidId = (...candidates) => candidates.find(
+        id => id !== undefined && id !== null && `${id}` !== ''
+      )
+      const orderNodeId = pickValidId(
+        this.manualTaskDialog.node.orderNodeId,
+        this.manualTaskDialog.node.orderNode && this.manualTaskDialog.node.orderNode.orderNodeId,
+        matchedOrderNode && matchedOrderNode.orderNodeId,
+        matchedOrderNode && matchedOrderNode.orderNode && matchedOrderNode.orderNode.orderNodeId
+      ) || ''
+      const nodeId = pickValidId(
+        this.manualTaskDialog.node.nodeId,
+        this.manualTaskDialog.node.orderNode && this.manualTaskDialog.node.orderNode.nodeId,
+        matchedOrderNode && matchedOrderNode.nodeId,
+        matchedOrderNode && matchedOrderNode.orderNode && matchedOrderNode.orderNode.nodeId
+      ) || ''
+      if (orderNodeId && !this.manualTaskDialog.node.orderNodeId) {
+        this.$set(this.manualTaskDialog.node, 'orderNodeId', orderNodeId)
+      }
       if (orderId && (orderNodeId || nodeId)) {
         try {
           await submitRemark({ orderId, orderNodeId, remark })
