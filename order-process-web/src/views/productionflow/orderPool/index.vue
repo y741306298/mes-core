@@ -1246,18 +1246,33 @@ export default {
       if (automationState && (automationState.status === 'running' || automationState.status === 'failed')) {
         return
       }
-      const template = order.flowTemplate || await this.ensureFlowTemplateDetails(order.templateId)
+      let orderDetail = order
+      if (!orderDetail || !Array.isArray(orderDetail.orderNodes) || !orderDetail.orderNodes.length) {
+        try {
+          const { data } = await getOrderPool(orderId)
+          if (data) {
+            orderDetail = this.normalizeOrder(data)
+            const listIndex = this.orderList.findIndex(item => item.orderId === orderId)
+            if (listIndex !== -1) {
+              this.$set(this.orderList, listIndex, orderDetail)
+            }
+          }
+        } catch (error) {
+          console.error('获取订单详情失败', error)
+        }
+      }
+      const template = orderDetail.flowTemplate || await this.ensureFlowTemplateDetails(orderDetail.templateId)
       if (!template || !Array.isArray(template.flowNodeList) || !template.flowNodeList.length) {
         return
       }
-      const queue = this.buildAutoTriggerQueue(order, template)
+      const queue = this.buildAutoTriggerQueue(orderDetail, template)
       if (!queue.length) {
         return
       }
       this.setOrderAutomationState(orderId, {
         templateId: template.templateId,
         templateInstance: template,
-        orderForm: order,
+        orderForm: orderDetail,
         status: 'running',
         failedNode: null,
         pendingNodes: queue.slice(),
@@ -1268,7 +1283,7 @@ export default {
         templateId: template.templateId,
         template,
         nodes: queue,
-        orderForm: order,
+        orderForm: orderDetail,
         orderId
       })
     },
