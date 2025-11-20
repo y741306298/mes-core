@@ -930,6 +930,17 @@ export default {
         sort: node && node.sort != null ? node.sort : index
       }))
     },
+    normalizeOrderNodes(nodes = []) {
+      if (!Array.isArray(nodes)) {
+        return []
+      }
+      return nodes.map((node, index) => ({
+        ...node,
+        nodeStatus: node && node.nodeStatus != null ? `${node.nodeStatus}` : '0',
+        nodeRemark: node && node.nodeRemark ? node.nodeRemark : '',
+        sort: node && node.sort != null ? node.sort : index
+      }))
+    },
     normalizeFlow(flow = {}) {
       const materialsSummary = Array.isArray(flow.materialsSummary)
         ? flow.materialsSummary.map((item, index) => ({
@@ -1297,8 +1308,28 @@ export default {
         : []
       const orderId = this.manualTaskDialog.orderId
       const remark = (this.manualTaskDialog.remark || '').trim() || '人工处理完成'
+      const orderNodesFromForm = (orderForm && Array.isArray(orderForm.orderNodes))
+        ? this.normalizeOrderNodes(orderForm.orderNodes)
+        : []
+      const fallbackOrderNodeById = node => {
+        if (!node) {
+          return null
+        }
+        const targetNodeId = node.nodeId
+          || (node.orderNode && node.orderNode.nodeId)
+          || ''
+        if (!targetNodeId) {
+          return null
+        }
+        return orderNodesFromForm.find(item => item.nodeId === targetNodeId) || null
+      }
+      const matchedOrderNode = fallbackOrderNodeById(this.manualTaskDialog.node)
+      if (matchedOrderNode && !this.manualTaskDialog.node.orderNode) {
+        this.$set(this.manualTaskDialog.node, 'orderNode', matchedOrderNode)
+      }
       const orderNodeId = this.manualTaskDialog.node.orderNodeId
         || (this.manualTaskDialog.node.orderNode && this.manualTaskDialog.node.orderNode.orderNodeId)
+        || (matchedOrderNode && matchedOrderNode.orderNodeId)
         || ''
       const nodeId = this.manualTaskDialog.node.nodeId
         || (this.manualTaskDialog.node.orderNode && this.manualTaskDialog.node.orderNode.nodeId)
