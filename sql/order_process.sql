@@ -20,3 +20,12 @@ CREATE TABLE `brt_task_template` (
   PRIMARY KEY (`template_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='任务模板';
 
+-- ----------------------------
+-- brt_order_node字段补充
+-- ----------------------------
+ALTER TABLE `brt_order_node`
+    ADD COLUMN IF NOT EXISTS `oper_setting` varchar(32) DEFAULT NULL COMMENT '操作设置(0=生成收货单,1=生成送货单,2=减库存,3=加库存)' AFTER `sort`;
+
+ALTER TABLE `brt_order_node`
+    ADD COLUMN IF NOT EXISTS `trigger_mode` varchar(32) DEFAULT 'MANUAL' COMMENT '触发方式(AUTO=自动触发,MANUAL=人工触发)' AFTER `oper_setting`;
+

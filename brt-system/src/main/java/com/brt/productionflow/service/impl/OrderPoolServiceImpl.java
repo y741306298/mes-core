@@ -405,6 +405,7 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
             orderNode.setNodeId(flowNode.getNodeId());
             orderNode.setNodeRemark(flowNode.getNodeName());
             orderNode.setOperSetting(flowNode.getOtherSetting());
+            orderNode.setTriggerMode(Boolean.TRUE.equals(flowNode.getAutoCompletion()) ? "AUTO" : "MANUAL");
             orderNode.setSort(flowNode.getSort() == null
                 ? Long.valueOf(sort.getAndIncrement())
                 : flowNode.getSort().longValue());
