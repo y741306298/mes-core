@@ -1333,13 +1333,31 @@ export default {
       if (direct !== null) {
         return direct
       }
+      const directCode = this.parseStatusCode(response.code)
+      if (directCode !== null) {
+        return directCode
+      }
       if (response.data) {
         const nested = this.parseBooleanFlag(response.data.success)
         if (nested !== null) {
           return nested
         }
+        const nestedCode = this.parseStatusCode(response.data.code)
+        if (nestedCode !== null) {
+          return nestedCode
+        }
       }
       return false
+    },
+    parseStatusCode(value) {
+      if (value === undefined || value === null) {
+        return null
+      }
+      const code = typeof value === 'string' ? Number.parseInt(value, 10) : value
+      if (Number.isNaN(code)) {
+        return null
+      }
+      return code === 200
     },
     parseBooleanFlag(value) {
       if (value === undefined || value === null) {
