@@ -4,9 +4,21 @@ import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.brt.common.enums.AuditStatusEnums;
+import com.brt.common.enums.NodeStatusEnums;
+import com.brt.common.enums.OrderTemplateStatusEnums;
+import com.brt.common.enums.OrderTemplateTypeEnums;
 import com.brt.common.utils.StringUtils;
+import com.brt.order.domain.BrtOrderNode;
+import com.brt.order.domain.BrtOrderTemplate;
+import com.brt.order.service.IBrtFlowNodeService;
 import com.brt.order.service.IBrtFlowTemplateService;
+import com.brt.order.service.IBrtOrderNodeService;
+import com.brt.order.service.IBrtOrderTemplateService;
+import com.brt.order.vo.BrtFlowNodeVo;
 import com.brt.order.vo.BrtFlowTemplateVo;
+import com.brt.order.vo.BrtOrderNodeVo;
+import com.brt.order.vo.BrtOrderTemplateVo;
 import com.brt.productionflow.domain.OrderPool;
 import com.brt.productionflow.domain.ProductionFlow;
 import com.brt.productionflow.domain.ProductionFlowMaterial;
@@ -54,6 +66,9 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
     private final ProductionFlowOrderRelMapper productionFlowOrderRelMapper;
     private final ProductionFlowStepMapper productionFlowStepMapper;
     private final IBrtFlowTemplateService flowTemplateService;
+    private final IBrtOrderTemplateService orderTemplateService;
+    private final IBrtOrderNodeService orderNodeService;
+    private final IBrtFlowNodeService flowNodeService;
 
     @Override
     public List<OrderPoolVo> selectOrderPoolList(OrderPoolQuery query) {
@@ -93,6 +108,7 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
         entity.setCreatedAt(now);
         entity.setUpdatedAt(now);
         orderPoolMapper.insert(entity);
+        createOrderProcessData(entity);
         return selectOrderPoolById(entity.getOrderId());
     }
 
@@ -233,7 +249,45 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
             .map(order -> BeanUtil.copyProperties(order, OrderPoolVo.class))
             .collect(Collectors.toList());
         applyTemplateData(result);
+        applyOrderProcessData(result);
         return result;
+    }
+
+    private void applyOrderProcessData(List<OrderPoolVo> orders) {
+        if (CollectionUtils.isEmpty(orders)) {
+            return;
+        }
+        Set<String> orderIds = orders.stream()
+            .map(OrderPool::getOrderId)
+            .filter(StringUtils::isNotBlank)
+            .collect(Collectors.toSet());
+        if (CollectionUtils.isEmpty(orderIds)) {
+            return;
+        }
+
+        Map<String, List<BrtOrderTemplateVo>> templateMap = orderTemplateService.list(Wrappers.<BrtOrderTemplate>lambdaQuery()
+                .in(BrtOrderTemplate::getOrderId, orderIds))
+            .stream()
+            .map(item -> BeanUtil.copyProperties(item, BrtOrderTemplateVo.class))
+            .collect(Collectors.groupingBy(BrtOrderTemplateVo::getOrderId));
+
+        Map<String, List<BrtOrderNodeVo>> nodeMap = orderNodeService.list(Wrappers.<BrtOrderNode>lambdaQuery()
+                .in(BrtOrderNode::getOrderId, orderIds)
+                .orderByAsc(BrtOrderNode::getSort)
+                .orderByAsc(BrtOrderNode::getOrderNodeId))
+            .stream()
+            .map(item -> BeanUtil.copyProperties(item, BrtOrderNodeVo.class))
+            .collect(Collectors.groupingBy(BrtOrderNodeVo::getOrderId));
+
+        orders.forEach(order -> {
+            BrtOrderTemplateVo template = templateMap.getOrDefault(order.getOrderId(), Collections.emptyList())
+                .stream()
+                .filter(item -> StringUtils.isBlank(order.getTemplateId()) || StringUtils.equals(order.getTemplateId(), item.getTemplateId()))
+                .findFirst()
+                .orElseGet(() -> templateMap.getOrDefault(order.getOrderId(), Collections.emptyList()).stream().findFirst().orElse(null));
+            order.setOrderTemplate(template);
+            order.setOrderNodes(new ArrayList<>(nodeMap.getOrDefault(order.getOrderId(), Collections.emptyList())));
+        });
     }
 
     private List<ProductionFlowVo> attachFlowDetails(List<ProductionFlow> flows) {
@@ -303,6 +357,58 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
         saveMaterials(flowId, flowVo.getMaterialsSummary());
         saveOrderRelations(flowId, flowVo.getOrderIds());
         saveSteps(flowId, flowVo.getProcess());
+    }
+
+    private void createOrderProcessData(OrderPool orderPool) {
+        if (orderPool == null || StringUtils.isBlank(orderPool.getOrderId()) || StringUtils.isBlank(orderPool.getTemplateId())) {
+            return;
+        }
+        List<BrtOrderTemplate> existingTemplates = orderTemplateService.list(Wrappers.<BrtOrderTemplate>lambdaQuery()
+            .eq(BrtOrderTemplate::getOrderId, orderPool.getOrderId())
+            .eq(BrtOrderTemplate::getTemplateId, orderPool.getTemplateId()));
+        if (CollectionUtils.isNotEmpty(existingTemplates)) {
+            return;
+        }
+
+        BrtFlowTemplateVo flowTemplate = flowTemplateService.queryBrtFlowTemplateByTemplateId(orderPool.getTemplateId());
+        if (flowTemplate == null) {
+            return;
+        }
+
+        BrtOrderTemplateVo orderTemplate = new BrtOrderTemplateVo();
+        orderTemplate.setOrderId(orderPool.getOrderId());
+        orderTemplate.setTemplateId(orderPool.getTemplateId());
+        orderTemplate.setOrderTemplateStatus(OrderTemplateStatusEnums.正常.getCode());
+        orderTemplate.setAuditStatus(AuditStatusEnums.通过.getCode());
+        orderTemplate.setTemplateType(OrderTemplateTypeEnums.订单模板.getCode());
+        orderTemplate.setOrderNum(orderPool.getQuantity());
+        orderTemplate.setStatus("1");
+        orderTemplateService.insertBrtOrderTemplate(orderTemplate);
+
+        List<BrtFlowNodeVo> flowNodes = flowTemplate.getFlowNodeList();
+        if (CollectionUtils.isEmpty(flowNodes)) {
+            BrtFlowNodeVo query = new BrtFlowNodeVo();
+            query.setTemplateId(orderPool.getTemplateId());
+            flowNodes = flowNodeService.queryBrtFlowNodeAll(query);
+        }
+        if (CollectionUtils.isEmpty(flowNodes)) {
+            return;
+        }
+
+        AtomicInteger sort = new AtomicInteger(0);
+        flowNodes.forEach(flowNode -> {
+            BrtOrderNode orderNode = new BrtOrderNode();
+            orderNode.setOrderTemplateId(orderTemplate.getOrderTemplateId());
+            orderNode.setChildId(flowNode.getChildId());
+            orderNode.setOrderId(orderPool.getOrderId());
+            orderNode.setTemplateId(orderPool.getTemplateId());
+            orderNode.setNodeId(flowNode.getNodeId());
+            orderNode.setNodeRemark(flowNode.getNodeRemark());
+            orderNode.setOperSetting(flowNode.getOperSetting());
+            orderNode.setSort(flowNode.getSort() == null ? sort.getAndIncrement() : flowNode.getSort().longValue());
+            orderNode.setNodeStatus(NodeStatusEnums.未开始.getCode());
+            orderNodeService.save(orderNode);
+        });
     }
 
     private void clearFlowRelations(String flowId) {
