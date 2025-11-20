@@ -1456,6 +1456,7 @@ export default {
       if (matchedOrderNode && !this.manualTaskDialog.node.orderNode) {
         this.$set(this.manualTaskDialog.node, 'orderNode', matchedOrderNode)
       }
+      console.log("this.manualTaskDialog.node",this.manualTaskDialog.node)
       const orderNodeId = this.manualTaskDialog.node.orderNodeId
         || (this.manualTaskDialog.node.orderNode && this.manualTaskDialog.node.orderNode.orderNodeId)
         || (matchedOrderNode && matchedOrderNode.orderNodeId)

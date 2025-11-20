@@ -381,7 +381,7 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
         orderTemplate.setOrderTemplateStatus(OrderTemplateStatusEnums.正常.getCode());
         orderTemplate.setAuditStatus(AuditStatusEnums.通过.getCode());
         orderTemplate.setTemplateType(OrderTemplateTypeEnums.订单模板.getCode());
-        orderTemplate.setOrderNum(orderPool.getQuantity());
+        orderTemplate.setOrderNum(Long.valueOf(orderPool.getQuantity()));
         orderTemplate.setStatus("1");
         orderTemplateService.insertBrtOrderTemplate(orderTemplate);
 

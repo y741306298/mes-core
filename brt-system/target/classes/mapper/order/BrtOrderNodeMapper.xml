@@ -16,6 +16,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="nodeStatus"    column="node_status"    />
         <result property="nodeRemark"    column="node_remark"    />
         <result property="sort"    column="sort"    />
+        <result property="operSetting"    column="oper_setting"    />
         <result property="createTime"    column="create_time"    />
         <result property="createBy"    column="create_by"    />
         <result property="updateTime"    column="update_time"    />
@@ -25,6 +26,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="principal"    column="principal"    />
         <result property="nodePrincipal"    column="node_principal"    />
         <result property="timeout"    column="timeout"    />
+        <result property="triggerMode"    column="trigger_mode"    />
         <association property="flowNodeVo" javaType="com.brt.order.vo.BrtFlowNodeVo" column="node_id" select="com.brt.order.mapper.BrtFlowNodeMapper.queryBrtFlowNodeByNodeId" />
         <association property="user" javaType="com.brt.common.core.domain.entity.SysUser" column="user_id" select="com.brt.system.mapper.SysUserMapper.selectUserById" />
         <association property="nodePrincipalVo" javaType="com.brt.common.core.domain.entity.SysUser" column="node_principal" select="com.brt.system.mapper.SysUserMapper.selectUserById" />
@@ -55,6 +57,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             A.node_status,
             A.node_remark,
             A.sort,
+            A.oper_setting,
             A.node_principal,
             A.create_time,
             A.timeout,
@@ -62,7 +65,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             A.update_time,
             A.update_by,
             A.create_id,
-            A.child_id
+            A.child_id,
+            A.trigger_mode
     </sql>
 
     <sql id="brtOrderNodeQuerySql">
@@ -83,11 +87,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         A.node_status,
         A.node_remark,
         A.sort,
+        A.oper_setting,
         A.node_principal,
         A.create_time,
         A.create_by,
         A.update_time,
         A.update_by,
+        A.trigger_mode,
         T.order_no,
         T.customer_id,
         T.audit_status,
@@ -136,11 +142,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         A.node_status,
         A.node_remark,
         A.sort,
+        A.oper_setting,
         A.node_principal,
         A.create_time,
         A.create_by,
         A.update_time,
         A.update_by,
+        A.trigger_mode,
         T.order_no,
         T.customer_id,
         T.audit_status,
