@@ -281,7 +281,7 @@
                   :class="{ 'manual-node-clickable': isManualOnlyFlowNode(node) }"
                   v-for="(node, nodeIndex) in viewOrderFlowNodes"
                   :key="node.nodeId || node.nodeName || nodeIndex"
-                  @click="handleFlowNodeClick(node)"
+                  @click.stop="handleFlowNodeClick(node, $event)"
                 >
                   <div v-if="nodeIndex === 0" class="arrow-first">
                     <div :class="flowNodeSegmentClass(node, 'firstCenter')">
@@ -649,6 +649,7 @@ export default {
         orderId: '',
         submitting: false
       },
+      nodeClickHandling: false,
       orderAutomationState: {},
        flowStatusOptions: [
          'pending',
@@ -1224,11 +1225,17 @@ export default {
           errorMessage,
           responsePreview: this.formatTaskResponsePreview(result.response)
         })
+        this.refreshOrderRecord(orderId, { silent: true, updateDialog: true }).catch(() => {})
       }
       if (failedNode && failedNode.nodeName) {
         this.$message.error(`节点「${failedNode.nodeName}」自动执行失败，请在订单详情中人工处理`)
       } else {
         this.$message.error('自动任务执行失败，请人工处理')
+      }
+      if (orderId && failedNode) {
+        this.$nextTick(() => {
+          this.openManualTaskDialogForOrder(orderId)
+        })
       }
     },
     resetManualTaskDialog() {
@@ -1431,24 +1438,35 @@ export default {
       }
       return !this.isTaskTemplateNode(node)
     },
-    handleFlowNodeClick(node) {
-      if (!node) {
+    handleFlowNodeClick(node, event) {
+      if (event && typeof event.stopPropagation === 'function') {
+        event.stopPropagation()
+      }
+      if (this.nodeClickHandling) {
         return
       }
-      const record = this.viewOrderDialog.record
-      const orderId = record && record.orderId
-      if (!orderId) {
-        return
+      this.nodeClickHandling = true
+      try {
+        if (!node) {
+          return
+        }
+        const record = this.viewOrderDialog.record
+        const orderId = record && record.orderId
+        if (!orderId) {
+          return
+        }
+        const state = this.orderAutomationState[orderId]
+        if (state && state.failedNode && this.isSameFlowNode(state.failedNode, node)) {
+          this.openManualTaskDialogForOrder(orderId)
+          return
+        }
+        if (!this.isManualOnlyFlowNode(node)) {
+          return
+        }
+        this.openManualDialogForManualNode({ node, record })
+      } finally {
+        this.nodeClickHandling = false
       }
-      const state = this.orderAutomationState[orderId]
-      if (state && state.failedNode && this.isSameFlowNode(state.failedNode, node)) {
-        this.openManualTaskDialogForOrder(orderId)
-        return
-      }
-      if (!this.isManualOnlyFlowNode(node)) {
-        return
-      }
-      this.openManualDialogForManualNode({ node, record })
     },
     openManualDialogForManualNode({ node, record }) {
       if (!node || !record || !record.flowTemplate) {
