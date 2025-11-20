@@ -366,7 +366,7 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
         List<BrtOrderTemplate> existingTemplates = orderTemplateService.list(Wrappers.<BrtOrderTemplate>lambdaQuery()
             .eq(BrtOrderTemplate::getOrderId, orderPool.getOrderId())
             .eq(BrtOrderTemplate::getTemplateId, orderPool.getTemplateId()));
-        if (CollectionUtils.isNotEmpty(existingTemplates)) {
+        if (!CollectionUtils.isEmpty(existingTemplates)) {
             return;
         }
 
@@ -399,13 +399,15 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
         flowNodes.forEach(flowNode -> {
             BrtOrderNode orderNode = new BrtOrderNode();
             orderNode.setOrderTemplateId(orderTemplate.getOrderTemplateId());
-            orderNode.setChildId(flowNode.getChildId());
+            orderNode.setChildId(orderTemplate.getChildId());
             orderNode.setOrderId(orderPool.getOrderId());
             orderNode.setTemplateId(orderPool.getTemplateId());
             orderNode.setNodeId(flowNode.getNodeId());
-            orderNode.setNodeRemark(flowNode.getNodeRemark());
-            orderNode.setOperSetting(flowNode.getOperSetting());
-            orderNode.setSort(flowNode.getSort() == null ? sort.getAndIncrement() : flowNode.getSort().longValue());
+            orderNode.setNodeRemark(flowNode.getNodeName());
+            orderNode.setOperSetting(flowNode.getOtherSetting());
+            orderNode.setSort(flowNode.getSort() == null
+                ? Long.valueOf(sort.getAndIncrement())
+                : flowNode.getSort().longValue());
             orderNode.setNodeStatus(NodeStatusEnums.未开始.getCode());
             orderNodeService.save(orderNode);
         });
