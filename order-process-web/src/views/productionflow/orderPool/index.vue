@@ -743,17 +743,32 @@ export default {
        if (this.orderSearch.status) {
          list = list.filter(order => order.orderStatus === this.orderSearch.status)
        }
-       if (this.orderSearch.priority) {
-         list = list.filter(order => order.priority === this.orderSearch.priority)
-      }
-      return list
+      if (this.orderSearch.priority) {
+        list = list.filter(order => order.priority === this.orderSearch.priority)
+     }
+     return list
     },
     viewOrderFlowNodes() {
-      if (!this.viewOrderDialog.record || !this.viewOrderDialog.record.flowTemplate) {
+      const record = this.viewOrderDialog.record
+      if (!record) {
         return []
       }
-      const nodes = this.viewOrderDialog.record.flowTemplate.flowNodeList
-      return Array.isArray(nodes) ? nodes : []
+      const templateNodes = record.flowTemplate && Array.isArray(record.flowTemplate.flowNodeList)
+        ? deepClone(record.flowTemplate.flowNodeList)
+        : []
+      const orderNodes = this.normalizeOrderNodes(record.orderNodes)
+      if (!templateNodes.length && orderNodes.length) {
+        return orderNodes.map(node => ({
+          nodeName: node.nodeName || node.nodeRemark || node.nodeId,
+          orderNode: node
+        }))
+      }
+      return templateNodes.map((node, index) => {
+        const matchedNode = orderNodes.find(item => item.nodeId && item.nodeId === node.nodeId)
+          || orderNodes[index]
+          || null
+        return Object.assign({}, node, { orderNode: matchedNode })
+      })
     }
   },
   methods: {
@@ -854,6 +869,7 @@ export default {
         ) {
           this.viewOrderDialog.record = this.buildViewOrderRecord(normalized)
         }
+        this.autoTriggerFromOrder(normalized)
         return normalized
       } catch (error) {
         console.error('刷新订单详情失败', error)
@@ -881,6 +897,7 @@ export default {
       this.fetchOrders()
     },
     normalizeOrder(order = {}) {
+      const orderNodes = this.normalizeOrderNodes(order.orderNodes)
       return {
         orderId: order.orderId || '',
         previewImage: order.previewImage || '',
@@ -898,8 +915,22 @@ export default {
         colorRequirement: order.colorRequirement || '',
         fileFormat: order.fileFormat || '',
         templateId: order.templateId || '',
-        flowTemplate: order.flowTemplate || null
+        flowTemplate: order.flowTemplate || null,
+        orderTemplate: order.orderTemplate || null,
+        orderNodes
       }
+    },
+    normalizeOrderNodes(nodes = []) {
+      if (!Array.isArray(nodes)) {
+        return []
+      }
+      return nodes.map((node, index) => ({
+        ...node,
+        nodeStatus: node && node.nodeStatus != null ? `${node.nodeStatus}` : '0',
+        nodeRemark: node && node.nodeRemark ? node.nodeRemark : '',
+        triggerMode: (node && node.triggerMode) ? `${node.triggerMode}` : 'MANUAL',
+        sort: node && node.sort != null ? node.sort : index
+      }))
     },
     normalizeFlow(flow = {}) {
       const materialsSummary = Array.isArray(flow.materialsSummary)
@@ -1005,6 +1036,29 @@ export default {
       }
       return Boolean(this.taskTemplateMap[nodeType])
     },
+    normalizeTriggerMode(value) {
+      if (!value) {
+        return 'MANUAL'
+      }
+      const normalized = `${value}`.toUpperCase()
+      if (normalized === 'AUTO' || normalized === '自动触发') {
+        return 'AUTO'
+      }
+      if (normalized === 'MANUAL' || normalized === '人工触发') {
+        return 'MANUAL'
+      }
+      return normalized
+    },
+    isAutoTriggerNode(node) {
+      if (!node) {
+        return false
+      }
+      const triggerMode = this.normalizeTriggerMode(
+        (node.orderNode && node.orderNode.triggerMode)
+        || node.triggerMode
+      )
+      return triggerMode === 'AUTO'
+    },
     buildTaskRequestPayload(config = {}, orderForm = {}) {
       const payload = {}
       const params = Array.isArray(config.requestParams) ? config.requestParams : []
@@ -1056,6 +1110,10 @@ export default {
     async executeTaskNode(node, orderForm) {
       const nodeType = node && node.nodeType != null ? `${node.nodeType}` : ''
       const orderId = orderForm && orderForm.orderId ? orderForm.orderId : ''
+      const orderNodeId = node.orderNodeId
+        || (node.orderNode && node.orderNode.orderNodeId)
+        || ''
+      const flowNodeId = node.nodeId || (node.orderNode && node.orderNode.nodeId) || ''
       const finalizeResult = async result => {
         this.updateNodeExecutionState(node, result)
         if (orderId) {
@@ -1080,11 +1138,27 @@ export default {
       try {
         const responseData = await this.executeTaskTemplate(taskTemplate, orderForm, config)
         const success = this.isTaskResponseSuccess(responseData)
-        return finalizeResult({
+        const resultPayload = {
           success,
           response: responseData,
           message: success ? '任务执行成功' : '接口返回未满足成功条件'
-        })
+        }
+        if (success && orderId && orderNodeId) {
+          try {
+            await complateNode({
+              orderId,
+              orderNodeId,
+              nodeId: flowNodeId,
+              nodeRemark: resultPayload.message || '自动触发完成',
+              nodeType: '3'
+            })
+          } catch (error) {
+            console.error('自动节点完成失败', error)
+            resultPayload.success = false
+            resultPayload.error = (error && error.message) || '节点完成失败'
+          }
+        }
+        return finalizeResult(resultPayload)
       } catch (error) {
         const errorMessage = (error && error.responseData && (error.responseData.message || error.responseData.msg))
           || (error && error.message)
@@ -1117,6 +1191,86 @@ export default {
         }
         throw error
       }
+    },
+    buildAutoTriggerQueue(order = {}, template) {
+      const flowTemplate = template || order.flowTemplate || null
+      if (!flowTemplate || !Array.isArray(flowTemplate.flowNodeList) || !flowTemplate.flowNodeList.length) {
+        return []
+      }
+      const flowNodes = flowTemplate.flowNodeList.slice().sort((a, b) => {
+        const aSort = a && a.sort != null ? Number(a.sort) : 0
+        const bSort = b && b.sort != null ? Number(b.sort) : 0
+        return aSort - bSort
+      })
+      const orderNodes = this.normalizeOrderNodes(order.orderNodes)
+      if (!orderNodes.length) {
+        return []
+      }
+      const orderNodeMap = {}
+      orderNodes.forEach(item => {
+        if (item && item.nodeId) {
+          orderNodeMap[item.nodeId] = item
+        }
+      })
+      const startIndex = flowNodes.findIndex(flowNode => {
+        const mapped = flowNode && flowNode.nodeId ? orderNodeMap[flowNode.nodeId] : null
+        return mapped && this.isAutoTriggerNode(mapped) && `${mapped.nodeStatus || '0'}` === '1'
+      })
+      if (startIndex === -1) {
+        return []
+      }
+      const queue = []
+      for (let i = startIndex; i < flowNodes.length; i += 1) {
+        const flowNode = flowNodes[i]
+        const mapped = flowNode && flowNode.nodeId ? orderNodeMap[flowNode.nodeId] : null
+        if (!mapped) {
+          continue
+        }
+        const triggerMode = this.normalizeTriggerMode(mapped.triggerMode)
+        if (triggerMode !== 'AUTO') {
+          break
+        }
+        if (`${mapped.nodeStatus || '0'}` === '2') {
+          continue
+        }
+        queue.push({ ...flowNode, orderNode: mapped, orderNodeId: mapped.orderNodeId })
+      }
+      return queue
+    },
+    async autoTriggerFromOrder(order) {
+      const orderId = order && order.orderId
+      if (!orderId) {
+        return
+      }
+      const automationState = this.orderAutomationState[orderId]
+      if (automationState && (automationState.status === 'running' || automationState.status === 'failed')) {
+        return
+      }
+      const template = order.flowTemplate || await this.ensureFlowTemplateDetails(order.templateId)
+      if (!template || !Array.isArray(template.flowNodeList) || !template.flowNodeList.length) {
+        return
+      }
+      const queue = this.buildAutoTriggerQueue(order, template)
+      if (!queue.length) {
+        return
+      }
+      this.setOrderAutomationState(orderId, {
+        templateId: template.templateId,
+        templateInstance: template,
+        orderForm: order,
+        status: 'running',
+        failedNode: null,
+        pendingNodes: queue.slice(),
+        errorMessage: '',
+        responsePreview: ''
+      })
+      this.runTaskNodesSequence({
+        templateId: template.templateId,
+        template,
+        nodes: queue,
+        orderForm: order,
+        orderId
+      })
     },
     async triggerTemplateTasksForOrder(templateId, orderForm) {
       if (!templateId || !orderForm || !orderForm.orderId) {
@@ -1268,8 +1422,32 @@ export default {
         : []
       const orderId = this.manualTaskDialog.orderId
       const remark = (this.manualTaskDialog.remark || '').trim() || '人工处理完成'
-      const orderNodeId = this.manualTaskDialog.node.orderNodeId || ''
-      const nodeId = this.manualTaskDialog.node.nodeId || ''
+      const orderNodesFromForm = (orderForm && Array.isArray(orderForm.orderNodes))
+        ? this.normalizeOrderNodes(orderForm.orderNodes)
+        : []
+      const fallbackOrderNodeById = node => {
+        if (!node) {
+          return null
+        }
+        const targetNodeId = node.nodeId
+          || (node.orderNode && node.orderNode.nodeId)
+          || ''
+        if (!targetNodeId) {
+          return null
+        }
+        return orderNodesFromForm.find(item => item.nodeId === targetNodeId) || null
+      }
+      const matchedOrderNode = fallbackOrderNodeById(this.manualTaskDialog.node)
+      if (matchedOrderNode && !this.manualTaskDialog.node.orderNode) {
+        this.$set(this.manualTaskDialog.node, 'orderNode', matchedOrderNode)
+      }
+      const orderNodeId = this.manualTaskDialog.node.orderNodeId
+        || (this.manualTaskDialog.node.orderNode && this.manualTaskDialog.node.orderNode.orderNodeId)
+        || (matchedOrderNode && matchedOrderNode.orderNodeId)
+        || ''
+      const nodeId = this.manualTaskDialog.node.nodeId
+        || (this.manualTaskDialog.node.orderNode && this.manualTaskDialog.node.orderNode.nodeId)
+        || ''
       if (orderId && (orderNodeId || nodeId)) {
         try {
           await submitRemark({ orderId, orderNodeId, remark })
@@ -1390,6 +1568,19 @@ export default {
       return null
     },
     renderNodeStatusText(node) {
+      if (node && node.orderNode) {
+        const status = `${node.orderNode.nodeStatus || '0'}`
+        if (status === '2') {
+          return node.orderNode.nodeRemark || '已完成'
+        }
+        if (status === '1') {
+          return node.orderNode.nodeRemark || '进行中'
+        }
+        if (status === '3') {
+          return node.orderNode.nodeRemark || '已超时'
+        }
+        return node.orderNode.nodeRemark || '未开始'
+      }
       const execution = node && node.taskExecution
       if (!execution) {
         return '未执行'
@@ -1403,6 +1594,16 @@ export default {
       return execution.message || '待确认'
     },
     nodeVisualState(node) {
+      if (node && node.orderNode) {
+        const status = `${node.orderNode.nodeStatus || '0'}`
+        if (status === '2') {
+          return 'success'
+        }
+        if (status === '3') {
+          return 'failed'
+        }
+        return 'pending'
+      }
       if (!node || !node.taskExecution) {
         return 'pending'
       }
@@ -1451,6 +1652,12 @@ export default {
       if (!node || !orderId) {
         return false
       }
+      const orderNode = node.orderNode
+      const triggerMode = this.normalizeTriggerMode((orderNode && orderNode.triggerMode) || node.triggerMode)
+      const isAutoTrigger = triggerMode === 'AUTO'
+      if (!isAutoTrigger) {
+        return orderNode && `${orderNode.nodeStatus || '0'}` !== '2'
+      }
       const state = this.orderAutomationState[orderId]
       return Boolean(
         state &&
@@ -1481,15 +1688,18 @@ export default {
         if (!orderId) {
           return
         }
+        if (node.orderNode && `${node.orderNode.nodeStatus || '0'}` === '2') {
+          return
+        }
         const state = this.orderAutomationState[orderId]
         if (state && state.failedNode && this.isSameFlowNode(state.failedNode, node)) {
           this.openManualTaskDialogForOrder(orderId)
           return
         }
-        if (!this.isManualOnlyFlowNode(node)) {
-          return
+        const pendingOrderNode = node.orderNode && `${node.orderNode.nodeStatus || '0'}` !== '2'
+        if (pendingOrderNode || this.isManualOnlyFlowNode(node)) {
+          this.openManualDialogForManualNode({ node, record })
         }
-        this.openManualDialogForManualNode({ node, record })
       } finally {
         this.nodeClickHandling = false
       }

@@ -115,6 +115,11 @@ public class BrtOrderNode extends BaseEntity {
     private String operSetting;
 
     /**
+     * 触发方式(AUTO=自动触发,MANUAL=人工触发)
+     */
+    private String triggerMode;
+
+    /**
      * 创建人ID
      */
     private String createId;
