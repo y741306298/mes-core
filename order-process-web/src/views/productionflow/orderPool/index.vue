@@ -743,17 +743,32 @@ export default {
        if (this.orderSearch.status) {
          list = list.filter(order => order.orderStatus === this.orderSearch.status)
        }
-       if (this.orderSearch.priority) {
-         list = list.filter(order => order.priority === this.orderSearch.priority)
-      }
-      return list
+      if (this.orderSearch.priority) {
+        list = list.filter(order => order.priority === this.orderSearch.priority)
+     }
+     return list
     },
     viewOrderFlowNodes() {
-      if (!this.viewOrderDialog.record || !this.viewOrderDialog.record.flowTemplate) {
+      const record = this.viewOrderDialog.record
+      if (!record) {
         return []
       }
-      const nodes = this.viewOrderDialog.record.flowTemplate.flowNodeList
-      return Array.isArray(nodes) ? nodes : []
+      const templateNodes = record.flowTemplate && Array.isArray(record.flowTemplate.flowNodeList)
+        ? deepClone(record.flowTemplate.flowNodeList)
+        : []
+      const orderNodes = this.normalizeOrderNodes(record.orderNodes)
+      if (!templateNodes.length && orderNodes.length) {
+        return orderNodes.map(node => ({
+          nodeName: node.nodeName || node.nodeRemark || node.nodeId,
+          orderNode: node
+        }))
+      }
+      return templateNodes.map((node, index) => {
+        const matchedNode = orderNodes.find(item => item.nodeId && item.nodeId === node.nodeId)
+          || orderNodes[index]
+          || null
+        return Object.assign({}, node, { orderNode: matchedNode })
+      })
     }
   },
   methods: {
@@ -881,6 +896,7 @@ export default {
       this.fetchOrders()
     },
     normalizeOrder(order = {}) {
+      const orderNodes = this.normalizeOrderNodes(order.orderNodes)
       return {
         orderId: order.orderId || '',
         previewImage: order.previewImage || '',
@@ -898,8 +914,21 @@ export default {
         colorRequirement: order.colorRequirement || '',
         fileFormat: order.fileFormat || '',
         templateId: order.templateId || '',
-        flowTemplate: order.flowTemplate || null
+        flowTemplate: order.flowTemplate || null,
+        orderTemplate: order.orderTemplate || null,
+        orderNodes
       }
+    },
+    normalizeOrderNodes(nodes = []) {
+      if (!Array.isArray(nodes)) {
+        return []
+      }
+      return nodes.map((node, index) => ({
+        ...node,
+        nodeStatus: node && node.nodeStatus != null ? `${node.nodeStatus}` : '0',
+        nodeRemark: node && node.nodeRemark ? node.nodeRemark : '',
+        sort: node && node.sort != null ? node.sort : index
+      }))
     },
     normalizeFlow(flow = {}) {
       const materialsSummary = Array.isArray(flow.materialsSummary)
@@ -1268,8 +1297,32 @@ export default {
         : []
       const orderId = this.manualTaskDialog.orderId
       const remark = (this.manualTaskDialog.remark || '').trim() || '人工处理完成'
-      const orderNodeId = this.manualTaskDialog.node.orderNodeId || ''
-      const nodeId = this.manualTaskDialog.node.nodeId || ''
+      const orderNodesFromForm = (orderForm && Array.isArray(orderForm.orderNodes))
+        ? this.normalizeOrderNodes(orderForm.orderNodes)
+        : []
+      const fallbackOrderNodeById = node => {
+        if (!node) {
+          return null
+        }
+        const targetNodeId = node.nodeId
+          || (node.orderNode && node.orderNode.nodeId)
+          || ''
+        if (!targetNodeId) {
+          return null
+        }
+        return orderNodesFromForm.find(item => item.nodeId === targetNodeId) || null
+      }
+      const matchedOrderNode = fallbackOrderNodeById(this.manualTaskDialog.node)
+      if (matchedOrderNode && !this.manualTaskDialog.node.orderNode) {
+        this.$set(this.manualTaskDialog.node, 'orderNode', matchedOrderNode)
+      }
+      const orderNodeId = this.manualTaskDialog.node.orderNodeId
+        || (this.manualTaskDialog.node.orderNode && this.manualTaskDialog.node.orderNode.orderNodeId)
+        || (matchedOrderNode && matchedOrderNode.orderNodeId)
+        || ''
+      const nodeId = this.manualTaskDialog.node.nodeId
+        || (this.manualTaskDialog.node.orderNode && this.manualTaskDialog.node.orderNode.nodeId)
+        || ''
       if (orderId && (orderNodeId || nodeId)) {
         try {
           await submitRemark({ orderId, orderNodeId, remark })
@@ -1390,6 +1443,19 @@ export default {
       return null
     },
     renderNodeStatusText(node) {
+      if (node && node.orderNode) {
+        const status = `${node.orderNode.nodeStatus || '0'}`
+        if (status === '2') {
+          return node.orderNode.nodeRemark || '已完成'
+        }
+        if (status === '1') {
+          return node.orderNode.nodeRemark || '进行中'
+        }
+        if (status === '3') {
+          return node.orderNode.nodeRemark || '已超时'
+        }
+        return node.orderNode.nodeRemark || '未开始'
+      }
       const execution = node && node.taskExecution
       if (!execution) {
         return '未执行'
@@ -1403,6 +1469,16 @@ export default {
       return execution.message || '待确认'
     },
     nodeVisualState(node) {
+      if (node && node.orderNode) {
+        const status = `${node.orderNode.nodeStatus || '0'}`
+        if (status === '2') {
+          return 'success'
+        }
+        if (status === '3') {
+          return 'failed'
+        }
+        return 'pending'
+      }
       if (!node || !node.taskExecution) {
         return 'pending'
       }
@@ -1451,6 +1527,9 @@ export default {
       if (!node || !orderId) {
         return false
       }
+      if (node.orderNode && `${node.orderNode.nodeStatus || '0'}` !== '2') {
+        return true
+      }
       const state = this.orderAutomationState[orderId]
       return Boolean(
         state &&
@@ -1481,15 +1560,18 @@ export default {
         if (!orderId) {
           return
         }
+        if (node.orderNode && `${node.orderNode.nodeStatus || '0'}` === '2') {
+          return
+        }
         const state = this.orderAutomationState[orderId]
         if (state && state.failedNode && this.isSameFlowNode(state.failedNode, node)) {
           this.openManualTaskDialogForOrder(orderId)
           return
         }
-        if (!this.isManualOnlyFlowNode(node)) {
-          return
+        const pendingOrderNode = node.orderNode && `${node.orderNode.nodeStatus || '0'}` !== '2'
+        if (pendingOrderNode || this.isManualOnlyFlowNode(node)) {
+          this.openManualDialogForManualNode({ node, record })
         }
-        this.openManualDialogForManualNode({ node, record })
       } finally {
         this.nodeClickHandling = false
       }
