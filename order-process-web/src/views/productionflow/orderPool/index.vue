@@ -1224,11 +1224,17 @@ export default {
           errorMessage,
           responsePreview: this.formatTaskResponsePreview(result.response)
         })
+        this.refreshOrderRecord(orderId, { silent: true, updateDialog: true }).catch(() => {})
       }
       if (failedNode && failedNode.nodeName) {
         this.$message.error(`节点「${failedNode.nodeName}」自动执行失败，请在订单详情中人工处理`)
       } else {
         this.$message.error('自动任务执行失败，请人工处理')
+      }
+      if (orderId && failedNode) {
+        this.$nextTick(() => {
+          this.openManualTaskDialogForOrder(orderId)
+        })
       }
     },
     resetManualTaskDialog() {
