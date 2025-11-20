@@ -1834,8 +1834,46 @@ export default {
         && automationState.templateInstance
       ) {
         record.flowTemplate = automationState.templateInstance
+      } else if (automationState && automationState.templateInstance) {
+        record.flowTemplate = this.mergeTemplateExecutionState(
+          record.flowTemplate || automationState.templateInstance,
+          automationState.templateInstance
+        )
       }
       return record
+    },
+    mergeTemplateExecutionState(targetTemplate, stateTemplate) {
+      if (!targetTemplate && !stateTemplate) {
+        return null
+      }
+      if (!targetTemplate) {
+        return deepClone(stateTemplate)
+      }
+      if (!stateTemplate) {
+        return deepClone(targetTemplate)
+      }
+      const merged = deepClone(targetTemplate)
+      const targetNodes = Array.isArray(merged.flowNodeList) ? merged.flowNodeList : []
+      const stateNodes = Array.isArray(stateTemplate.flowNodeList) ? stateTemplate.flowNodeList : []
+      const findStateNode = targetNode => stateNodes.find(item => this.isSameFlowNode(item, targetNode))
+      targetNodes.forEach((node, index) => {
+        const matched = findStateNode(node)
+        if (!matched) {
+          return
+        }
+        if (matched.taskExecution) {
+          this.$set(node, 'taskExecution', deepClone(matched.taskExecution))
+        }
+        if (matched.nodeStatus !== undefined) {
+          this.$set(node, 'nodeStatus', matched.nodeStatus)
+        }
+        if (matched.nodeRemark !== undefined) {
+          this.$set(node, 'nodeRemark', matched.nodeRemark)
+        }
+        this.$set(targetNodes, index, node)
+      })
+      merged.flowNodeList = targetNodes
+      return merged
     },
     formatDateDisplay(value) {
       const result = this.formatDateValue(value)
