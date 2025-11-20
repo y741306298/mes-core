@@ -544,7 +544,7 @@ import {
 } from '@/api/productionflow/orderPool'
 import { listFlowTemplateAll, getFlowTemplate } from '@/api/order/flowTemplate'
 import { listTaskTemplateAll } from '@/api/order/taskTemplate'
-import { submitRemark } from '@/api/order/orderNode'
+import { complateNode, submitRemark } from '@/api/order/orderNode'
 import request from '@/utils/request'
 
  const PRIORITY_WEIGHT = {
@@ -1269,9 +1269,17 @@ export default {
       const orderId = this.manualTaskDialog.orderId
       const remark = (this.manualTaskDialog.remark || '').trim() || '人工处理完成'
       const orderNodeId = this.manualTaskDialog.node.orderNodeId || ''
-      if (orderId && orderNodeId) {
+      const nodeId = this.manualTaskDialog.node.nodeId || ''
+      if (orderId && (orderNodeId || nodeId)) {
         try {
           await submitRemark({ orderId, orderNodeId, remark })
+          await complateNode({
+            orderId,
+            orderNodeId,
+            nodeId,
+            nodeRemark: remark,
+            nodeType: '3'
+          })
           this.$message.success('人工处理已提交')
         } catch (error) {
           console.error('人工处理提交失败', error)
