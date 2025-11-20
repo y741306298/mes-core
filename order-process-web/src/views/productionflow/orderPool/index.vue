@@ -930,6 +930,17 @@ export default {
         sort: node && node.sort != null ? node.sort : index
       }))
     },
+    normalizeOrderNodes(nodes = []) {
+      if (!Array.isArray(nodes)) {
+        return []
+      }
+      return nodes.map((node, index) => ({
+        ...node,
+        nodeStatus: node && node.nodeStatus != null ? `${node.nodeStatus}` : '0',
+        nodeRemark: node && node.nodeRemark ? node.nodeRemark : '',
+        sort: node && node.sort != null ? node.sort : index
+      }))
+    },
     normalizeFlow(flow = {}) {
       const materialsSummary = Array.isArray(flow.materialsSummary)
         ? flow.materialsSummary.map((item, index) => ({
