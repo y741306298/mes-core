@@ -1448,11 +1448,14 @@ export default {
           return this.manualTaskDialog.pendingNodes.slice()
         }
         const state = orderId && this.getOrderAutomationState(orderId)
+        console.log("orderId",orderId)
+        console.log("this.getOrderAutomationState(orderId)",this.getOrderAutomationState(orderId))
         if (state && Array.isArray(state.pendingNodes)) {
           return state.pendingNodes.slice()
         }
         return []
       })()
+      console.log("pendingNodes",pendingNodes)
       const remark = (this.manualTaskDialog.remark || '').trim() || '人工处理完成'
       const orderNodesFromForm = (orderForm && Array.isArray(orderForm.orderNodes))
         ? this.normalizeOrderNodes(orderForm.orderNodes)
@@ -1839,6 +1842,7 @@ export default {
     },
     getOrderAutomationState(orderId) {
       const key = this.normalizeOrderAutomationKey(orderId)
+      console.log("key",key)
       if (!key) {
         return null
       }

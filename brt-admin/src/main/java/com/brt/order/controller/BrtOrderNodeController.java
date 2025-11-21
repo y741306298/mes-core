@@ -183,7 +183,7 @@ public class BrtOrderNodeController extends BaseController {
     @PostMapping("/complateNode")
     @RepeatSubmit
     public AjaxResult complateNode(@RequestSingleParam("orderId") String orderId,
-                                   @RequestSingleParam("nodeId") String orderNodeId,
+                                   @RequestSingleParam("orderNodeId") String orderNodeId,
                                    @RequestSingleParam("nodeType") String nodeType,
                                    @RequestSingleParam("nodeRemark") String nodeRemark){
         brtOrderNodeService.submitRemark(orderId,orderNodeId,nodeRemark);
