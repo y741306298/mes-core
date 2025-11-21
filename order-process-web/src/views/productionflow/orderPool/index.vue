@@ -1511,8 +1511,10 @@ export default {
         })
         await this.refreshOrderRecord(orderId, { silent: true, updateDialog: true })
       }
+      const nextPendingNode = pendingNodes[0]
+      const shouldAutoRunNext = nextPendingNode && this.isAutoTriggerNode(nextPendingNode)
       this.resetManualTaskDialog()
-      if (templateId && template && orderForm && pendingNodes.length) {
+      if (templateId && template && orderForm && pendingNodes.length && shouldAutoRunNext) {
         this.runTaskNodesSequence({
           templateId,
           template,
