@@ -1242,7 +1242,7 @@ export default {
       if (!orderId) {
         return
       }
-      const automationState = this.orderAutomationState[orderId]
+      const automationState = this.getOrderAutomationState(orderId)
       if (automationState && (automationState.status === 'running' || automationState.status === 'failed')) {
         return
       }
@@ -1429,6 +1429,7 @@ export default {
         return
       }
       this.manualTaskDialog.submitting = true
+      const orderId = this.manualTaskDialog.orderId
       const templateId = this.manualTaskDialog.templateId
       const template = this.manualTaskDialog.template
       const orderForm = this.manualTaskDialog.orderForm
@@ -1436,13 +1437,12 @@ export default {
         if (Array.isArray(this.manualTaskDialog.pendingNodes) && this.manualTaskDialog.pendingNodes.length) {
           return this.manualTaskDialog.pendingNodes.slice()
         }
-        const state = orderId && this.orderAutomationState[orderId]
+        const state = orderId && this.getOrderAutomationState(orderId)
         if (state && Array.isArray(state.pendingNodes)) {
           return state.pendingNodes.slice()
         }
         return []
       })()
-      const orderId = this.manualTaskDialog.orderId
       const remark = (this.manualTaskDialog.remark || '').trim() || '人工处理完成'
       const orderNodesFromForm = (orderForm && Array.isArray(orderForm.orderNodes))
         ? this.normalizeOrderNodes(orderForm.orderNodes)
@@ -1694,7 +1694,7 @@ export default {
       if (!isAutoTrigger) {
         return orderNode && `${orderNode.nodeStatus || '0'}` !== '2'
       }
-      const state = this.orderAutomationState[orderId]
+      const state = this.getOrderAutomationState(orderId)
       return Boolean(
         state &&
         state.status === 'failed' &&
@@ -1727,7 +1727,7 @@ export default {
         if (node.orderNode && `${node.orderNode.nodeStatus || '0'}` === '2') {
           return
         }
-        const state = this.orderAutomationState[orderId]
+        const state = this.getOrderAutomationState(orderId)
         if (state && state.failedNode && this.isSameFlowNode(state.failedNode, node)) {
           this.openManualTaskDialogForOrder(orderId)
           return
@@ -1764,7 +1764,7 @@ export default {
       if (!orderId) {
         return
       }
-      const state = this.orderAutomationState[orderId]
+      const state = this.getOrderAutomationState(orderId)
       if (!state || !state.failedNode) {
         this.$message.warning('暂无需要人工处理的节点')
         return
@@ -1780,11 +1780,31 @@ export default {
       this.manualTaskDialog.remark = ''
       this.manualTaskDialog.orderId = orderId
     },
+    normalizeOrderAutomationKey(orderId) {
+      if (orderId === undefined || orderId === null) {
+        return ''
+      }
+      if (typeof orderId === 'object') {
+        const numericId = orderId.orderId || orderId.id || orderId.value
+        if (numericId !== undefined && numericId !== null) {
+          return `${numericId}`
+        }
+      }
+      return `${orderId}`
+    },
+    getOrderAutomationState(orderId) {
+      const key = this.normalizeOrderAutomationKey(orderId)
+      if (!key) {
+        return null
+      }
+      return this.orderAutomationState[key] || null
+    },
     setOrderAutomationState(orderId, payload = {}) {
-      if (!orderId) {
+      const key = this.normalizeOrderAutomationKey(orderId)
+      if (!key) {
         return
       }
-      const previous = this.orderAutomationState[orderId] || {}
+      const previous = this.orderAutomationState[key] || {}
       const next = {
         templateId: payload.templateId !== undefined ? payload.templateId : previous.templateId,
         templateInstance: payload.templateInstance || previous.templateInstance,
@@ -1797,7 +1817,7 @@ export default {
         errorMessage: payload.errorMessage !== undefined ? payload.errorMessage : previous.errorMessage,
         responsePreview: payload.responsePreview !== undefined ? payload.responsePreview : previous.responsePreview
       }
-      this.$set(this.orderAutomationState, orderId, next)
+      this.$set(this.orderAutomationState, key, next)
     },
     statusTagType(status) {
       const mapping = {
@@ -1824,7 +1844,7 @@ export default {
       if (!row || !row.orderId) {
         return ''
       }
-      const state = this.orderAutomationState[row.orderId]
+      const state = this.getOrderAutomationState(row.orderId)
       return state && state.status === 'failed' ? 'order-row-failed' : ''
     },
     handleOrderSelectionChange(val) {
@@ -2099,7 +2119,7 @@ export default {
       if (!record.flowTemplate && record.templateId) {
         record.flowTemplate = this.findTemplateById(record.templateId)
       }
-      const automationState = record.orderId ? this.orderAutomationState[record.orderId] : null
+      const automationState = record.orderId ? this.getOrderAutomationState(record.orderId) : null
       if (
         (!record.flowTemplate || !Array.isArray(record.flowTemplate.flowNodeList) || !record.flowTemplate.flowNodeList.length)
         && automationState
