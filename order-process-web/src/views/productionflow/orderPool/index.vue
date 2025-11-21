@@ -1300,8 +1300,18 @@ export default {
         const flowNodes = Array.isArray(templateInstance.flowNodeList)
           ? templateInstance.flowNodeList
           : []
-        const hasAutoNodes = flowNodes.some(node => this.isTaskTemplateNode(node))
-        if (!hasAutoNodes) {
+        const queue = this.buildAutoTriggerQueue(orderForm, templateInstance)
+        if (!queue.length) {
+          this.setOrderAutomationState(orderForm.orderId, {
+            templateId,
+            templateInstance,
+            orderForm: deepClone(orderForm),
+            status: 'success',
+            pendingNodes: [],
+            failedNode: null,
+            errorMessage: '',
+            responsePreview: ''
+          })
           return
         }
         this.setOrderAutomationState(orderForm.orderId, {
@@ -1310,14 +1320,14 @@ export default {
           orderForm: deepClone(orderForm),
           status: 'running',
           failedNode: null,
-          pendingNodes: [],
+          pendingNodes: queue.slice(),
           errorMessage: '',
           responsePreview: ''
         })
         await this.runTaskNodesSequence({
           templateId,
           template: templateInstance,
-          nodes: flowNodes,
+          nodes: queue,
           orderForm,
           orderId: orderForm.orderId
         })
@@ -1747,6 +1757,14 @@ export default {
       const template = record.flowTemplate
       const templateId = template.templateId || ''
       const defaultMessage = '节点需人工处理（未配置自动触发）'
+      const normalizedOrderNodes = this.normalizeOrderNodes(record.orderNodes)
+      const matchedOrderNode = this.findOrderNodeForFlowNode(node, normalizedOrderNodes)
+      if (matchedOrderNode && !node.orderNode) {
+        this.$set(node, 'orderNode', matchedOrderNode)
+      }
+      if (matchedOrderNode && !node.orderNodeId) {
+        this.$set(node, 'orderNodeId', matchedOrderNode.orderNodeId)
+      }
       this.manualTaskDialog.visible = true
       this.manualTaskDialog.node = node
       this.manualTaskDialog.template = template
@@ -1773,12 +1791,39 @@ export default {
       this.manualTaskDialog.node = state.failedNode
       this.manualTaskDialog.template = state.templateInstance
       this.manualTaskDialog.templateId = state.templateId || ''
-      this.manualTaskDialog.orderForm = state.orderForm || null
-      this.manualTaskDialog.pendingNodes = Array.isArray(state.pendingNodes) ? state.pendingNodes.slice() : []
+      const normalizedOrderForm = state.orderForm ? { ...state.orderForm, orderNodes: this.normalizeOrderNodes(state.orderForm.orderNodes) } : null
+      this.manualTaskDialog.orderForm = normalizedOrderForm
+      const pendingNodes = Array.isArray(state.pendingNodes) ? state.pendingNodes.slice() : []
+      this.manualTaskDialog.pendingNodes = pendingNodes.map(node => this.enrichFlowNodeWithOrderNode(node, normalizedOrderForm && normalizedOrderForm.orderNodes))
+      const failedNode = this.enrichFlowNodeWithOrderNode(state.failedNode, normalizedOrderForm && normalizedOrderForm.orderNodes)
+      this.manualTaskDialog.node = failedNode
       this.manualTaskDialog.errorMessage = state.errorMessage || ''
       this.manualTaskDialog.responsePreview = state.responsePreview || ''
       this.manualTaskDialog.remark = ''
       this.manualTaskDialog.orderId = orderId
+    },
+    findOrderNodeForFlowNode(flowNode, orderNodes = []) {
+      if (!flowNode || !Array.isArray(orderNodes) || !orderNodes.length) {
+        return null
+      }
+      const targetNodeId = flowNode.nodeId || (flowNode.orderNode && flowNode.orderNode.nodeId)
+      if (!targetNodeId) {
+        return null
+      }
+      return orderNodes.find(item => item.nodeId === targetNodeId) || null
+    },
+    enrichFlowNodeWithOrderNode(flowNode, orderNodes = []) {
+      if (!flowNode) {
+        return flowNode
+      }
+      const matched = this.findOrderNodeForFlowNode(flowNode, orderNodes)
+      if (matched && !flowNode.orderNode) {
+        this.$set(flowNode, 'orderNode', matched)
+      }
+      if (matched && !flowNode.orderNodeId) {
+        this.$set(flowNode, 'orderNodeId', matched.orderNodeId)
+      }
+      return flowNode
     },
     normalizeOrderAutomationKey(orderId) {
       if (orderId === undefined || orderId === null) {
