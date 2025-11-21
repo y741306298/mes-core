@@ -1432,9 +1432,16 @@ export default {
       const templateId = this.manualTaskDialog.templateId
       const template = this.manualTaskDialog.template
       const orderForm = this.manualTaskDialog.orderForm
-      const pendingNodes = Array.isArray(this.manualTaskDialog.pendingNodes)
-        ? this.manualTaskDialog.pendingNodes.slice()
-        : []
+      const pendingNodes = (() => {
+        if (Array.isArray(this.manualTaskDialog.pendingNodes) && this.manualTaskDialog.pendingNodes.length) {
+          return this.manualTaskDialog.pendingNodes.slice()
+        }
+        const state = orderId && this.orderAutomationState[orderId]
+        if (state && Array.isArray(state.pendingNodes)) {
+          return state.pendingNodes.slice()
+        }
+        return []
+      })()
       const orderId = this.manualTaskDialog.orderId
       const remark = (this.manualTaskDialog.remark || '').trim() || '人工处理完成'
       const orderNodesFromForm = (orderForm && Array.isArray(orderForm.orderNodes))
