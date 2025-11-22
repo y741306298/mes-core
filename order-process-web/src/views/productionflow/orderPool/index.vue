@@ -1212,29 +1212,46 @@ export default {
           orderNodeMap[item.nodeId] = item
         }
       })
-      const startIndex = flowNodes.findIndex(flowNode => {
-        const mapped = flowNode && flowNode.nodeId ? orderNodeMap[flowNode.nodeId] : null
-        return mapped && this.isAutoTriggerNode(mapped) && `${mapped.nodeStatus || '0'}` === '1'
-      })
-      if (startIndex === -1) {
-        return []
-      }
+
+      let shouldStartQueue = false
+      let previousNodesCompleted = true
       const queue = []
-      for (let i = startIndex; i < flowNodes.length; i += 1) {
+
+      for (let i = 0; i < flowNodes.length; i += 1) {
         const flowNode = flowNodes[i]
         const mapped = flowNode && flowNode.nodeId ? orderNodeMap[flowNode.nodeId] : null
+        const triggerMode = this.normalizeTriggerMode((mapped && mapped.triggerMode) || flowNode.triggerMode)
+        const statusStr = `${(mapped && mapped.nodeStatus) || '0'}`
+        const isCompleted = statusStr === '2'
+
         if (!mapped) {
-          continue
+          previousNodesCompleted = false
         }
-        const triggerMode = this.normalizeTriggerMode(mapped.triggerMode)
-        if (triggerMode !== 'AUTO') {
-          break
+
+        if (!shouldStartQueue) {
+          if (!previousNodesCompleted) {
+            break
+          }
+          if (!mapped || isCompleted) {
+            continue
+          }
+          if (triggerMode === 'AUTO') {
+            shouldStartQueue = true
+            queue.push({ ...flowNode, orderNode: mapped, orderNodeId: mapped.orderNodeId })
+            continue
+          }
+          previousNodesCompleted = false
+        } else {
+          if (!mapped || isCompleted) {
+            continue
+          }
+          if (triggerMode !== 'AUTO') {
+            break
+          }
+          queue.push({ ...flowNode, orderNode: mapped, orderNodeId: mapped.orderNodeId })
         }
-        if (`${mapped.nodeStatus || '0'}` === '2') {
-          continue
-        }
-        queue.push({ ...flowNode, orderNode: mapped, orderNodeId: mapped.orderNodeId })
       }
+
       return queue
     },
     async autoTriggerFromOrder(order) {
