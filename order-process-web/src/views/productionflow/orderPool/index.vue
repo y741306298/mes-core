@@ -1254,6 +1254,49 @@ export default {
 
       return queue
     },
+    hasPendingManualNode(order = {}, template) {
+      const flowTemplate = template || order.flowTemplate || null
+      if (!flowTemplate || !Array.isArray(flowTemplate.flowNodeList) || !flowTemplate.flowNodeList.length) {
+        return false
+      }
+      const flowNodes = flowTemplate.flowNodeList.slice().sort((a, b) => {
+        const aSort = a && a.sort != null ? Number(a.sort) : 0
+        const bSort = b && b.sort != null ? Number(b.sort) : 0
+        return aSort - bSort
+      })
+      const orderNodes = this.normalizeOrderNodes(order.orderNodes)
+      if (!orderNodes.length) {
+        return false
+      }
+      const orderNodeMap = {}
+      orderNodes.forEach(item => {
+        if (item && item.nodeId) {
+          orderNodeMap[item.nodeId] = item
+        }
+      })
+      let previousNodesCompleted = true
+      for (let i = 0; i < flowNodes.length; i += 1) {
+        const flowNode = flowNodes[i]
+        const mapped = flowNode && flowNode.nodeId ? orderNodeMap[flowNode.nodeId] : null
+        const triggerMode = this.normalizeTriggerMode((mapped && mapped.triggerMode) || flowNode.triggerMode)
+        const statusStr = `${(mapped && mapped.nodeStatus) || '0'}`
+        const isCompleted = statusStr === '2'
+        if (!mapped) {
+          previousNodesCompleted = false
+        }
+        if (!previousNodesCompleted) {
+          break
+        }
+        if (!mapped || isCompleted) {
+          continue
+        }
+        if (triggerMode !== 'AUTO') {
+          return true
+        }
+        previousNodesCompleted = false
+      }
+      return false
+    },
     async autoTriggerFromOrder(order) {
       const orderId = order && order.orderId
       if (!orderId) {
@@ -1280,6 +1323,9 @@ export default {
       }
       const template = orderDetail.flowTemplate || await this.ensureFlowTemplateDetails(orderDetail.templateId)
       if (!template || !Array.isArray(template.flowNodeList) || !template.flowNodeList.length) {
+        return
+      }
+      if (this.hasPendingManualNode(orderDetail, template)) {
         return
       }
       const queue = this.buildAutoTriggerQueue(orderDetail, template)
@@ -1317,6 +1363,9 @@ export default {
         const flowNodes = Array.isArray(templateInstance.flowNodeList)
           ? templateInstance.flowNodeList
           : []
+        if (this.hasPendingManualNode(orderForm, templateInstance)) {
+          return
+        }
         const queue = this.buildAutoTriggerQueue(orderForm, templateInstance)
         if (!queue.length) {
           this.setOrderAutomationState(orderForm.orderId, {
