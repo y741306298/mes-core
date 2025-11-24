@@ -137,6 +137,10 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
         if (ids.isEmpty()) {
             return 0;
         }
+        orderNodeService.remove(Wrappers.<BrtOrderNode>lambdaQuery()
+            .in(BrtOrderNode::getOrderId, ids));
+        orderTemplateService.remove(Wrappers.<BrtOrderTemplate>lambdaQuery()
+            .in(BrtOrderTemplate::getOrderId, ids));
         return orderPoolMapper.deleteBatchIds(ids);
     }
 
