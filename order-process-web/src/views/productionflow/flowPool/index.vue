@@ -6,7 +6,7 @@
          <div class="header-actions">
            <el-input
              v-model="flowSearch.keyword"
-             placeholder="搜索生产流ID/负责人"
+             placeholder="搜索生产池ID/负责人"
              size="small"
              clearable
              class="header-search"
@@ -34,7 +34,7 @@
 
        <div class="table-toolbar">
          <el-button type="primary" size="small" icon="el-icon-plus" @click="openFlowDialog()">
-           新增生产流
+           新增生产池
          </el-button>
          <el-button type="info" size="small" icon="el-icon-refresh" @click="resetFlowQuery">
            重置筛选
@@ -49,7 +49,7 @@
         :row-key="row => row.flowId"
         v-loading="loading"
       >
-        <el-table-column prop="flowId" label="生产流ID" width="160" show-overflow-tooltip />
+        <el-table-column prop="flowId" label="生产池ID" width="160" show-overflow-tooltip />
         <el-table-column label="流程模板" prop="templateId" width="160" show-overflow-tooltip>
           <template slot-scope="scope">
             {{ (scope.row.flowTemplate && scope.row.flowTemplate.templateName) || scope.row.templateId || '—' }}
@@ -87,13 +87,13 @@
        </el-table>
      </el-card>
 
-     <!-- 新增/编辑生产流 -->
+     <!-- 新增/编辑生产池 -->
      <el-dialog :title="flowDialog.title" :visible.sync="flowDialog.visible" width="880px">
       <el-form ref="flowForm" :model="flowDialog.form" :rules="flowRules" label-width="140px">
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="生产流ID" prop="flowId">
-              <el-input v-model="flowDialog.form.flowId" placeholder="请输入生产流ID" />
+            <el-form-item label="生产池ID" prop="flowId">
+              <el-input v-model="flowDialog.form.flowId" placeholder="请输入生产池ID" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -113,8 +113,8 @@
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :span="12">
-            <el-form-item label="生产状态" prop="flowStatus">
+           <el-col :span="12">
+             <el-form-item label="生产状态" prop="flowStatus">
               <el-select v-model="flowDialog.form.flowStatus" placeholder="请选择生产状态">
                  <el-option
                    v-for="item in flowStatusOptions"
@@ -145,11 +145,11 @@
                </el-select>
              </el-form-item>
            </el-col>
-           <el-col :span="12">
-             <el-form-item label="订单总数量" prop="totalQuantity">
-               <el-input-number v-model="flowDialog.form.totalQuantity" :min="1" :step="1" style="width: 100%;" />
-             </el-form-item>
-           </el-col>
+          <el-col :span="12">
+            <el-form-item label="订单总数量" prop="totalQuantity">
+              <el-input-number v-model="flowDialog.form.totalQuantity" :min="1" :step="1" style="width: 100%;" />
+            </el-form-item>
+          </el-col>
            <el-col :span="12">
              <el-form-item label="优先级" prop="priority">
                <el-select v-model="flowDialog.form.priority" placeholder="请选择优先级">
@@ -197,73 +197,61 @@
                />
              </el-form-item>
            </el-col>
-           <el-col :span="12">
-             <el-form-item label="负责人">
-               <el-input v-model="flowDialog.form.assignedOperator" placeholder="请输入负责人" />
-             </el-form-item>
-           </el-col>
-           <el-col :span="12">
-             <el-form-item label="生产备注">
-               <el-input v-model="flowDialog.form.productionNotes" placeholder="请输入生产备注" />
-             </el-form-item>
-           </el-col>
-         </el-row>
-       </el-form>
+          <el-col :span="12">
+            <el-form-item label="负责人">
+              <el-input v-model="flowDialog.form.assignedOperator" placeholder="请输入负责人" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="生产备注">
+              <el-input v-model="flowDialog.form.productionNotes" placeholder="请输入生产备注" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+      </el-form>
 
        <div class="flow-summary">
          <div class="summary-header">
-           <h4 class="section-title">材料汇总</h4>
-           <el-button type="text" size="mini" icon="el-icon-plus" @click="addMaterialRow">新增材料</el-button>
+           <h4 class="section-title">关联订单</h4>
          </div>
-         <el-table :data="flowDialog.form.materialsSummary" border size="mini">
-           <el-table-column label="材料">
-             <template slot-scope="scope">
-               <el-input v-model="scope.row.material" size="mini" placeholder="材料" />
-             </template>
-           </el-table-column>
-           <el-table-column label="数量" width="140">
-             <template slot-scope="scope">
-               <el-input-number v-model="scope.row.quantity" :min="0" :step="1" size="mini" />
-             </template>
-           </el-table-column>
-           <el-table-column label="操作" width="100">
-             <template slot-scope="scope">
-               <el-button type="text" size="mini" @click="removeMaterialRow(scope.$index)">删除</el-button>
-             </template>
-           </el-table-column>
-         </el-table>
+         <el-tag
+           v-for="orderId in flowDialog.form.orderIds"
+           :key="orderId"
+           type="info"
+           effect="plain"
+           class="mr5"
+         >
+           {{ orderId }}
+         </el-tag>
 
-         <div class="summary-header">
-           <h4 class="section-title">当前进度</h4>
-           <el-button type="text" size="mini" icon="el-icon-plus" @click="addProcessRow">新增步骤</el-button>
+         <div v-if="dialogTemplate && dialogAssociatedOrders.length" class="order-flow-preview">
+           <h4 class="section-title">关联订单流程</h4>
+           <el-collapse>
+             <el-collapse-item
+               v-for="order in dialogAssociatedOrders"
+               :key="order.orderId"
+               :title="`${order.orderId}（${order.customerInfo || '未填写'}）`"
+             >
+               <el-steps :active="orderFlowActiveStep(order.nodes)" align-center finish-status="success">
+                 <el-step
+                   v-for="(step, idx) in order.nodes"
+                   :key="`${order.orderId}-${idx}`"
+                   :title="step.stepName || `步骤${idx + 1}`"
+                   :status="flowStepStatus(step.stepStatus)"
+                 >
+                   <template slot="description">
+                     <div class="step-detail">
+                       <el-tag size="mini" :type="flowStepStatusTag(step.stepStatus)">
+                         {{ flowProcessStatusText(step.stepStatus) }}
+                       </el-tag>
+                       <div class="step-remark" v-if="step.remark">{{ step.remark }}</div>
+                     </div>
+                   </template>
+                 </el-step>
+               </el-steps>
+             </el-collapse-item>
+           </el-collapse>
          </div>
-        <el-table :data="flowDialog.form.process" border size="mini">
-          <el-table-column label="步骤">
-            <template slot-scope="scope">
-              <el-input v-model="scope.row.stepName" size="mini" placeholder="步骤名称" />
-            </template>
-          </el-table-column>
-          <el-table-column label="状态" width="160">
-            <template slot-scope="scope">
-              <el-select v-model="scope.row.stepStatus" placeholder="请选择状态" size="mini">
-                <el-option label="待开始" value="pending" />
-                <el-option label="进行中" value="processing" />
-                <el-option label="已完成" value="completed" />
-                 <el-option label="异常" value="exception" />
-               </el-select>
-             </template>
-           </el-table-column>
-           <el-table-column label="备注">
-             <template slot-scope="scope">
-              <el-input v-model="scope.row.remark" placeholder="备注" size="mini" />
-            </template>
-          </el-table-column>
-           <el-table-column label="操作" width="100">
-             <template slot-scope="scope">
-               <el-button type="text" size="mini" @click="removeProcessRow(scope.$index)">删除</el-button>
-             </template>
-           </el-table-column>
-         </el-table>
        </div>
 
        <span slot="footer" class="dialog-footer">
@@ -272,11 +260,11 @@
        </span>
      </el-dialog>
 
-     <!-- 生产流详情 -->
+     <!-- 生产池详情 -->
      <el-dialog :title="viewFlowDialog.title" :visible.sync="viewFlowDialog.visible" width="820px">
        <div v-if="viewFlowDialog.record">
          <el-descriptions :column="2" border label-class-name="desc-label">
-           <el-descriptions-item label="生产流ID">{{ viewFlowDialog.record.flowId }}</el-descriptions-item>
+           <el-descriptions-item label="生产池ID">{{ viewFlowDialog.record.flowId }}</el-descriptions-item>
            <el-descriptions-item label="状态">{{ flowStatusLabels[viewFlowDialog.record.flowStatus] || viewFlowDialog.record.flowStatus }}</el-descriptions-item>
            <el-descriptions-item label="订单总数量">{{ viewFlowDialog.record.totalQuantity }}</el-descriptions-item>
            <el-descriptions-item label="优先级">{{ priorityLabels[viewFlowDialog.record.priority] }}</el-descriptions-item>
@@ -299,6 +287,35 @@
          >
            {{ orderId }}
          </el-tag>
+
+         <div v-if="viewFlowOrders.length" class="order-flow-preview">
+           <h4 class="section-title">关联订单流程</h4>
+           <el-collapse>
+             <el-collapse-item
+               v-for="order in viewFlowOrders"
+               :key="order.orderId"
+               :title="`${order.orderId}（${order.customerInfo || '未填写'}）`"
+             >
+               <el-steps :active="orderFlowActiveStep(order.nodes)" align-center finish-status="success">
+                 <el-step
+                   v-for="(step, idx) in order.nodes"
+                   :key="`${order.orderId}-${idx}`"
+                   :title="step.stepName || `步骤${idx + 1}`"
+                   :status="flowStepStatus(step.stepStatus)"
+                 >
+                   <template slot="description">
+                     <div class="step-detail">
+                       <el-tag size="mini" :type="flowStepStatusTag(step.stepStatus)">
+                         {{ flowProcessStatusText(step.stepStatus) }}
+                       </el-tag>
+                       <div class="step-remark" v-if="step.remark">{{ step.remark }}</div>
+                     </div>
+                   </template>
+                 </el-step>
+               </el-steps>
+             </el-collapse-item>
+           </el-collapse>
+         </div>
 
          <h4 class="section-title">材料汇总</h4>
          <el-table :data="viewFlowDialog.record.materialsSummary" border size="mini">
@@ -473,7 +490,7 @@ export default {
         form: createEmptyFlowForm()
       },
       flowRules: {
-        flowId: [{ required: true, message: '请输入生产流ID', trigger: 'blur' }],
+        flowId: [{ required: true, message: '请输入生产池ID', trigger: 'blur' }],
         templateId: [{ required: true, message: '请选择流程模板', trigger: 'change' }],
         flowStatus: [{ required: true, message: '请选择生产状态', trigger: 'change' }],
         orderIds: [{ required: true, message: '请选择关联订单', trigger: 'change' }],
@@ -482,7 +499,7 @@ export default {
       },
       viewFlowDialog: {
         visible: false,
-        title: '生产流详情',
+        title: '生产池详情',
         record: null
       },
       flowStepDialog: {
@@ -500,6 +517,36 @@ export default {
   computed: {
     filteredFlows() {
       return this.flowList
+    },
+    dialogTemplate() {
+      const templateId = this.flowDialog.form.templateId
+      return this.templateCache[templateId] || this.templateOptions.find(item => item.templateId === templateId)
+    },
+    dialogAssociatedOrders() {
+      const template = this.dialogTemplate
+      if (!template) return []
+      return this.flowDialog.form.orderIds.map(orderId => {
+        const base = this.orderList.find(item => item.orderId === orderId) || { orderId }
+        return {
+          ...base,
+          nodes: this.buildOrderNodesForTemplate(base, template)
+        }
+      })
+    },
+    viewFlowOrders() {
+      const record = this.viewFlowDialog.record
+      if (!record || !Array.isArray(record.orderIds) || !record.orderIds.length) {
+        return []
+      }
+      const template = record.flowTemplate || (record.templateId && this.templateCache[record.templateId])
+      if (!template) return []
+      return record.orderIds.map(orderId => {
+        const base = this.orderList.find(item => item.orderId === orderId) || { orderId }
+        return {
+          ...base,
+          nodes: this.buildOrderNodesForTemplate(base, template)
+        }
+      })
     }
   },
   created() {
@@ -525,7 +572,7 @@ export default {
         })
       } catch (error) {
         console.error(error)
-        this.$message.error('加载生产流数据失败')
+        this.$message.error('加载生产池数据失败')
       } finally {
         this.loading = false
       }
@@ -603,6 +650,20 @@ export default {
       }
       return mapping[status] || '待开始'
     },
+    orderFlowActiveStep(nodes) {
+      if (!Array.isArray(nodes) || !nodes.length) return 0
+      const exceptionIndex = nodes.findIndex(step => step.stepStatus === 'exception')
+      if (exceptionIndex !== -1) return exceptionIndex + 1
+      const completedCount = nodes.filter(step => step.stepStatus === 'completed').length
+      if (completedCount >= nodes.length) {
+        return nodes.length
+      }
+      const processingIndex = nodes.findIndex(step => step.stepStatus === 'processing')
+      if (processingIndex !== -1) {
+        return processingIndex + 1
+      }
+      return completedCount + 1
+    },
     flowStepStatusTag(status) {
       const mapping = {
         pending: 'info',
@@ -611,6 +672,23 @@ export default {
         exception: 'danger'
       }
       return mapping[status] || 'info'
+    },
+    buildOrderNodesForTemplate(order, template) {
+      if (!template || !Array.isArray(template.flowNodeList)) return []
+      const existingNodes = Array.isArray(order && order.orderNodes) ? order.orderNodes : []
+      return template.flowNodeList
+        .filter(node => node && node.nodeStatus !== 'N')
+        .sort((a, b) => (a.sort || 0) - (b.sort || 0))
+        .map((node, index) => {
+          const matched = existingNodes.find(item => item.nodeId === node.nodeId) || {}
+          return {
+            nodeId: node.nodeId,
+            stepName: node.nodeName,
+            stepStatus: matched.stepStatus || 'pending',
+            remark: matched.remark || '',
+            sortOrder: node.sort != null ? node.sort : index
+          }
+        })
     },
     flowStepStatus(status) {
       const mapping = {
@@ -662,19 +740,19 @@ export default {
     },
     async openFlowDialog(flow) {
       if (flow && flow.flowId) {
-        this.flowDialog.title = '编辑生产流'
+        this.flowDialog.title = '编辑生产池'
         this.flowDialog.isEdit = true
         try {
           const { data } = await getFlowPool(flow.flowId)
           this.flowDialog.form = this.normalizeFlowForm(data || flow)
         } catch (error) {
           console.error(error)
-          this.$message.error('获取生产流详情失败，将使用现有数据')
+          this.$message.error('获取生产池详情失败，将使用现有数据')
           this.flowDialog.form = this.normalizeFlowForm(flow)
         }
         await this.ensureTemplate(this.flowDialog.form.templateId)
       } else {
-        this.flowDialog.title = '新增生产流'
+        this.flowDialog.title = '新增生产池'
         this.flowDialog.isEdit = false
         this.flowDialog.form = this.prepareEmptyForm()
       }
@@ -703,6 +781,9 @@ export default {
             sortOrder: node.sort != null ? node.sort : index
           }))
       }
+      if (template) {
+        this.applyTemplateToOrders(this.flowDialog.form.orderIds, template)
+      }
     },
     addMaterialRow() {
       if (!Array.isArray(this.flowDialog.form.materialsSummary)) {
@@ -729,6 +810,20 @@ export default {
     removeProcessRow(index) {
       if (!Array.isArray(this.flowDialog.form.process)) return
       this.flowDialog.form.process.splice(index, 1)
+    },
+    applyTemplateToOrders(orderIds, template) {
+      if (!template || !Array.isArray(orderIds)) return
+      const clonedTemplate = JSON.parse(JSON.stringify(template))
+      this.orderList = this.orderList.map(order => {
+        if (orderIds.includes(order.orderId)) {
+          return {
+            ...order,
+            templateId: clonedTemplate.templateId,
+            flowTemplate: clonedTemplate
+          }
+        }
+        return order
+      })
     },
     updateFlowMetrics() {
       const selected = this.flowDialog.form.orderIds
@@ -806,7 +901,9 @@ export default {
           }
           this.$message.success('保存成功')
           this.flowDialog.visible = false
-          await this.fetchFlowList()
+          const template = await this.ensureTemplate(payload.templateId)
+          this.applyTemplateToOrders(payload.orderIds, template)
+          await Promise.all([this.fetchFlowList(), this.fetchOrders()])
         } catch (error) {
           console.error(error)
           this.$message.error('保存失败，请重试')
@@ -817,6 +914,7 @@ export default {
       try {
         const { data } = await getFlowPool(flow.flowId)
         this.viewFlowDialog.record = data || JSON.parse(JSON.stringify(flow))
+        await this.ensureTemplate(this.viewFlowDialog.record.templateId)
       } catch (error) {
         console.error(error)
         this.viewFlowDialog.record = JSON.parse(JSON.stringify(flow))
@@ -875,7 +973,7 @@ export default {
       }
     },
     handleDeleteFlow(flow) {
-      this.$confirm(`确认删除生产流【${flow.flowId}】吗？`, '提示', {
+      this.$confirm(`确认删除生产池【${flow.flowId}】吗？`, '提示', {
         type: 'warning'
       }).then(async () => {
         try {
@@ -955,12 +1053,20 @@ export default {
      font-weight: 600;
    }
 
-   .summary-header {
-     display: flex;
-     align-items: center;
-     justify-content: space-between;
-     margin-top: 18px;
-   }
+  .summary-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 18px;
+  }
+
+  .order-flow-preview {
+    margin-top: 12px;
+
+    .el-collapse-item__header {
+      font-weight: 600;
+    }
+  }
 
    .step-detail {
      display: flex;

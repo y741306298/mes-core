@@ -68,16 +68,16 @@
          >
            删除订单
          </el-button>
-         <el-button
-           type="success"
-           size="small"
-           icon="el-icon-upload"
-           :disabled="selectedOrders.length === 0"
-           @click="openFlowCreationDialog"
-         >
-           入池
-         </el-button>
-       </div>
+        <el-button
+          type="success"
+          size="small"
+          icon="el-icon-upload"
+          :disabled="selectedOrders.length === 0"
+          @click="openPoolAssignmentDialog"
+        >
+          入池
+        </el-button>
+      </div>
 
       <el-table
         ref="orderTable"
@@ -336,156 +336,102 @@
       </span>
     </el-dialog>
 
-     <!-- 入池创建生产流 -->
-     <el-dialog :title="flowCreationDialog.title" :visible.sync="flowCreationDialog.visible" width="780px">
-       <el-form ref="flowForm" :model="flowCreationDialog.form" :rules="flowRules" label-width="120px">
-         <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="生产流ID" prop="flowId">
-              <el-input v-model="flowCreationDialog.form.flowId" placeholder="请输入生产流ID" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="流程模板" prop="templateId">
-              <el-select
-                v-model="flowCreationDialog.form.templateId"
-                placeholder="请选择流程模板"
-                filterable
-                clearable
-                @change="handleFlowTemplateChange"
-              >
-                <el-option
-                  v-for="item in flowTemplateOptions"
-                  :key="item.templateId"
-                  :label="item.templateName"
-                  :value="item.templateId"
-                />
-              </el-select>
-            </el-form-item>
-          </el-col>
-           <el-col :span="12">
-             <el-form-item label="生产状态" prop="flowStatus">
-               <el-select v-model="flowCreationDialog.form.flowStatus" placeholder="请选择生产状态">
-                 <el-option
-                   v-for="item in flowStatusOptions"
-                   :key="item"
-                   :label="flowStatusLabels[item] || item"
-                   :value="item"
-                 />
-               </el-select>
-             </el-form-item>
-           </el-col>
-           <el-col :span="12">
-             <el-form-item label="订单总数量" prop="totalQuantity">
-               <el-input-number v-model="flowCreationDialog.form.totalQuantity" :min="1" :step="1" style="width: 100%;" />
-             </el-form-item>
-           </el-col>
-           <el-col :span="12">
-             <el-form-item label="优先级" prop="priority">
-               <el-select v-model="flowCreationDialog.form.priority" placeholder="请选择优先级">
-                 <el-option v-for="item in priorityOptions" :key="item" :label="priorityLabels[item]" :value="item" />
-               </el-select>
-             </el-form-item>
-           </el-col>
-           <el-col :span="12">
-             <el-form-item label="预计开始时间">
-               <el-date-picker
-                 v-model="flowCreationDialog.form.scheduledStart"
-                 type="datetime"
-                 style="width: 100%;"
-                 value-format="yyyy-MM-dd HH:mm"
-               />
-             </el-form-item>
-           </el-col>
-           <el-col :span="12">
-             <el-form-item label="预计完成时间">
-               <el-date-picker
-                 v-model="flowCreationDialog.form.scheduledEnd"
-                 type="datetime"
-                 style="width: 100%;"
-                 value-format="yyyy-MM-dd HH:mm"
-               />
-             </el-form-item>
-           </el-col>
-           <el-col :span="12">
-             <el-form-item label="实际开始时间">
-               <el-date-picker
-                 v-model="flowCreationDialog.form.actualStart"
-                 type="datetime"
-                 style="width: 100%;"
-                 value-format="yyyy-MM-dd HH:mm"
-               />
-             </el-form-item>
-           </el-col>
-           <el-col :span="12">
-             <el-form-item label="实际完成时间">
-               <el-date-picker
-                 v-model="flowCreationDialog.form.actualEnd"
-                 type="datetime"
-                 style="width: 100%;"
-                 value-format="yyyy-MM-dd HH:mm"
-               />
-             </el-form-item>
-           </el-col>
-           <el-col :span="12">
-             <el-form-item label="负责人">
-               <el-input v-model="flowCreationDialog.form.assignedOperator" placeholder="请输入负责人" />
-             </el-form-item>
-           </el-col>
-           <el-col :span="12">
-             <el-form-item label="生产备注">
-               <el-input v-model="flowCreationDialog.form.productionNotes" placeholder="请输入生产备注" />
-             </el-form-item>
-           </el-col>
-         </el-row>
-       </el-form>
+    <!-- 订单分配到生产池 -->
+    <el-dialog
+      title="分配生产池"
+      :visible.sync="poolAssignmentDialog.visible"
+      width="820px"
+    >
+      <div class="pool-assignment" v-loading="poolAssignmentDialog.submitting">
+        <el-alert
+          title="选择生产池并为每个订单分配进入池子的数量，可拆分到多个生产池。"
+          type="info"
+          :closable="false"
+          show-icon
+          class="mb12"
+        />
 
-       <div class="flow-summary">
-         <h4 class="section-title">关联订单</h4>
-         <el-tag
-           v-for="orderId in flowCreationDialog.form.orderIds"
-           :key="orderId"
-           type="info"
-           effect="plain"
-           class="mr5"
-         >
-           {{ orderId }}
-         </el-tag>
-
-         <h4 class="section-title">材料汇总</h4>
-         <el-table :data="flowCreationDialog.form.materialsSummary" border size="mini">
-           <el-table-column prop="material" label="材料" />
-           <el-table-column prop="quantity" label="数量" width="120" />
-         </el-table>
-
-        <h4 class="section-title">流程节点</h4>
-        <div v-if="flowCreationDialog.form.flowTemplate">
-          <div class="template-summary">
-            模板：{{ flowCreationDialog.form.flowTemplate.templateName }}
-          </div>
-          <el-timeline>
-            <el-timeline-item
-              v-for="node in (flowCreationDialog.form.flowTemplate.flowNodeList || [])"
-              :key="node.nodeId || node.nodeName"
-            >
-              <div class="template-node">
-                <span class="node-name">{{ node.nodeName }}</span>
-                <el-tag
-                  v-if="node.nodeType === '0'"
-                  size="mini"
-                  type="info"
-                  class="node-type-tag"
-                >系统</el-tag>
-              </div>
-            </el-timeline-item>
-          </el-timeline>
+        <div v-if="!poolAssignmentDialog.orders.length" class="empty-assignment">
+          请选择订单后再进行入池操作。
         </div>
-        <div v-else class="template-empty">请选择流程模板</div>
-       </div>
+
+        <div v-else>
+          <div
+            v-for="order in poolAssignmentDialog.orders"
+            :key="order.orderId"
+            class="order-allocation-card"
+          >
+            <div class="order-allocation-header">
+              <div class="order-basic">
+                <div class="order-id">订单：{{ order.orderId }}</div>
+                <div class="order-customer">客户：{{ order.customerInfo || '未填写' }}</div>
+              </div>
+              <div class="order-quantity">
+                数量：{{ order.quantity }}，已分配 {{ allocationTotal(order.orderId) }}，剩余 {{ Math.max(0, order.quantity - allocationTotal(order.orderId)) }}
+              </div>
+            </div>
+
+            <el-table
+              :data="allocationsByOrder(order.orderId)"
+              border
+              size="small"
+              class="allocation-table"
+              empty-text="请为该订单分配生产池"
+            >
+              <el-table-column label="生产池" min-width="220">
+                <template slot-scope="scope">
+                  <el-select
+                    v-model="scope.row.flowId"
+                    placeholder="请选择生产池"
+                    filterable
+                    clearable
+                    style="width: 100%;"
+                  >
+                    <el-option
+                      v-for="pool in flowPoolOptions"
+                      :key="pool.flowId"
+                      :label="`${pool.flowId}（${(pool.flowTemplate && pool.flowTemplate.templateName) || '未绑定模板'}）`"
+                      :value="pool.flowId"
+                    />
+                  </el-select>
+                </template>
+              </el-table-column>
+              <el-table-column label="分配数量" width="160" align="center">
+                <template slot-scope="scope">
+                  <el-input-number
+                    v-model="scope.row.quantity"
+                    :min="1"
+                    :max="order.quantity"
+                    :step="1"
+                    controls-position="right"
+                  />
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="120" align="center">
+                <template slot-scope="scope">
+                  <el-button
+                    type="text"
+                    size="mini"
+                    @click="removeAllocation(order.orderId, scope.$index)"
+                  >移除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+
+            <div class="allocation-actions">
+              <el-button type="primary" size="mini" icon="el-icon-plus" @click="addAllocation(order)">
+                继续分配
+              </el-button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <span slot="footer" class="dialog-footer">
-       <el-button @click="flowCreationDialog.visible = false">取 消</el-button>
-       <el-button type="primary" :loading="flowCreationDialog.submitting" @click="submitFlow">生 成</el-button>
+        <el-button @click="poolAssignmentDialog.visible = false">取 消</el-button>
+        <el-button type="primary" :loading="poolAssignmentDialog.submitting" @click="submitPoolAssignments">
+          确 定
+        </el-button>
       </span>
     </el-dialog>
 
@@ -537,49 +483,29 @@ import {
   getOrderPool,
   addOrderPool,
   updateOrderPool,
-  removeOrderPool,
-  listProductionFlows,
-  addProductionFlow,
-  updateProductionFlow
+  removeOrderPool
 } from '@/api/productionflow/orderPool'
+import { listFlowPool, getFlowPool as getFlowPoolDetail, updateFlowPool } from '@/api/productionflow/flowPool'
 import { listFlowTemplateAll, getFlowTemplate } from '@/api/order/flowTemplate'
 import { listTaskTemplateAll } from '@/api/order/taskTemplate'
 import { complateNode, submitRemark } from '@/api/order/orderNode'
 import request from '@/utils/request'
 
- const PRIORITY_WEIGHT = {
-   low: 1,
-   normal: 2,
-   high: 3,
-   urgent: 4
- }
+const pad = value => `${value}`.padStart(2, '0')
 
- const pad = value => `${value}`.padStart(2, '0')
-
- const formatDateHelper = value => {
-   if (!value) return ''
-   const date = value instanceof Date ? value : new Date(value)
-   if (Number.isNaN(date.getTime())) return ''
-   const y = date.getFullYear()
-   const m = pad(date.getMonth() + 1)
-   const d = pad(date.getDate())
-   const h = pad(date.getHours())
-   const min = pad(date.getMinutes())
-   return `${y}-${m}-${d} ${h}:${min}`
- }
-
- const nowDateTimeHelper = () => formatDateHelper(new Date())
-
-const nowDateStampHelper = () => {
-  const date = new Date()
+const formatDateHelper = value => {
+  if (!value) return ''
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
   const y = date.getFullYear()
   const m = pad(date.getMonth() + 1)
   const d = pad(date.getDate())
   const h = pad(date.getHours())
   const min = pad(date.getMinutes())
-  const s = pad(date.getSeconds())
-  return `${y}${m}${d}-${h}${min}${s}`
+  return `${y}-${m}-${d} ${h}:${min}`
 }
+
+const nowDateTimeHelper = () => formatDateHelper(new Date())
 
 const SYSTEM_NODE_TYPES = new Set(['0', '1', '2', '3', '4', '5', '6', '7'])
 
@@ -604,14 +530,14 @@ export default {
   name: 'ProductionFlowOrderPool',
   data() {
     return {
-       orderStatusOptions: ['待处理', '处理中', '待入池', '已入池', '生产中', '已完成', '已取消'],
-       priorityOptions: ['low', 'normal', 'high', 'urgent'],
-       priorityLabels: {
-         low: '低',
-         normal: '普通',
-         high: '高',
-         urgent: '紧急'
-       },
+      orderStatusOptions: ['待处理', '处理中', '待入池', '已入池', '生产中', '已完成', '已取消'],
+      priorityOptions: ['low', 'normal', 'high', 'urgent'],
+      priorityLabels: {
+        low: '低',
+        normal: '普通',
+        high: '高',
+        urgent: '紧急'
+      },
       orderSearch: {
         keyword: '',
         status: '',
@@ -619,6 +545,8 @@ export default {
       },
       orderList: [],
       flowList: [],
+      flowPoolOptions: [],
+      flowPoolDetailMap: {},
       flowTemplateOptions: [],
       flowTemplateDetailMap: {},
       taskTemplateMap: {},
@@ -665,41 +593,25 @@ export default {
          'completed',
          'cancelled'
        ],
-       flowStatusLabels: {
-         pending: '待开始',
-         file_preparing: '文件准备中',
-         file_ready: '文件就绪',
-         layout_designing: '排版设计中',
-         layout_approved: '排版已确认',
-         printing: '打印中',
-         printed: '已打印',
-         cutting: '切割中',
-         cut_completed: '切割完成',
-         quality_check: '质检中',
-         completed: '已完成',
-         cancelled: '已取消'
-       },
-      flowCreationDialog: {
+      flowStatusLabels: {
+        pending: '待开始',
+        file_preparing: '文件准备中',
+        file_ready: '文件就绪',
+        layout_designing: '排版设计中',
+        layout_approved: '排版已确认',
+        printing: '打印中',
+        printed: '已打印',
+        cutting: '切割中',
+        cut_completed: '切割完成',
+        quality_check: '质检中',
+        completed: '已完成',
+        cancelled: '已取消'
+      },
+      poolAssignmentDialog: {
         visible: false,
-        title: '创建生产流',
-        isEdit: false,
         submitting: false,
-        form: {
-          flowId: '',
-          orderIds: [],
-          templateId: '',
-          flowTemplate: null,
-          flowStatus: 'pending',
-          totalQuantity: 0,
-          materialsSummary: [],
-          priority: 'normal',
-          scheduledStart: '',
-          scheduledEnd: '',
-          actualStart: '',
-          actualEnd: '',
-          assignedOperator: '',
-          productionNotes: ''
-        }
+        orders: [],
+        allocations: []
       },
       orderRules: {
         orderId: [{ required: true, message: '请输入订单编号', trigger: 'blur' }],
@@ -714,13 +626,6 @@ export default {
         sizeRequirement: [{ required: true, message: '请输入尺寸规格', trigger: 'blur' }],
         fileFormat: [{ required: true, message: '请输入文件格式', trigger: 'blur' }],
         craftRequirements: [{ required: true, message: '请输入工艺要求', trigger: 'blur' }]
-      },
-      flowRules: {
-        flowId: [{ required: true, message: '请输入生产流ID', trigger: 'blur' }],
-        flowStatus: [{ required: true, message: '请选择状态', trigger: 'change' }],
-        templateId: [{ required: true, message: '请选择流程模板', trigger: 'change' }],
-        totalQuantity: [{ required: true, message: '请输入订单总数量', trigger: 'change' }],
-        priority: [{ required: true, message: '请选择优先级', trigger: 'change' }]
       }
     }
   },
@@ -885,12 +790,23 @@ export default {
     },
     async fetchFlows() {
       try {
-        const response = await listProductionFlows()
+        const response = await listFlowPool({})
         const list = Array.isArray(response.data) ? response.data : []
-        this.flowList = list.map(item => this.normalizeFlow(item))
+        const normalized = list.map(item => this.normalizeFlow(item))
+        this.flowList = normalized
+        this.flowPoolOptions = normalized
+        const map = {}
+        normalized.forEach(item => {
+          if (item && item.flowId) {
+            map[item.flowId] = item
+          }
+        })
+        this.flowPoolDetailMap = map
       } catch (error) {
         this.flowList = []
-        this.$message.error('获取生产流数据失败')
+        this.flowPoolOptions = []
+        this.flowPoolDetailMap = {}
+        this.$message.error('获取生产池数据失败')
       }
     },
     handleOrderQuery() {
@@ -941,6 +857,11 @@ export default {
           sortOrder: item.sortOrder !== undefined ? item.sortOrder : index
         }))
         : []
+      const orderAllocations = Array.isArray(flow.orderAllocations)
+        ? flow.orderAllocations
+          .filter(item => item && item.orderId)
+          .map(item => ({ orderId: item.orderId, quantity: Number(item.quantity || 0) }))
+        : []
       return {
         flowId: flow.flowId || '',
         orderIds: Array.isArray(flow.orderIds) ? flow.orderIds.slice() : [],
@@ -949,6 +870,7 @@ export default {
         flowStatus: flow.flowStatus || 'pending',
         totalQuantity: Number(flow.totalQuantity || 0),
         materialsSummary,
+        orderAllocations,
         priority: flow.priority || 'normal',
         scheduledStart: this.formatDateValue(flow.scheduledStart) || '',
         scheduledEnd: this.formatDateValue(flow.scheduledEnd) || '',
@@ -956,6 +878,12 @@ export default {
         actualEnd: this.formatDateValue(flow.actualEnd) || '',
         assignedOperator: flow.assignedOperator || '',
         productionNotes: flow.productionNotes || '',
+        process: Array.isArray(flow.process)
+          ? flow.process.map((step, index) => ({
+            ...step,
+            sortOrder: step.sortOrder !== undefined ? step.sortOrder : index
+          }))
+          : [],
         createdAt: this.formatDateValue(flow.createdAt) || '',
         updatedAt: this.formatDateValue(flow.updatedAt) || ''
       }
@@ -2099,113 +2027,195 @@ export default {
       this.viewOrderDialog.visible = true
       await this.refreshOrderRecord(order.orderId, { silent: true, updateDialog: true, withLoading: true })
     },
-    openFlowCreationDialog() {
+    openPoolAssignmentDialog() {
       if (!this.selectedOrders.length) {
         this.$message.warning('请先选择至少一个订单')
         return
       }
-      const selected = this.selectedOrders.map(item => ({ ...item }))
-      const flowId = `FLOW-${this.nowDateStamp()}`
-      const totalQuantity = selected.reduce((acc, cur) => acc + Number(cur.quantity || 0), 0)
-      const materialsMap = {}
-      selected.forEach(order => {
-        const key = order.mainMaterial || '未知材料'
-        materialsMap[key] = (materialsMap[key] || 0) + Number(order.quantity || 0)
-      })
-      const materialsSummary = Object.keys(materialsMap).map(key => ({
-        material: key,
-        quantity: materialsMap[key]
+      if (!this.flowPoolOptions.length) {
+        this.fetchFlows()
+      }
+      const orders = this.selectedOrders.map(item => ({
+        ...item,
+        quantity: Number(item.quantity || 0)
       }))
-      const priority = selected.reduce((max, order) => {
-        return PRIORITY_WEIGHT[order.priority] > PRIORITY_WEIGHT[max] ? order.priority : max
-      }, 'low')
-      const initialTemplateId = selected[0].templateId || ''
-      const sameTemplate = selected.every(item => item.templateId === initialTemplateId)
-      if (!sameTemplate) {
-        this.$message.info('选中的订单使用的流程模板不同，请手动选择。')
-      }
-      const templateId = sameTemplate ? initialTemplateId : ''
-      const flowTemplate = sameTemplate
-        ? (selected[0].flowTemplate || this.findTemplateById(templateId))
-        : null
-      this.flowCreationDialog.form = {
-        flowId,
-        orderIds: selected.map(item => item.orderId),
-        templateId,
-        flowTemplate,
-        flowStatus: 'pending',
-        totalQuantity,
-        materialsSummary,
-        priority,
-        scheduledStart: '',
-        scheduledEnd: '',
-        actualStart: '',
-        actualEnd: '',
-        assignedOperator: '',
-        productionNotes: ''
-      }
-      this.flowCreationDialog.isEdit = false
-      this.flowCreationDialog.submitting = false
-      this.flowCreationDialog.title = '创建生产流'
-      this.$nextTick(() => {
-        if (this.$refs.flowForm) {
-          this.$refs.flowForm.clearValidate()
-        }
-      })
-      this.flowCreationDialog.visible = true
+      const timestamp = Date.now()
+      this.poolAssignmentDialog.orders = orders
+      this.poolAssignmentDialog.allocations = orders.map((order, index) => ({
+        key: `${order.orderId}-${timestamp}-${index}`,
+        orderId: order.orderId,
+        flowId: '',
+        quantity: order.quantity
+      }))
+      this.poolAssignmentDialog.submitting = false
+      this.poolAssignmentDialog.visible = true
     },
-    submitFlow() {
-      if (!this.$refs.flowForm) return
-      this.$refs.flowForm.validate(async valid => {
-        if (!valid) return
-        const payload = this.buildFlowPayload(this.flowCreationDialog.form)
-        this.flowCreationDialog.submitting = true
-        try {
-          const exists = this.flowList.some(item => item.flowId === payload.flowId)
-          if (exists) {
-            await updateProductionFlow(payload)
-          } else {
-            await addProductionFlow(payload)
-          }
-          this.$message.success('生产流已生成')
-          this.flowCreationDialog.visible = false
-          this.selectedOrders = []
-          await Promise.all([this.fetchFlows(), this.fetchOrders()])
-        } catch (error) {
-          this.$message.error('生成失败')
-        } finally {
-          this.flowCreationDialog.submitting = false
-        }
+    allocationsByOrder(orderId) {
+      return this.poolAssignmentDialog.allocations.filter(item => item.orderId === orderId)
+    },
+    allocationTotal(orderId) {
+      return this.allocationsByOrder(orderId).reduce((sum, item) => sum + Number(item.quantity || 0), 0)
+    },
+    addAllocation(order) {
+      if (!order || !order.orderId) return
+      const remaining = Math.max(1, Number(order.quantity || 0) - this.allocationTotal(order.orderId))
+      this.poolAssignmentDialog.allocations.push({
+        key: `${order.orderId}-${Date.now()}-${Math.random()}`,
+        orderId: order.orderId,
+        flowId: '',
+        quantity: remaining
       })
     },
-    buildFlowPayload(form = {}) {
+    removeAllocation(orderId, index) {
+      const list = this.allocationsByOrder(orderId)
+      const target = list[index]
+      if (!target) return
+      const globalIndex = this.poolAssignmentDialog.allocations.findIndex(item => item === target)
+      if (globalIndex !== -1) {
+        this.poolAssignmentDialog.allocations.splice(globalIndex, 1)
+      }
+    },
+    validateAllocations() {
+      if (!this.poolAssignmentDialog.orders.length) {
+        this.$message.warning('请选择订单')
+        return false
+      }
+      if (!this.poolAssignmentDialog.allocations.length) {
+        this.$message.warning('请为订单创建分配记录')
+        return false
+      }
+      for (const order of this.poolAssignmentDialog.orders) {
+        const allocations = this.allocationsByOrder(order.orderId).filter(item => item.flowId && Number(item.quantity || 0) > 0)
+        if (!allocations.length) {
+          this.$message.warning(`请为订单【${order.orderId}】选择至少一个生产池`)
+          return false
+        }
+        const total = allocations.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
+        if (total > Number(order.quantity || 0)) {
+          this.$message.warning(`订单【${order.orderId}】分配数量不能超过订单数量`)
+          return false
+        }
+      }
+      const flowIds = this.poolAssignmentDialog.allocations.map(item => item.flowId).filter(Boolean)
+      if (!flowIds.length) {
+        this.$message.warning('请选择生产池后再提交')
+        return false
+      }
+      return true
+    },
+    mergeOrderAllocations(existing = [], extra = {}) {
+      const map = {}
+      const normalizedExisting = Array.isArray(existing)
+        ? existing.filter(item => item && item.orderId).map(item => ({
+          orderId: item.orderId,
+          quantity: Number(item.quantity || 0)
+        }))
+        : []
+      normalizedExisting.forEach(item => {
+        map[item.orderId] = (map[item.orderId] || 0) + Number(item.quantity || 0)
+      })
+      Object.keys(extra || {}).forEach(orderId => {
+        map[orderId] = (map[orderId] || 0) + Number(extra[orderId] || 0)
+      })
+      return Object.keys(map).map(orderId => ({ orderId, quantity: map[orderId] }))
+    },
+    async ensureFlowPoolDetail(flowId) {
+      if (!flowId) return null
+      if (this.flowPoolDetailMap[flowId]) {
+        return deepClone(this.flowPoolDetailMap[flowId])
+      }
+      try {
+        const { data } = await getFlowPoolDetail(flowId)
+        const normalized = this.normalizeFlow(data || {})
+        this.flowPoolDetailMap[flowId] = normalized
+        return deepClone(normalized)
+      } catch (error) {
+        console.error(error)
+        return null
+      }
+    },
+    buildFlowPoolPayload(flow = {}, orderQuantities = {}) {
+      const base = this.normalizeFlow(flow)
+      const orderAllocations = this.mergeOrderAllocations(base.orderAllocations, orderQuantities)
+      const orderIds = Array.from(new Set([...(base.orderIds || []), ...Object.keys(orderQuantities || {})]))
+      const totalQuantity = orderAllocations.reduce((sum, item) => sum + Number(item.quantity || 0), 0) || base.totalQuantity
       return {
-        flowId: form.flowId,
-        templateId: form.templateId || '',
-        orderIds: Array.isArray(form.orderIds) ? form.orderIds : [],
-        flowStatus: form.flowStatus || 'pending',
-        totalQuantity: Number(form.totalQuantity || 0),
-        materialsSummary: Array.isArray(form.materialsSummary)
-          ? form.materialsSummary.map((item, index) => ({
-            materialId: item.materialId,
+        flowId: base.flowId,
+        templateId: base.templateId || '',
+        flowStatus: base.flowStatus || 'pending',
+        orderIds,
+        totalQuantity,
+        materialsSummary: Array.isArray(base.materialsSummary)
+          ? base.materialsSummary.map((item, index) => ({
+            ...item,
             material: item.material || '',
             quantity: Number(item.quantity || 0),
             sortOrder: item.sortOrder !== undefined ? item.sortOrder : index
           }))
           : [],
-        priority: form.priority || 'normal',
-        scheduledStart: form.scheduledStart ? this.formatDateValue(form.scheduledStart) : null,
-        scheduledEnd: form.scheduledEnd ? this.formatDateValue(form.scheduledEnd) : null,
-        actualStart: form.actualStart ? this.formatDateValue(form.actualStart) : null,
-        actualEnd: form.actualEnd ? this.formatDateValue(form.actualEnd) : null,
-        assignedOperator: form.assignedOperator || '',
-        productionNotes: form.productionNotes || ''
+        priority: base.priority || 'normal',
+        scheduledStart: base.scheduledStart ? this.formatDateValue(base.scheduledStart) : null,
+        scheduledEnd: base.scheduledEnd ? this.formatDateValue(base.scheduledEnd) : null,
+        actualStart: base.actualStart ? this.formatDateValue(base.actualStart) : null,
+        actualEnd: base.actualEnd ? this.formatDateValue(base.actualEnd) : null,
+        assignedOperator: base.assignedOperator || '',
+        productionNotes: base.productionNotes || '',
+        flowTemplate: base.flowTemplate || null,
+        process: Array.isArray(base.process)
+          ? base.process.map((step, index) => ({
+            stepId: step.stepId,
+            nodeId: step.nodeId,
+            stepName: step.stepName,
+            stepStatus: step.stepStatus || 'pending',
+            remark: step.remark,
+            sortOrder: step.sortOrder !== undefined ? step.sortOrder : index
+          }))
+          : [],
+        createdAt: base.createdAt || '',
+        updatedAt: this.nowDateTime(),
+        orderAllocations
       }
     },
-    async handleFlowTemplateChange(templateId) {
-      this.flowCreationDialog.form.templateId = templateId
-      const template = await this.ensureFlowTemplateDetails(templateId)
-      this.flowCreationDialog.form.flowTemplate = template || this.findTemplateById(templateId)
+    async submitPoolAssignments() {
+      if (!this.validateAllocations()) {
+        return
+      }
+      const grouped = {}
+      this.poolAssignmentDialog.allocations.forEach(item => {
+        if (!item.flowId || !item.orderId) return
+        const quantity = Number(item.quantity || 0)
+        if (!grouped[item.flowId]) {
+          grouped[item.flowId] = { total: 0, orders: {} }
+        }
+        grouped[item.flowId].total += quantity
+        grouped[item.flowId].orders[item.orderId] = (grouped[item.flowId].orders[item.orderId] || 0) + quantity
+      })
+      const flowIds = Object.keys(grouped)
+      if (!flowIds.length) {
+        this.$message.warning('请选择生产池后再提交')
+        return
+      }
+      this.poolAssignmentDialog.submitting = true
+      try {
+        for (const flowId of flowIds) {
+          const detail = await this.ensureFlowPoolDetail(flowId)
+          if (!detail) {
+            this.$message.warning(`生产池【${flowId}】不存在或已删除`)
+            continue
+          }
+          const payload = this.buildFlowPoolPayload(detail, grouped[flowId].orders)
+          await updateFlowPool(payload)
+        }
+        this.$message.success('分配成功')
+        this.poolAssignmentDialog.visible = false
+        this.selectedOrders = []
+        await Promise.all([this.fetchFlows(), this.fetchOrders()])
+      } catch (error) {
+        console.error(error)
+        this.$message.error('分配失败，请稍后重试')
+      } finally {
+        this.poolAssignmentDialog.submitting = false
+      }
     },
     async handleOrderTemplateSelect(templateId) {
       this.orderDialog.form.templateId = templateId
@@ -2288,16 +2298,13 @@ export default {
     },
      formatDateValue(value) {
        return formatDateHelper(value)
-     },
-     nowDateTime() {
-       return nowDateTimeHelper()
-     },
-     nowDateStamp() {
-       return nowDateStampHelper()
-     }
-   }
- }
- </script>
+    },
+    nowDateTime() {
+      return nowDateTimeHelper()
+    }
+  }
+}
+</script>
 
  <style lang="scss" scoped>
  .productionflow-order-page {
@@ -2446,6 +2453,55 @@ export default {
   .mr5 {
     margin-right: 5px;
     margin-bottom: 4px;
+  }
+
+  .pool-assignment {
+    min-height: 160px;
+  }
+
+  .mb12 {
+    margin-bottom: 12px;
+  }
+
+  .empty-assignment {
+    padding: 20px 0;
+    text-align: center;
+    color: #909399;
+  }
+
+  .order-allocation-card {
+    border: 1px solid #ebeef5;
+    border-radius: 6px;
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+
+  .order-allocation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+
+  .order-basic {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+  }
+
+  .order-quantity {
+    color: #606266;
+    font-size: 13px;
+  }
+
+  .allocation-table {
+    margin-bottom: 8px;
+  }
+
+  .allocation-actions {
+    text-align: right;
   }
 }
 
