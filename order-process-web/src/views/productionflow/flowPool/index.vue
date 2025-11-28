@@ -147,7 +147,7 @@
            </el-col>
           <el-col :span="12">
             <el-form-item label="订单总数量" prop="totalQuantity">
-              <el-input-number v-model="flowDialog.form.totalQuantity" :min="1" :step="1" style="width: 100%;" />
+              <el-input-number v-model="flowDialog.form.totalQuantity" :min="0" :step="1" style="width: 100%;" />
             </el-form-item>
           </el-col>
            <el-col :span="12">
@@ -277,6 +277,48 @@
            <el-descriptions-item label="生产备注" :span="2">{{ viewFlowDialog.record.productionNotes || '—' }}</el-descriptions-item>
          </el-descriptions>
 
+         <h4 class="section-title">生产池流程模板</h4>
+         <div v-if="viewFlowTemplateNodes.length" class="flow-template-visual">
+           <div class="template-summary">
+             模板：{{ (viewFlowDialog.record.flowTemplate && viewFlowDialog.record.flowTemplate.templateName) || '—' }}
+           </div>
+           <div class="flow-track">
+             <div
+               class="flow-node-wrapper"
+               v-for="(node, nodeIndex) in viewFlowTemplateNodes"
+               :key="node.nodeId || node.nodeName || nodeIndex"
+             >
+               <div v-if="nodeIndex === 0" class="arrow-first">
+                 <div :class="flowNodeSegmentClass(node, 'firstCenter')">
+                   <span class="flow-node-name">{{ node.nodeName }}</span>
+                 </div>
+                 <div :class="flowNodeSegmentClass(node, 'firstRight')"></div>
+               </div>
+               <div
+                 v-else-if="nodeIndex === viewFlowTemplateNodes.length - 1"
+                 class="arrow-last"
+               >
+                 <div :class="flowNodeSegmentClass(node, 'lastLeft')"></div>
+                 <div :class="flowNodeSegmentClass(node, 'lastCenter')">
+                   <span class="flow-node-name">{{ node.nodeName }}</span>
+                 </div>
+                 <div class="last-right"></div>
+               </div>
+               <div v-else class="arrow">
+                 <div :class="flowNodeSegmentClass(node, 'arrowLeft')"></div>
+                 <div :class="flowNodeSegmentClass(node, 'arrowCenter')">
+                   <span class="flow-node-name">{{ node.nodeName }}</span>
+                 </div>
+                 <div :class="flowNodeSegmentClass(node, 'arrowRight')"></div>
+               </div>
+               <div class="node-extra">
+                 <div class="node-status-text">{{ renderNodeStatusText(node) }}</div>
+               </div>
+             </div>
+           </div>
+         </div>
+         <div v-else class="template-empty">未绑定流程模板</div>
+
          <h4 class="section-title">关联订单</h4>
          <el-tag
            v-for="orderId in viewFlowDialog.record.orderIds"
@@ -296,57 +338,47 @@
                :key="order.orderId"
                :title="`${order.orderId}（${order.customerInfo || '未填写'}）`"
              >
-               <el-steps :active="orderFlowActiveStep(order.nodes)" align-center finish-status="success">
-                 <el-step
-                   v-for="(step, idx) in order.nodes"
-                   :key="`${order.orderId}-${idx}`"
-                   :title="step.stepName || `步骤${idx + 1}`"
-                   :status="flowStepStatus(step.stepStatus)"
-                 >
-                   <template slot="description">
-                     <div class="step-detail">
-                       <el-tag size="mini" :type="flowStepStatusTag(step.stepStatus)">
-                         {{ flowProcessStatusText(step.stepStatus) }}
-                       </el-tag>
-                       <div class="step-remark" v-if="step.remark">{{ step.remark }}</div>
+               <div v-if="order.flowNodes && order.flowNodes.length" class="flow-template-visual">
+                 <div class="template-summary">模板：{{ order.flowTemplate && order.flowTemplate.templateName }}</div>
+                 <div class="flow-track">
+                   <div
+                     class="flow-node-wrapper"
+                     v-for="(node, nodeIndex) in order.flowNodes"
+                     :key="node.nodeId || node.nodeName || nodeIndex"
+                   >
+                     <div v-if="nodeIndex === 0" class="arrow-first">
+                       <div :class="flowNodeSegmentClass(node, 'firstCenter')">
+                         <span class="flow-node-name">{{ node.nodeName }}</span>
+                       </div>
+                       <div :class="flowNodeSegmentClass(node, 'firstRight')"></div>
                      </div>
-                   </template>
-                 </el-step>
-               </el-steps>
+                     <div v-else-if="nodeIndex === order.flowNodes.length - 1" class="arrow-last">
+                       <div :class="flowNodeSegmentClass(node, 'lastLeft')"></div>
+                       <div :class="flowNodeSegmentClass(node, 'lastCenter')">
+                         <span class="flow-node-name">{{ node.nodeName }}</span>
+                       </div>
+                       <div class="last-right"></div>
+                     </div>
+                     <div v-else class="arrow">
+                       <div :class="flowNodeSegmentClass(node, 'arrowLeft')"></div>
+                       <div :class="flowNodeSegmentClass(node, 'arrowCenter')">
+                         <span class="flow-node-name">{{ node.nodeName }}</span>
+                       </div>
+                       <div :class="flowNodeSegmentClass(node, 'arrowRight')"></div>
+                     </div>
+                     <div class="node-extra">
+                       <div class="node-status-text">{{ renderNodeStatusText(node) }}</div>
+                       <div class="node-meta" v-if="node.taskExecution && node.taskExecution.lastTriggeredAt">
+                         最近执行：{{ node.taskExecution.lastTriggeredAt }}
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+               <div v-else class="template-empty">未绑定流程模板</div>
              </el-collapse-item>
            </el-collapse>
          </div>
-
-         <h4 class="section-title">材料汇总</h4>
-         <el-table :data="viewFlowDialog.record.materialsSummary" border size="mini">
-           <el-table-column prop="material" label="材料" />
-           <el-table-column prop="quantity" label="数量" width="120" />
-         </el-table>
-
-         <h4 class="section-title">当前进度</h4>
-        <el-steps :active="flowProcessActiveStep(viewFlowDialog.record)" align-center>
-          <el-step
-            v-for="(step, index) in viewFlowDialog.record.process || []"
-            :key="`${viewFlowDialog.record.flowId}-${index}`"
-            :title="step.stepName || `步骤${index + 1}`"
-            :status="flowStepStatus(step.stepStatus)"
-          >
-            <template slot="description">
-              <div class="step-detail">
-                <el-tag size="mini" :type="flowStepStatusTag(step.stepStatus)">
-                  {{ flowProcessStatusText(step.stepStatus) }}
-                </el-tag>
-                <el-button
-                  v-if="step.stepStatus === 'exception'"
-                  type="text"
-                  size="mini"
-                  @click="openFlowStepIntervention(viewFlowDialog.record, index)"
-                 >人工处理</el-button>
-                 <div class="step-remark" v-if="step.remark">{{ step.remark }}</div>
-               </div>
-             </template>
-           </el-step>
-         </el-steps>
        </div>
        <span slot="footer" class="dialog-footer">
          <el-button @click="viewFlowDialog.visible = false">关 闭</el-button>
@@ -442,6 +474,23 @@ const formatDateHelper = value => {
 
 const nowDateTimeHelper = () => formatDateHelper(new Date())
 
+const FLOW_SEGMENT_CLASS_MAP = {
+  firstCenter: { default: 'first-center', success: 'first-center-active', failed: 'first-center-refuse' },
+  firstRight: { default: 'first-right', success: 'first-right-active', failed: 'first-right-refuse' },
+  arrowLeft: { default: 'arrow-left', success: 'arrow-left-active', failed: 'arrow-left-refuse' },
+  arrowCenter: { default: 'arrow-center', success: 'arrow-center-active', failed: 'arrow-center-refuse' },
+  arrowRight: { default: 'arrow-right', success: 'arrow-right-active', failed: 'arrow-right-refuse' },
+  lastLeft: { default: 'last-left', success: 'last-left-active', failed: 'last-left-refuse' },
+  lastCenter: { default: 'last-center', success: 'last-center-active', failed: 'last-center-refuse' }
+}
+
+const deepClone = data => {
+  if (data === null || data === undefined) {
+    return data
+  }
+  return JSON.parse(JSON.stringify(data))
+}
+
 const createEmptyFlowForm = () => ({
   flowId: '',
   templateId: '',
@@ -494,7 +543,6 @@ export default {
         templateId: [{ required: true, message: '请选择流程模板', trigger: 'change' }],
         flowStatus: [{ required: true, message: '请选择生产状态', trigger: 'change' }],
         orderIds: [{ required: true, message: '请选择关联订单', trigger: 'change' }],
-        totalQuantity: [{ required: true, message: '请输入订单总数量', trigger: 'change' }],
         priority: [{ required: true, message: '请选择优先级', trigger: 'change' }]
       },
       viewFlowDialog: {
@@ -529,7 +577,7 @@ export default {
         const base = this.orderList.find(item => item.orderId === orderId) || { orderId }
         return {
           ...base,
-          nodes: this.buildOrderNodesForTemplate(base, template)
+          nodes: this.buildOrderFlowNodes(base, template)
         }
       })
     },
@@ -544,9 +592,20 @@ export default {
         const base = this.orderList.find(item => item.orderId === orderId) || { orderId }
         return {
           ...base,
-          nodes: this.buildOrderNodesForTemplate(base, template)
+          flowTemplate: base.flowTemplate || template,
+          flowNodes: this.buildOrderFlowNodes(base, template)
         }
       })
+    },
+    viewFlowTemplateNodes() {
+      const record = this.viewFlowDialog.record
+      const template = record && (record.flowTemplate || this.templateCache[record.templateId])
+      if (!template || !Array.isArray(template.flowNodeList)) {
+        return []
+      }
+      return deepClone(template.flowNodeList)
+        .filter(node => node && node.nodeStatus !== 'N')
+        .sort((a, b) => (a.sort || 0) - (b.sort || 0))
     }
   },
   created() {
@@ -673,22 +732,41 @@ export default {
       }
       return mapping[status] || 'info'
     },
-    buildOrderNodesForTemplate(order, template) {
+    buildOrderFlowNodes(order, template) {
       if (!template || !Array.isArray(template.flowNodeList)) return []
-      const existingNodes = Array.isArray(order && order.orderNodes) ? order.orderNodes : []
+      const orderNodes = this.normalizeOrderNodes(order && order.orderNodes)
       return template.flowNodeList
         .filter(node => node && node.nodeStatus !== 'N')
         .sort((a, b) => (a.sort || 0) - (b.sort || 0))
         .map((node, index) => {
-          const matched = existingNodes.find(item => item.nodeId === node.nodeId) || {}
-          return {
-            nodeId: node.nodeId,
-            stepName: node.nodeName,
-            stepStatus: matched.stepStatus || 'pending',
-            remark: matched.remark || '',
-            sortOrder: node.sort != null ? node.sort : index
-          }
+          const matchedNode = orderNodes.find(item => item.nodeId && item.nodeId === node.nodeId)
+            || orderNodes[index]
+            || null
+          return Object.assign({}, node, {
+            orderNode: matchedNode,
+            stepStatus: this.mapOrderNodeStatus(matchedNode && matchedNode.nodeStatus),
+            remark: (matchedNode && matchedNode.nodeRemark) || ''
+          })
         })
+    },
+    mapOrderNodeStatus(status) {
+      const value = `${status || '0'}`
+      if (value === '2') return 'completed'
+      if (value === '1') return 'processing'
+      if (value === '3') return 'exception'
+      return 'pending'
+    },
+    normalizeOrderNodes(nodes = []) {
+      if (!Array.isArray(nodes)) {
+        return []
+      }
+      return nodes.map((node, index) => ({
+        ...node,
+        nodeStatus: node && node.nodeStatus != null ? `${node.nodeStatus}` : '0',
+        nodeRemark: node && node.nodeRemark ? node.nodeRemark : '',
+        triggerMode: (node && node.triggerMode) ? `${node.triggerMode}` : 'MANUAL',
+        sort: node && node.sort != null ? node.sort : index
+      }))
     },
     flowStepStatus(status) {
       const mapping = {
@@ -698,6 +776,68 @@ export default {
         exception: 'error'
       }
       return mapping[status] || 'wait'
+    },
+    renderNodeStatusText(node) {
+      if (node && node.orderNode) {
+        const status = `${node.orderNode.nodeStatus || '0'}`
+        if (status === '2') {
+          return node.orderNode.nodeRemark || '已完成'
+        }
+        if (status === '1') {
+          return node.orderNode.nodeRemark || '进行中'
+        }
+        if (status === '3') {
+          return node.orderNode.nodeRemark || '已超时'
+        }
+        return node.orderNode.nodeRemark || '未开始'
+      }
+      const execution = node && node.taskExecution
+      if (!execution) {
+        return '未执行'
+      }
+      if (execution.success) {
+        return execution.manual ? '人工完成' : '自动完成'
+      }
+      if (execution.error) {
+        return '执行失败'
+      }
+      return execution.message || '待确认'
+    },
+    nodeVisualState(node) {
+      if (node && node.orderNode) {
+        const status = `${node.orderNode.nodeStatus || '0'}`
+        if (status === '2') {
+          return 'success'
+        }
+        if (status === '3') {
+          return 'failed'
+        }
+        return 'pending'
+      }
+      if (!node || !node.taskExecution) {
+        return 'pending'
+      }
+      if (node.taskExecution.success) {
+        return 'success'
+      }
+      if (node.taskExecution.success === false || node.taskExecution.error) {
+        return 'failed'
+      }
+      return 'pending'
+    },
+    flowNodeSegmentClass(node, segment) {
+      const config = FLOW_SEGMENT_CLASS_MAP[segment]
+      if (!config) {
+        return ''
+      }
+      const state = this.nodeVisualState(node)
+      if (state === 'success' && config.success) {
+        return config.success
+      }
+      if (state === 'failed' && config.failed) {
+        return config.failed
+      }
+      return config.default
     },
     flowProcessActiveStep(flow) {
       const steps = (flow && Array.isArray(flow.process)) ? flow.process : []
@@ -1068,9 +1208,54 @@ export default {
     }
   }
 
-   .step-detail {
-     display: flex;
-     align-items: center;
+  .template-summary {
+    margin-bottom: 12px;
+    font-size: 14px;
+    color: #606266;
+  }
+
+  .flow-template-visual {
+    overflow-x: auto;
+  }
+
+  .flow-track {
+    display: flex;
+    padding: 10px 0;
+  }
+
+  .flow-node-wrapper {
+    margin-right: 10px;
+    min-width: 140px;
+  }
+
+  .flow-node-name {
+    color: #fff;
+    font-size: 13px;
+  }
+
+  .node-extra {
+    font-size: 12px;
+    color: #606266;
+    margin-top: 6px;
+
+    .node-status-text {
+      font-weight: 500;
+    }
+
+    .node-meta {
+      color: #909399;
+      margin-top: 4px;
+    }
+  }
+
+  .template-empty {
+    color: #909399;
+    font-size: 13px;
+  }
+
+  .step-detail {
+    display: flex;
+    align-items: center;
 
      .el-tag {
        margin-right: 8px;
@@ -1079,8 +1264,149 @@ export default {
      .step-remark {
        margin-left: 8px;
        color: #606266;
-     }
-   }
+  }
+}
+
+.arrow-first {
+  display: flex;
+}
+
+.first-center,
+.first-center-active,
+.first-center-refuse {
+  background-color: #cbcdd4;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 4px 0 0 4px;
+}
+
+.first-center-active {
+  background-color: #70eaa9;
+}
+
+.first-center-refuse {
+  background-color: #ca5f41;
+}
+
+.first-right,
+.first-right-active,
+.first-right-refuse {
+  width: 0;
+  height: 0;
+  border-top: 20px solid transparent;
+  border-bottom: 20px solid transparent;
+  border-left: 20px solid #cbcdd4;
+}
+
+.first-right-active {
+  border-left-color: #70eaa9;
+}
+
+.first-right-refuse {
+  border-left-color: #ca5f41;
+}
+
+.arrow {
+  display: flex;
+  margin-left: -25px;
+}
+
+.arrow-left,
+.arrow-left-active,
+.arrow-left-refuse {
+  border-width: 19px;
+  border-style: solid;
+  border-color: #cbcdd4 transparent #cbcdd4 #cbcdd4;
+}
+
+.arrow-left-active {
+  border-color: #70eaa9 transparent #70eaa9 #70eaa9;
+}
+
+.arrow-left-refuse {
+  border-color: #ca5f41 transparent #ca5f41 #ca5f41;
+}
+
+.arrow-center,
+.arrow-center-active,
+.arrow-center-refuse {
+  width: 100px;
+  text-align: center;
+}
+
+.arrow-center {
+  background-color: #cbcdd4;
+}
+
+.arrow-center-active {
+  background-color: #70eaa9;
+}
+
+.arrow-center-refuse {
+  background-color: #ca5f41;
+}
+
+.arrow-right,
+.arrow-right-active,
+.arrow-right-refuse {
+  border-width: 19px;
+  border-style: solid;
+  border-color: transparent transparent transparent #cbcdd4;
+}
+
+.arrow-right-active {
+  border-color: transparent transparent transparent #70eaa9;
+}
+
+.arrow-right-refuse {
+  border-color: transparent transparent transparent #ca5f41;
+}
+
+.arrow-last {
+  display: flex;
+  margin-left: -25px;
+}
+
+.last-left,
+.last-left-active,
+.last-left-refuse {
+  border-width: 19px;
+  border-style: solid;
+  border-color: #cbcdd4 #cbcdd4 #cbcdd4 transparent;
+}
+
+.last-left-active {
+  border-color: #70eaa9 #70eaa9 #70eaa9 transparent;
+}
+
+.last-left-refuse {
+  border-color: #ca5f41 #ca5f41 #ca5f41 transparent;
+}
+
+.last-center,
+.last-center-active,
+.last-center-refuse {
+  width: 100px;
+  text-align: center;
+}
+
+.last-center {
+  background-color: #cbcdd4;
+}
+
+.last-center-active {
+  background-color: #70eaa9;
+}
+
+.last-center-refuse {
+  background-color: #ca5f41;
+}
+
+.last-right {
+  border-width: 19px;
+  border-style: solid;
+  border-color: transparent transparent transparent transparent;
+}
 
    .mr5 {
      margin-right: 5px;
