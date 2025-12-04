@@ -2216,6 +2216,32 @@ export default {
         orderAllocations
       }
     },
+    async applyFlowTemplateToOrders(flowDetail, orderIds = []) {
+      if (!flowDetail || !flowDetail.templateId || !Array.isArray(orderIds) || !orderIds.length) {
+        return
+      }
+      const template = flowDetail.flowTemplate
+        || await this.ensureFlowTemplateDetails(flowDetail.templateId)
+      if (!template) {
+        return
+      }
+      for (const orderId of orderIds) {
+        let orderDetail = this.orderList.find(item => item.orderId === orderId) || null
+        if (!orderDetail || !Array.isArray(orderDetail.orderNodes) || !orderDetail.orderNodes.length) {
+          orderDetail = await this.refreshOrderRecord(orderId, { silent: true, updateDialog: false }) || orderDetail
+        }
+        if (!orderDetail) {
+          continue
+        }
+        const orderForm = Object.assign({}, deepClone(orderDetail), {
+          flowTemplate: template,
+          templateId: flowDetail.templateId,
+          flowPoolId: flowDetail.flowId,
+          flowPool: flowDetail
+        })
+        await this.triggerTemplateTasksForOrder(flowDetail.templateId, orderForm)
+      }
+    },
     async submitPoolAssignments() {
       if (!this.validateAllocations()) {
         return
@@ -2245,6 +2271,7 @@ export default {
           }
           const payload = this.buildFlowPoolPayload(detail, grouped[flowId].orders)
           await updateFlowPool(payload)
+          await this.applyFlowTemplateToOrders(detail, Object.keys(grouped[flowId].orders || {}))
         }
         this.$message.success('分配成功')
         this.poolAssignmentDialog.visible = false
