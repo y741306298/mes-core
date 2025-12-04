@@ -1033,8 +1033,14 @@ export default {
           payload[param.paramKey] = value
         }
       })
-      if (orderForm.orderId && payload.orderId == null) {
+      if (orderForm.orderId) {
         payload.orderId = orderForm.orderId
+      }
+      const flowId = orderForm.flowId
+        || orderForm.flowPoolId
+        || (orderForm.flowPool && orderForm.flowPool.flowId)
+      if (flowId) {
+        payload.flowId = flowId
       }
       return payload
     },
