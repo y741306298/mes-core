@@ -188,6 +188,7 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
         entity.setUpdatedAt(now);
         productionFlowMapper.insert(entity);
         saveFlowRelations(entity.getFlowId(), productionFlowVo);
+        syncFlowTemplateToOrders(entity, toSafeSet(productionFlowVo.getOrderIds()), now);
         updateOrdersStatus(toSafeSet(productionFlowVo.getOrderIds()), "已入池", now);
         return selectProductionFlowById(entity.getFlowId());
     }
@@ -208,6 +209,8 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
 
         clearFlowRelations(entity.getFlowId());
         saveFlowRelations(entity.getFlowId(), productionFlowVo);
+
+        syncFlowTemplateToOrders(entity, toSafeSet(productionFlowVo.getOrderIds()), now);
 
         Set<String> newOrderIds = toSafeSet(productionFlowVo.getOrderIds());
         updateOrdersStatus(newOrderIds, "已入池", now);
@@ -361,6 +364,23 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
         saveMaterials(flowId, flowVo.getMaterialsSummary());
         saveOrderRelations(flowId, flowVo.getOrderIds());
         saveSteps(flowId, flowVo.getProcess());
+    }
+
+    private void syncFlowTemplateToOrders(ProductionFlow flow, Set<String> orderIds, LocalDateTime now) {
+        if (flow == null || StringUtils.isBlank(flow.getTemplateId()) || CollectionUtils.isEmpty(orderIds)) {
+            return;
+        }
+        List<OrderPool> orders = orderPoolMapper.selectList(Wrappers.<OrderPool>lambdaQuery()
+            .in(OrderPool::getOrderId, orderIds));
+        if (CollectionUtils.isEmpty(orders)) {
+            return;
+        }
+        orders.forEach(order -> {
+            order.setTemplateId(flow.getTemplateId());
+            order.setUpdatedAt(now);
+            orderPoolMapper.updateById(order);
+            createOrderProcessData(order);
+        });
     }
 
     private void createOrderProcessData(OrderPool orderPool) {
