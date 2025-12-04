@@ -126,7 +126,7 @@
              </el-form-item>
            </el-col>
            <el-col :span="24">
-             <el-form-item label="关联订单" prop="orderIds">
+             <el-form-item label="关联订单">
                <el-select
                  v-model="flowDialog.form.orderIds"
                  multiple
@@ -145,11 +145,6 @@
                </el-select>
              </el-form-item>
            </el-col>
-          <el-col :span="12">
-            <el-form-item label="订单总数量" prop="totalQuantity">
-              <el-input-number v-model="flowDialog.form.totalQuantity" :min="0" :step="1" style="width: 100%;" />
-            </el-form-item>
-          </el-col>
            <el-col :span="12">
              <el-form-item label="优先级" prop="priority">
                <el-select v-model="flowDialog.form.priority" placeholder="请选择优先级">
@@ -519,7 +514,6 @@ export default {
         flowId: [{ required: true, message: '请输入生产池ID', trigger: 'blur' }],
         templateId: [{ required: true, message: '请选择流程模板', trigger: 'change' }],
         flowStatus: [{ required: true, message: '请选择生产状态', trigger: 'change' }],
-        orderIds: [{ required: true, message: '请选择关联订单', trigger: 'change' }],
         priority: [{ required: true, message: '请选择优先级', trigger: 'change' }]
       },
       viewFlowDialog: {
@@ -700,9 +694,12 @@ export default {
       return mapping[status] || 'info'
     },
     buildOrderFlowNodes(order, template) {
-      if (!template || !Array.isArray(template.flowNodeList)) return []
+      const resolvedTemplate = (order && order.flowTemplate && Array.isArray(order.flowTemplate.flowNodeList))
+        ? order.flowTemplate
+        : template
+      if (!resolvedTemplate || !Array.isArray(resolvedTemplate.flowNodeList)) return []
       const orderNodes = this.normalizeOrderNodes(order && order.orderNodes)
-      return template.flowNodeList
+      return resolvedTemplate.flowNodeList
         .filter(node => node && node.nodeStatus !== 'N')
         .sort((a, b) => (a.sort || 0) - (b.sort || 0))
         .map((node, index) => {
@@ -918,18 +915,39 @@ export default {
       if (!Array.isArray(this.flowDialog.form.process)) return
       this.flowDialog.form.process.splice(index, 1)
     },
-    applyTemplateToOrders(orderIds, template) {
-      if (!template || !Array.isArray(orderIds)) return
-      const clonedTemplate = JSON.parse(JSON.stringify(template))
+    applyTemplateToOrders(orderIds, defaultTemplate) {
+      if (!Array.isArray(orderIds) || (!defaultTemplate && !this.orderList.length)) return
       this.orderList = this.orderList.map(order => {
-        if (orderIds.includes(order.orderId)) {
+        if (!orderIds.includes(order.orderId)) return order
+        const orderTemplate = (order && order.flowTemplate && Array.isArray(order.flowTemplate.flowNodeList))
+          ? order.flowTemplate
+          : (order && order.templateId && this.templateCache[order.templateId])
+        const templateToUse = orderTemplate || defaultTemplate
+        const templateNodes = templateToUse && Array.isArray(templateToUse.flowNodeList)
+          ? templateToUse.flowNodeList
+            .filter(node => node && node.nodeStatus !== 'N')
+            .sort((a, b) => (a.sort || 0) - (b.sort || 0))
+          : []
+        const normalizedOrderNodes = this.normalizeOrderNodes(order && order.orderNodes)
+        const mappedNodes = templateNodes.map((node, index) => {
+          const matched = normalizedOrderNodes.find(item => item.nodeId === node.nodeId)
+            || normalizedOrderNodes[index]
+            || null
           return {
-            ...order,
-            templateId: clonedTemplate.templateId,
-            flowTemplate: clonedTemplate
+            ...node,
+            triggerMode: (matched && matched.triggerMode) || node.triggerMode || 'MANUAL',
+            nodeStatus: (matched && matched.nodeStatus) || '0',
+            nodeRemark: (matched && matched.nodeRemark) || '',
+            orderNodeId: (matched && matched.orderNodeId) || '',
+            sort: node.sort != null ? node.sort : index
           }
+        })
+        return {
+          ...order,
+          templateId: templateToUse ? templateToUse.templateId : order.templateId,
+          flowTemplate: templateToUse || order.flowTemplate,
+          orderNodes: mappedNodes
         }
-        return order
       })
     },
     updateFlowMetrics() {
