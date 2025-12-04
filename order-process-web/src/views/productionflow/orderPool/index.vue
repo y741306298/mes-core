@@ -269,6 +269,32 @@
             <el-descriptions-item label="备注" :span="2">{{ viewOrderDialog.record.remark || '—' }}</el-descriptions-item>
           </el-descriptions>
 
+          <h4 class="section-title">生产池流转</h4>
+          <div v-if="viewOrderFlowRelations.length" class="flow-pool-track">
+            <template v-for="(flow, index) in viewOrderFlowRelations">
+              <div :key="flow.flowId || index" class="flow-pool-chip">
+                <div class="flow-pool-title">
+                  <span class="flow-pool-name">{{ flow.flowId || '未命名生产池' }}</span>
+                  <span v-if="flow.flowTemplate" class="flow-pool-template">
+                    （{{ flow.flowTemplate.templateName }}）
+                  </span>
+                </div>
+                <el-tag size="mini" :type="flowStatusTagType(flow.flowStatus)">
+                  {{ flowStatusLabels[flow.flowStatus] || flow.flowStatus || '未知状态' }}
+                </el-tag>
+                <div v-if="flow.createdAt" class="flow-pool-time">{{ formatDateDisplay(flow.createdAt) }}</div>
+              </div>
+              <div
+                v-if="index < viewOrderFlowRelations.length - 1"
+                :key="`${flow.flowId || index}-arrow`"
+                class="flow-pool-arrow"
+              >
+                →
+              </div>
+            </template>
+          </div>
+          <div v-else class="template-empty">暂无生产池流转记录</div>
+
           <h4 class="section-title">流程模板</h4>
           <div v-if="viewOrderFlowNodes.length">
             <div class="template-summary">
@@ -674,6 +700,14 @@ export default {
           || null
         return Object.assign({}, node, { orderNode: matchedNode })
       })
+    },
+    viewOrderFlowRelations() {
+      const record = this.viewOrderDialog.record
+      if (!record || !record.orderId) {
+        return []
+      }
+      const flows = this.flowList.filter(flow => Array.isArray(flow.orderIds) && flow.orderIds.includes(record.orderId))
+      return flows.slice().sort((a, b) => this.toTimestamp(a.createdAt) - this.toTimestamp(b.createdAt))
     }
   },
   methods: {
@@ -2296,8 +2330,30 @@ export default {
       const result = this.formatDateValue(value)
       return result || '—'
     },
-     formatDateValue(value) {
-       return formatDateHelper(value)
+    formatDateValue(value) {
+      return formatDateHelper(value)
+    },
+    toTimestamp(value) {
+      if (!value) return 0
+      const date = value instanceof Date ? value : new Date(value)
+      return Number.isNaN(date.getTime()) ? 0 : date.getTime()
+    },
+    flowStatusTagType(status) {
+      const map = {
+        pending: 'info',
+        file_preparing: 'warning',
+        file_ready: 'warning',
+        layout_designing: 'warning',
+        layout_approved: 'warning',
+        printing: 'warning',
+        printed: 'info',
+        cutting: 'warning',
+        cut_completed: 'success',
+        quality_check: 'warning',
+        completed: 'success',
+        cancelled: 'info'
+      }
+      return map[status] || 'info'
     },
     nowDateTime() {
       return nowDateTimeHelper()
@@ -2372,6 +2428,49 @@ export default {
 
   .flow-template-visual {
     overflow-x: auto;
+  }
+
+  .flow-pool-track {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0 10px;
+  }
+
+  .flow-pool-chip {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 10px;
+    background: #f5f7fa;
+    border: 1px solid #e4e7ed;
+    border-radius: 6px;
+    min-width: 160px;
+    box-sizing: border-box;
+  }
+
+  .flow-pool-title {
+    font-weight: 600;
+    color: #303133;
+    margin-bottom: 4px;
+  }
+
+  .flow-pool-template {
+    color: #606266;
+    font-weight: 400;
+    margin-left: 6px;
+  }
+
+  .flow-pool-time {
+    margin-top: 4px;
+    color: #909399;
+    font-size: 12px;
+  }
+
+  .flow-pool-arrow {
+    color: #c0c4cc;
+    font-size: 18px;
+    padding: 0 4px;
   }
 
   .flow-track {

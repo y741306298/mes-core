@@ -428,34 +428,11 @@ const PRIORITY_WEIGHT = {
   urgent: 4
 }
 
-const FLOW_STATUS_OPTIONS = [
-  'pending',
-  'file_preparing',
-  'file_ready',
-  'layout_designing',
-  'layout_approved',
-  'printing',
-  'printed',
-  'cutting',
-  'cut_completed',
-  'quality_check',
-  'completed',
-  'cancelled'
-]
+const FLOW_STATUS_OPTIONS = ['flowing', 'frozen']
 
 const FLOW_STATUS_LABELS = {
-  pending: '待开始',
-  file_preparing: '文件准备中',
-  file_ready: '文件已完成',
-  layout_designing: '排版设计中',
-  layout_approved: '排版已确认',
-  printing: '打印中',
-  printed: '打印完成',
-  cutting: '后处理中',
-  cut_completed: '后处理完成',
-  quality_check: '质检中',
-  completed: '已完成',
-  cancelled: '已取消'
+  flowing: '流动',
+  frozen: '冻结'
 }
 
 const pad = value => `${value}`.padStart(2, '0')
@@ -494,7 +471,7 @@ const deepClone = data => {
 const createEmptyFlowForm = () => ({
   flowId: '',
   templateId: '',
-  flowStatus: 'pending',
+  flowStatus: 'flowing',
   orderIds: [],
   totalQuantity: 0,
   priority: 'normal',
@@ -685,18 +662,8 @@ export default {
     },
     flowStatusTagType(status) {
       const mapping = {
-        pending: 'info',
-        file_preparing: 'primary',
-        file_ready: 'primary',
-        layout_designing: 'warning',
-        layout_approved: 'success',
-        printing: 'warning',
-        printed: 'success',
-        cutting: 'warning',
-        cut_completed: 'success',
-        quality_check: 'warning',
-        completed: 'success',
-        cancelled: 'danger'
+        flowing: 'success',
+        frozen: 'info'
       }
       return mapping[status] || 'info'
     },
@@ -1274,10 +1241,13 @@ export default {
 .first-center,
 .first-center-active,
 .first-center-refuse {
-  background-color: #cbcdd4;
+  width: 100px;
+  text-align: center;
   color: #fff;
-  padding: 6px 12px;
-  border-radius: 4px 0 0 4px;
+}
+
+.first-center {
+  background-color: #cbcdd4;
 }
 
 .first-center-active {
@@ -1291,19 +1261,17 @@ export default {
 .first-right,
 .first-right-active,
 .first-right-refuse {
-  width: 0;
-  height: 0;
-  border-top: 20px solid transparent;
-  border-bottom: 20px solid transparent;
-  border-left: 20px solid #cbcdd4;
+  border-width: 19px;
+  border-style: solid;
+  border-color: transparent transparent transparent #cbcdd4;
 }
 
 .first-right-active {
-  border-left-color: #70eaa9;
+  border-color: transparent transparent transparent #70eaa9;
 }
 
 .first-right-refuse {
-  border-left-color: #ca5f41;
+  border-color: transparent transparent transparent #ca5f41;
 }
 
 .arrow {
@@ -1316,15 +1284,15 @@ export default {
 .arrow-left-refuse {
   border-width: 19px;
   border-style: solid;
-  border-color: #cbcdd4 transparent #cbcdd4 #cbcdd4;
+  border-color: #cbcdd4 #cbcdd4 #cbcdd4 transparent;
 }
 
 .arrow-left-active {
-  border-color: #70eaa9 transparent #70eaa9 #70eaa9;
+  border-color: #70eaa9 #70eaa9 #70eaa9 transparent;
 }
 
 .arrow-left-refuse {
-  border-color: #ca5f41 transparent #ca5f41 #ca5f41;
+  border-color: #ca5f41 #ca5f41 #ca5f41 transparent;
 }
 
 .arrow-center,
