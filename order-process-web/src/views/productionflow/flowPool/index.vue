@@ -774,14 +774,23 @@ export default {
     },
     isAutoTriggerNode(node) {
       if (!node) return false
-      const triggerMode = this.normalizeTriggerMode((node.orderNode && node.orderNode.triggerMode) || node.triggerMode)
+      const triggerMode = this.normalizeTriggerMode(
+        (node.orderNode && node.orderNode.triggerMode) || node.triggerMode
+      )
       return triggerMode === 'AUTO'
+    },
+    isManualTriggerNode(node) {
+      if (!node) return false
+      const triggerMode = this.normalizeTriggerMode(
+        (node.orderNode && node.orderNode.triggerMode) || node.triggerMode
+      )
+      return triggerMode === 'MANUAL'
     },
     isManualOnlyFlowNode(node) {
       if (!node) {
         return false
       }
-      return !this.isAutoTriggerNode(node)
+      return this.isManualTriggerNode(node)
     },
     buildOrderFlowNodes(order, template) {
       const resolvedTemplate = (order && order.flowTemplate && Array.isArray(order.flowTemplate.flowNodeList))
@@ -901,7 +910,7 @@ export default {
       const triggerMode = this.normalizeTriggerMode(
         (node.orderNode && node.orderNode.triggerMode) || node.triggerMode
       )
-      if (triggerMode !== 'AUTO') {
+      if (triggerMode === 'MANUAL') {
         return node.orderNode && `${node.orderNode.nodeStatus || '0'}` !== '2'
       }
       const state = this.getOrderAutomationState(orderId)
@@ -958,7 +967,7 @@ export default {
         return
       }
       const triggerMode = this.normalizeTriggerMode((node.orderNode && node.orderNode.triggerMode) || node.triggerMode)
-      if (triggerMode !== 'AUTO') {
+      if (triggerMode === 'MANUAL') {
         this.openManualDialogForManualNode({ node, record })
       }
     },
