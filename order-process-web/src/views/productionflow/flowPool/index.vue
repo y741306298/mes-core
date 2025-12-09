@@ -338,8 +338,10 @@
                  <div class="flow-track">
                    <div
                      class="flow-node-wrapper"
+                     :class="{ 'manual-node-clickable': isManualOnlyFlowNode(node) }"
                      v-for="(node, nodeIndex) in order.flowNodes"
                      :key="node.nodeId || node.nodeName || nodeIndex"
+                     @click.stop="handleFlowNodeClick(node, order, $event)"
                    >
                      <div v-if="nodeIndex === 0" class="arrow-first">
                        <div :class="flowNodeSegmentClass(node, 'firstCenter')">
@@ -366,6 +368,15 @@
                        <div class="node-meta" v-if="node.taskExecution && node.taskExecution.lastTriggeredAt">
                          最近执行：{{ node.taskExecution.lastTriggeredAt }}
                        </div>
+                       <el-button
+                         v-if="shouldShowManualButton(node, order.orderId)"
+                         type="text"
+                         size="mini"
+                         class="manual-handle-btn"
+                         @click.stop="openManualDialogForManualNode({ node, record: order })"
+                       >
+                         人工处理
+                       </el-button>
                      </div>
                    </div>
                  </div>
@@ -387,9 +398,9 @@
        width="480px"
        @close="resetFlowStepDialog"
      >
-       <el-form :model="flowStepDialog.form" label-width="100px">
-         <el-form-item label="步骤名称">
-           <el-input v-model="flowStepDialog.form.name" disabled />
+     <el-form :model="flowStepDialog.form" label-width="100px">
+       <el-form-item label="步骤名称">
+         <el-input v-model="flowStepDialog.form.name" disabled />
          </el-form-item>
          <el-form-item label="状态">
            <el-select v-model="flowStepDialog.form.status" placeholder="请选择状态">
@@ -403,18 +414,59 @@
            <el-input v-model="flowStepDialog.form.remark" type="textarea" :rows="3" placeholder="请输入备注" />
          </el-form-item>
        </el-form>
-       <span slot="footer" class="dialog-footer">
-         <el-button @click="flowStepDialog.visible = false">取 消</el-button>
-         <el-button type="primary" @click="confirmFlowStepIntervention">确 认</el-button>
-       </span>
-     </el-dialog>
-   </div>
- </template>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="flowStepDialog.visible = false">取 消</el-button>
+        <el-button type="primary" @click="confirmFlowStepIntervention">确 认</el-button>
+      </span>
+    </el-dialog>
+
+    <el-dialog
+      title="任务人工处理"
+      :visible.sync="manualTaskDialog.visible"
+      width="520px"
+      @close="resetManualTaskDialog"
+    >
+      <div class="manual-task-dialog">
+        <p class="manual-tip">
+          节点「{{ manualTaskDialog.node && manualTaskDialog.node.nodeName }}」自动执行失败，请人工确认后继续。
+        </p>
+        <el-alert
+          v-if="manualTaskDialog.errorMessage"
+          :title="manualTaskDialog.errorMessage"
+          type="error"
+          :closable="false"
+          class="mb12"
+        />
+        <el-input
+          v-model="manualTaskDialog.remark"
+          type="textarea"
+          :rows="3"
+          placeholder="请填写人工处理备注"
+        />
+        <div v-if="manualTaskDialog.responsePreview" class="response-preview">
+          <div class="preview-title">接口返回</div>
+          <pre>{{ manualTaskDialog.responsePreview }}</pre>
+        </div>
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="manualTaskDialog.visible = false">取 消</el-button>
+        <el-button
+          type="primary"
+          :loading="manualTaskDialog.submitting"
+          @click="confirmManualTaskHandling"
+        >
+          已人工理
+        </el-button>
+      </span>
+    </el-dialog>
+  </div>
+</template>
 
 <script>
 import { listFlowPool, getFlowPool, addFlowPool, updateFlowPool, removeFlowPool } from '@/api/productionflow/flowPool'
 import { listOrderPool } from '@/api/productionflow/orderPool'
 import { listFlowTemplateAll, getFlowTemplate } from '@/api/order/flowTemplate'
+import { complateNode, submitRemark } from '@/api/order/orderNode'
 
 const PRIORITY_WEIGHT = {
   low: 1,
@@ -530,7 +582,21 @@ export default {
           status: 'pending',
           remark: ''
         }
-      }
+      },
+      manualTaskDialog: {
+        visible: false,
+        node: null,
+        template: null,
+        templateId: '',
+        orderForm: null,
+        pendingNodes: [],
+        errorMessage: '',
+        responsePreview: '',
+        remark: '',
+        orderId: '',
+        submitting: false
+      },
+      orderAutomationState: {}
     }
   },
   computed: {
@@ -693,6 +759,39 @@ export default {
       }
       return mapping[status] || 'info'
     },
+    normalizeTriggerMode(value) {
+      if (!value) {
+        return 'MANUAL'
+      }
+      const normalized = `${value}`.toUpperCase()
+      if (normalized === 'AUTO' || normalized === '自动触发') {
+        return 'AUTO'
+      }
+      if (normalized === 'MANUAL' || normalized === '人工触发') {
+        return 'MANUAL'
+      }
+      return normalized
+    },
+    isAutoTriggerNode(node) {
+      if (!node) return false
+      const triggerMode = this.normalizeTriggerMode(
+        (node.orderNode && node.orderNode.triggerMode) || node.triggerMode
+      )
+      return triggerMode === 'AUTO'
+    },
+    isManualTriggerNode(node) {
+      if (!node) return false
+      const triggerMode = this.normalizeTriggerMode(
+        (node.orderNode && node.orderNode.triggerMode) || node.triggerMode
+      )
+      return triggerMode === 'MANUAL'
+    },
+    isManualOnlyFlowNode(node) {
+      if (!node) {
+        return false
+      }
+      return this.isManualTriggerNode(node)
+    },
     buildOrderFlowNodes(order, template) {
       const resolvedTemplate = (order && order.flowTemplate && Array.isArray(order.flowTemplate.flowNodeList))
         ? order.flowTemplate
@@ -708,6 +807,7 @@ export default {
             || null
           return Object.assign({}, node, {
             orderNode: matchedNode,
+            triggerMode: this.normalizeTriggerMode((matchedNode && matchedNode.triggerMode) || node.triggerMode),
             stepStatus: this.mapOrderNodeStatus(matchedNode && matchedNode.nodeStatus),
             remark: (matchedNode && matchedNode.nodeRemark) || ''
           })
@@ -803,6 +903,19 @@ export default {
       }
       return config.default
     },
+    shouldShowManualButton(node, orderId) {
+      if (!node || !orderId) {
+        return false
+      }
+      const triggerMode = this.normalizeTriggerMode(
+        (node.orderNode && node.orderNode.triggerMode) || node.triggerMode
+      )
+      if (triggerMode === 'MANUAL') {
+        return node.orderNode && `${node.orderNode.nodeStatus || '0'}` !== '2'
+      }
+      const state = this.getOrderAutomationState(orderId)
+      return Boolean(state && state.status === 'failed' && this.isSameFlowNode(state.failedNode, node))
+    },
     flowProcessActiveStep(flow) {
       const steps = (flow && Array.isArray(flow.process)) ? flow.process : []
       if (!steps.length) return 0
@@ -826,6 +939,37 @@ export default {
         urgent: 'danger'
       }
       return mapping[priority] || 'info'
+    },
+    isSameFlowNode(nodeA, nodeB) {
+      if (!nodeA || !nodeB) {
+        return false
+      }
+      const extractKey = node =>
+        node.nodeId ||
+        node.id ||
+        (node.taskTemplate && node.taskTemplate.taskTemplateId) ||
+        node.taskTemplateId ||
+        node.nodeName ||
+        node.name ||
+        ''
+      const keyA = extractKey(nodeA)
+      const keyB = extractKey(nodeB)
+      if (keyA && keyB) {
+        return keyA === keyB
+      }
+      return nodeA === nodeB
+    },
+    handleFlowNodeClick(node, record, event) {
+      if (event && typeof event.stopPropagation === 'function') {
+        event.stopPropagation()
+      }
+      if (!node || !record) {
+        return
+      }
+      const triggerMode = this.normalizeTriggerMode((node.orderNode && node.orderNode.triggerMode) || node.triggerMode)
+      if (triggerMode === 'MANUAL') {
+        this.openManualDialogForManualNode({ node, record })
+      }
     },
     prepareEmptyForm() {
       const form = createEmptyFlowForm()
@@ -1097,6 +1241,216 @@ export default {
         remark: ''
       }
     },
+    normalizeOrderAutomationKey(orderId) {
+      if (orderId === undefined || orderId === null) {
+        return ''
+      }
+      if (typeof orderId === 'object') {
+        const numericId = orderId.orderId || orderId.id || orderId.value
+        if (numericId !== undefined && numericId !== null) {
+          return `${numericId}`
+        }
+      }
+      return `${orderId}`
+    },
+    getOrderAutomationState(orderId) {
+      const key = this.normalizeOrderAutomationKey(orderId)
+      if (!key) {
+        return null
+      }
+      return this.orderAutomationState[key] || null
+    },
+    setOrderAutomationState(orderId, payload = {}) {
+      const key = this.normalizeOrderAutomationKey(orderId)
+      if (!key) {
+        return
+      }
+      const previous = this.orderAutomationState[key] || {}
+      const next = {
+        templateId: payload.templateId !== undefined ? payload.templateId : previous.templateId,
+        templateInstance: payload.templateInstance || previous.templateInstance,
+        orderForm: payload.orderForm || previous.orderForm,
+        status: payload.status || previous.status || 'pending',
+        pendingNodes: payload.pendingNodes !== undefined
+          ? payload.pendingNodes.slice()
+          : (previous.pendingNodes ? previous.pendingNodes.slice() : []),
+        failedNode: payload.failedNode !== undefined ? payload.failedNode : previous.failedNode,
+        errorMessage: payload.errorMessage !== undefined ? payload.errorMessage : previous.errorMessage,
+        responsePreview: payload.responsePreview !== undefined ? payload.responsePreview : previous.responsePreview
+      }
+      this.$set(this.orderAutomationState, key, next)
+    },
+    findOrderNodeForFlowNode(flowNode, orderNodes = []) {
+      if (!flowNode || !Array.isArray(orderNodes) || !orderNodes.length) {
+        return null
+      }
+      const targetNodeId = flowNode.nodeId || (flowNode.orderNode && flowNode.orderNode.nodeId)
+      if (!targetNodeId) {
+        return null
+      }
+      return orderNodes.find(item => item.nodeId === targetNodeId) || null
+    },
+    enrichFlowNodeWithOrderNode(flowNode, orderNodes = []) {
+      if (!flowNode) {
+        return flowNode
+      }
+      const matched = this.findOrderNodeForFlowNode(flowNode, orderNodes)
+      if (matched && !flowNode.orderNode) {
+        this.$set(flowNode, 'orderNode', matched)
+      }
+      if (matched && !flowNode.orderNodeId) {
+        this.$set(flowNode, 'orderNodeId', matched.orderNodeId)
+      }
+      return flowNode
+    },
+    openManualDialogForManualNode({ node, record }) {
+      if (!node || !record || !record.flowTemplate) {
+        return
+      }
+      const template = record.flowTemplate
+      const templateId = template.templateId || ''
+      const defaultMessage = '节点需人工处理（未配置自动触发）'
+      const normalizedOrderNodes = this.normalizeOrderNodes(record.orderNodes)
+      const matchedOrderNode = this.findOrderNodeForFlowNode(node, normalizedOrderNodes)
+      if (matchedOrderNode && !node.orderNode) {
+        this.$set(node, 'orderNode', matchedOrderNode)
+      }
+      if (matchedOrderNode && !node.orderNodeId) {
+        this.$set(node, 'orderNodeId', matchedOrderNode.orderNodeId)
+      }
+      this.manualTaskDialog.visible = true
+      this.manualTaskDialog.node = node
+      this.manualTaskDialog.template = template
+      this.manualTaskDialog.templateId = templateId
+      this.manualTaskDialog.orderForm = deepClone(record)
+      this.manualTaskDialog.pendingNodes = []
+      this.manualTaskDialog.errorMessage =
+        (node.taskExecution && (node.taskExecution.error || node.taskExecution.message)) ||
+        defaultMessage
+      this.manualTaskDialog.responsePreview = ''
+      this.manualTaskDialog.remark = ''
+      this.manualTaskDialog.orderId = record.orderId || ''
+    },
+    resetManualTaskDialog() {
+      this.manualTaskDialog.visible = false
+      this.manualTaskDialog.node = null
+      this.manualTaskDialog.template = null
+      this.manualTaskDialog.templateId = ''
+      this.manualTaskDialog.orderForm = null
+      this.manualTaskDialog.pendingNodes = []
+      this.manualTaskDialog.errorMessage = ''
+      this.manualTaskDialog.responsePreview = ''
+      this.manualTaskDialog.remark = ''
+      this.manualTaskDialog.orderId = ''
+      this.manualTaskDialog.submitting = false
+    },
+    updateNodeExecutionState(node, result = {}) {
+      if (!node) {
+        return
+      }
+      const execution = Object.assign({}, node.taskExecution || {}, {
+        lastTriggeredAt: this.nowDateTime(),
+        ...result
+      })
+      this.$set(node, 'taskExecution', execution)
+      if (result.response) {
+        const status = result.response.nodeStatus || result.response.status || result.response.statusValue
+        if (status !== undefined) {
+          this.$set(node, 'nodeStatus', status)
+        }
+        if (result.response.nodeRemark || result.response.remark) {
+          this.$set(node, 'nodeRemark', result.response.nodeRemark || result.response.remark)
+        }
+      }
+    },
+    async confirmManualTaskHandling() {
+      if (this.manualTaskDialog.submitting) {
+        return
+      }
+      if (!this.manualTaskDialog.node) {
+        this.resetManualTaskDialog()
+        return
+      }
+      this.manualTaskDialog.submitting = true
+      const orderId = this.manualTaskDialog.orderId
+      const templateId = this.manualTaskDialog.templateId
+      const template = this.manualTaskDialog.template
+      const orderForm = this.manualTaskDialog.orderForm
+      const pendingNodes = Array.isArray(this.manualTaskDialog.pendingNodes)
+        ? this.manualTaskDialog.pendingNodes.slice()
+        : []
+      const remark = (this.manualTaskDialog.remark || '').trim() || '人工处理完成'
+      const orderNodesFromForm = (orderForm && Array.isArray(orderForm.orderNodes))
+        ? this.normalizeOrderNodes(orderForm.orderNodes)
+        : []
+      const fallbackOrderNodeById = node => {
+        if (!node) {
+          return null
+        }
+        const targetNodeId = node.nodeId || (node.orderNode && node.orderNode.nodeId) || ''
+        if (!targetNodeId) {
+          return null
+        }
+        return orderNodesFromForm.find(item => item.nodeId === targetNodeId) || null
+      }
+      const matchedOrderNode = fallbackOrderNodeById(this.manualTaskDialog.node)
+      if (matchedOrderNode && !this.manualTaskDialog.node.orderNode) {
+        this.$set(this.manualTaskDialog.node, 'orderNode', matchedOrderNode)
+      }
+      const pickValidId = (...candidates) => candidates.find(id => id !== undefined && id !== null && `${id}` !== '')
+      const orderNodeId = pickValidId(
+        this.manualTaskDialog.node.orderNodeId,
+        this.manualTaskDialog.node.orderNode && this.manualTaskDialog.node.orderNode.orderNodeId,
+        matchedOrderNode && matchedOrderNode.orderNodeId,
+        matchedOrderNode && matchedOrderNode.orderNode && matchedOrderNode.orderNode.orderNodeId
+      ) || ''
+      const nodeId = pickValidId(
+        this.manualTaskDialog.node.nodeId,
+        this.manualTaskDialog.node.orderNode && this.manualTaskDialog.node.orderNode.nodeId,
+        matchedOrderNode && matchedOrderNode.nodeId,
+        matchedOrderNode && matchedOrderNode.orderNode && matchedOrderNode.orderNode.nodeId
+      ) || ''
+      if (orderNodeId && !this.manualTaskDialog.node.orderNodeId) {
+        this.$set(this.manualTaskDialog.node, 'orderNodeId', orderNodeId)
+      }
+      if (orderId && (orderNodeId || nodeId)) {
+        try {
+          await submitRemark({ orderId, orderNodeId, remark })
+          await complateNode({
+            orderId,
+            orderNodeId,
+            nodeId,
+            nodeRemark: remark,
+            nodeType: '3'
+          })
+          this.$message.success('人工处理已提交')
+        } catch (error) {
+          console.error('人工处理提交失败', error)
+          this.$message.error('人工处理提交失败，请稍后重试')
+          this.manualTaskDialog.submitting = false
+          return
+        }
+      }
+      this.updateNodeExecutionState(this.manualTaskDialog.node, {
+        success: true,
+        manual: true,
+        message: remark
+      })
+      if (orderId) {
+        this.setOrderAutomationState(orderId, {
+          templateId,
+          templateInstance: template,
+          orderForm,
+          status: pendingNodes.length ? 'running' : 'success',
+          pendingNodes,
+          failedNode: null,
+          errorMessage: '',
+          responsePreview: ''
+        })
+        await this.fetchOrders()
+      }
+      this.resetManualTaskDialog()
+    },
     handleDeleteFlow(flow) {
       this.$confirm(`确认删除生产池【${flow.flowId}】吗？`, '提示', {
         type: 'warning'
@@ -1217,6 +1571,16 @@ export default {
     min-width: 140px;
   }
 
+  .flow-node-wrapper.manual-node-clickable {
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.2s ease;
+  }
+
+  .flow-node-wrapper.manual-node-clickable:hover {
+    transform: translateY(-2px);
+  }
+
   .flow-node-name {
     color: #fff;
     font-size: 13px;
@@ -1234,6 +1598,11 @@ export default {
     .node-meta {
       color: #909399;
       margin-top: 4px;
+    }
+
+    .manual-handle-btn {
+      margin-top: 4px;
+      padding: 0;
     }
   }
 
@@ -1396,6 +1765,34 @@ export default {
   border-width: 19px;
   border-style: solid;
   border-color: transparent transparent transparent transparent;
+}
+
+.manual-task-dialog {
+  .manual-tip {
+    margin-bottom: 10px;
+    color: #606266;
+  }
+
+  .response-preview {
+    margin-top: 10px;
+    padding: 10px;
+    background: #f5f7fa;
+    border-radius: 4px;
+    border: 1px solid #ebeef5;
+    max-height: 200px;
+    overflow: auto;
+
+    .preview-title {
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      word-break: break-all;
+      margin: 0;
+    }
+  }
 }
 
    .mr5 {
