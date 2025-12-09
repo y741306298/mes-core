@@ -1102,9 +1102,13 @@ export default {
         type: 'warning'
       }).then(async () => {
         try {
+          const { data } = await getFlowPool(flow.flowId)
+          const detail = data || flow || {}
+          const payload = this.prepareFlowPayload({ ...detail, orderIds: [] })
+          await updateFlowPool(payload)
           await removeFlowPool(flow.flowId)
           this.$message.success('删除成功')
-          this.fetchFlowList()
+          await Promise.all([this.fetchFlowList(), this.fetchOrders()])
         } catch (error) {
           console.error(error)
           this.$message.error('删除失败，请重试')
