@@ -1014,7 +1014,7 @@ export default {
       }
       return Boolean(this.taskTemplateMap[nodeType])
     },
-    handleFlowNodeClick(node, record, event) {
+    async handleFlowNodeClick(node, record, event) {
       if (event && typeof event.stopPropagation === 'function') {
         event.stopPropagation()
       }
@@ -1041,6 +1041,13 @@ export default {
         const pendingOrderNode = node.orderNode && `${node.orderNode.nodeStatus || '0'}` !== '2'
         if (pendingOrderNode || this.isManualOnlyFlowNode(node)) {
           this.openManualDialogForManualNode({ node, record })
+          return
+        }
+        if (this.isTaskTemplateNode(node) && this.isAutoTriggerNode(node)) {
+          const result = await this.executeTaskNode(node, record)
+          if (!result || result.success !== true) {
+            this.$message.error((result && (result.error || result.message)) || '任务执行失败')
+          }
         }
       } finally {
         this.nodeClickHandling = false
