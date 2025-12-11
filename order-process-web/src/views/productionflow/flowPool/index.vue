@@ -466,7 +466,7 @@
 import { listFlowPool, getFlowPool, addFlowPool, updateFlowPool, removeFlowPool } from '@/api/productionflow/flowPool'
 import { listOrderPool, getOrderPool } from '@/api/productionflow/orderPool'
 import { listFlowTemplateAll, getFlowTemplate } from '@/api/order/flowTemplate'
-import { listTaskTemplateAll } from '@/api/order/taskTemplate'
+import { getTaskTemplate, listTaskTemplateAll } from '@/api/order/taskTemplate'
 import { complateNode, submitRemark } from '@/api/order/orderNode'
 import request from '@/utils/request'
 
@@ -741,6 +741,28 @@ export default {
         this.$message.error('获取流程模板详情失败')
       }
       return this.templateCache[templateId] || null
+    },
+    async ensureTaskTemplate(templateId) {
+      if (!templateId) return null
+      const existing = this.taskTemplateMap[templateId]
+      if (existing) {
+        return existing
+      }
+      try {
+        const { data } = await getTaskTemplate(templateId)
+        if (data) {
+          const normalized = {
+            ...data,
+            parsedConfig: this.parseTaskTemplateConfig(data.config)
+          }
+          this.$set(this.taskTemplateMap, `${templateId}`, normalized)
+          return normalized
+        }
+      } catch (error) {
+        console.error('获取任务模板失败', error)
+        this.$message.error('获取任务模板失败')
+      }
+      return null
     },
     normalizeOrder(order = {}) {
       const orderNodes = this.normalizeOrderNodes(order.orderNodes)
@@ -1028,7 +1050,14 @@ export default {
       if (!templateId) {
         return false
       }
-      return Boolean(this.taskTemplateMap[templateId])
+      const templateFromMap = this.taskTemplateMap[templateId]
+      if (templateFromMap) {
+        return true
+      }
+      if (Object.prototype.hasOwnProperty.call(this.taskTemplateMap, templateId) && templateFromMap === null) {
+        return true
+      }
+      return Boolean((node && node.taskTemplate) || (node && node.orderNode && node.orderNode.taskTemplate) || templateId)
     },
     async handleFlowNodeClick(node, record, event) {
       if (event && typeof event.stopPropagation === 'function') {
@@ -1520,14 +1549,15 @@ export default {
         return
       }
       const previous = this.orderAutomationState[key] || {}
+      const normalizedPendingNodes = Array.isArray(payload.pendingNodes)
+        ? payload.pendingNodes.slice()
+        : (Array.isArray(previous.pendingNodes) ? previous.pendingNodes.slice() : [])
       const next = {
         templateId: payload.templateId !== undefined ? payload.templateId : previous.templateId,
         templateInstance: payload.templateInstance || previous.templateInstance,
         orderForm: payload.orderForm || previous.orderForm,
         status: payload.status || previous.status || 'pending',
-        pendingNodes: payload.pendingNodes !== undefined
-          ? payload.pendingNodes.slice()
-          : (previous.pendingNodes ? previous.pendingNodes.slice() : []),
+        pendingNodes: normalizedPendingNodes,
         failedNode: payload.failedNode !== undefined ? payload.failedNode : previous.failedNode,
         errorMessage: payload.errorMessage !== undefined ? payload.errorMessage : previous.errorMessage,
         responsePreview: payload.responsePreview !== undefined ? payload.responsePreview : previous.responsePreview
@@ -1656,7 +1686,12 @@ export default {
       if (!templateId) {
         return finalizeResult({ success: false, message: '节点类型为空' })
       }
-      const taskTemplate = this.taskTemplateMap[templateId]
+      let taskTemplate = this.taskTemplateMap[templateId]
+        || node.taskTemplate
+        || (node.orderNode && node.orderNode.taskTemplate)
+      if (!taskTemplate) {
+        taskTemplate = await this.ensureTaskTemplate(templateId)
+      }
       if (!taskTemplate) {
         return finalizeResult({ success: false, message: '未找到任务模板配置' })
       }
