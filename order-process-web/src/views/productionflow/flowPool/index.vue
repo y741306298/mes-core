@@ -946,10 +946,12 @@ export default {
       }
       const orderNode = node.orderNode
       const triggerMode = this.normalizeTriggerMode((orderNode && orderNode.triggerMode) || node.triggerMode)
+      const isManualTrigger = triggerMode === 'MANUAL'
       const isAutoTrigger = triggerMode === 'AUTO'
-      if (!isAutoTrigger) {
+      if (isManualTrigger) {
         return orderNode && `${orderNode.nodeStatus || '0'}` !== '2'
       }
+      if (!isAutoTrigger) return false
       const state = this.getOrderAutomationState(orderId)
       return Boolean(
         state
