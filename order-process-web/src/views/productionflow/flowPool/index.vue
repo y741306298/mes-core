@@ -2068,7 +2068,7 @@ export default {
       const templateId = this.manualTaskDialog.templateId
       const template = this.manualTaskDialog.template
       const orderForm = this.manualTaskDialog.orderForm
-      const pendingNodes = (() => {
+      let pendingNodes = (() => {
         if (Array.isArray(this.manualTaskDialog.pendingNodes) && this.manualTaskDialog.pendingNodes.length) {
           return this.manualTaskDialog.pendingNodes.slice()
         }
@@ -2135,35 +2135,63 @@ export default {
         manual: true,
         message: remark
       })
+      if (matchedOrderNode) {
+        this.$set(matchedOrderNode, 'nodeStatus', '2')
+        this.$set(matchedOrderNode, 'nodeRemark', remark)
+        if (orderForm && Array.isArray(orderForm.orderNodes)) {
+          const nodeIndex = orderForm.orderNodes.findIndex(
+            item => item && (item.orderNodeId === matchedOrderNode.orderNodeId || item.nodeId === matchedOrderNode.nodeId)
+          )
+          if (nodeIndex !== -1) {
+            const updatedNode = {
+              ...orderForm.orderNodes[nodeIndex],
+              nodeStatus: '2',
+              nodeRemark: remark
+            }
+            this.$set(orderForm.orderNodes, nodeIndex, updatedNode)
+          }
+        }
+      }
       let refreshedOrder = null
+      if (orderId) {
+        refreshedOrder = await this.refreshOrderRecord(orderId, { silent: true, updateDialog: true })
+      }
+      const automationOrderForm = refreshedOrder || orderForm
+      if (!Array.isArray(pendingNodes) || !pendingNodes.length) {
+        if (automationOrderForm && template) {
+          const queue = this.buildAutoTriggerQueue(automationOrderForm, template)
+          pendingNodes = Array.isArray(queue) ? queue.slice() : []
+        } else {
+          pendingNodes = []
+        }
+      }
       if (orderId) {
         this.setOrderAutomationState(orderId, {
           templateId,
           templateInstance: template,
-          orderForm,
+          orderForm: automationOrderForm,
           status: pendingNodes.length ? 'running' : 'success',
           pendingNodes,
           failedNode: null,
           errorMessage: '',
           responsePreview: ''
         })
-        refreshedOrder = await this.refreshOrderRecord(orderId, { silent: true, updateDialog: true })
       }
       const nextPendingNode = pendingNodes[0]
       const shouldAutoRunNext = nextPendingNode && this.isAutoTriggerNode(nextPendingNode)
       this.resetManualTaskDialog()
       console.log("templateId",templateId);
       console.log("template",template);
-      console.log("orderForm",orderForm);
+      console.log("orderForm",automationOrderForm);
       console.log("pendingNodes.length",pendingNodes.length);
       console.log("shouldAutoRunNext",shouldAutoRunNext);
-      if (templateId && template && orderForm && pendingNodes.length && shouldAutoRunNext) {
+      if (templateId && template && automationOrderForm && pendingNodes.length && shouldAutoRunNext) {
         console.log("runTaskNodesSequence-------------------------")
         this.runTaskNodesSequence({
           templateId,
           template,
           nodes: pendingNodes,
-          orderForm,
+          orderForm: automationOrderForm,
           orderId
         })
       } else if (templateId && orderId && !pendingNodes.length) {
