@@ -37,6 +37,9 @@ public interface IOrderPoolService {
      */
     int deleteOrderPoolByIds(String[] orderIds);
 
+    /**
+     * 清理订单关联的流程节点与模板
+     */
     int clearOrderProcessesByIds(String[] orderIds);
 
     /**

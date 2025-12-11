@@ -143,11 +143,20 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
         if (ids.isEmpty()) {
             return 0;
         }
-        orderNodeService.remove(Wrappers.<BrtOrderNode>lambdaQuery()
+        int nodeDeleted = orderNodeService.count(Wrappers.<BrtOrderNode>lambdaQuery()
             .in(BrtOrderNode::getOrderId, ids));
-        orderTemplateService.remove(Wrappers.<BrtOrderTemplate>lambdaQuery()
+        int templateDeleted = orderTemplateService.count(Wrappers.<BrtOrderTemplate>lambdaQuery()
             .in(BrtOrderTemplate::getOrderId, ids));
-        return 1;
+
+        if (nodeDeleted > 0) {
+            orderNodeService.remove(Wrappers.<BrtOrderNode>lambdaQuery()
+                .in(BrtOrderNode::getOrderId, ids));
+        }
+        if (templateDeleted > 0) {
+            orderTemplateService.remove(Wrappers.<BrtOrderTemplate>lambdaQuery()
+                .in(BrtOrderTemplate::getOrderId, ids));
+        }
+        return nodeDeleted + templateDeleted;
     }
 
     @Override
@@ -458,6 +467,9 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
             return Collections.emptyList();
         }
         return Arrays.stream(orderIds)
+            .filter(StringUtils::isNotBlank)
+            .flatMap(id -> Arrays.stream(id.split(",")))
+            .map(String::trim)
             .filter(StringUtils::isNotBlank)
             .collect(Collectors.toList());
     }
