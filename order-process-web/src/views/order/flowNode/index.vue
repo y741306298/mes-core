@@ -25,6 +25,7 @@
             placeholder="请选择"
             filterable
             :loading="taskTemplateLoading"
+            @change="value => handleTaskTemplateChange(scope.row, value)"
           >
             <el-option-group label="系统任务" v-if="dict.type.node_type && dict.type.node_type.length">
               <el-option
@@ -116,6 +117,7 @@
             nodeName: "审批",
             nodeType: "0",
             nodeStatus: "Y",
+            autoCompletion: false,
           };
           this.flowNodeList.unshift(item)
         }
@@ -220,6 +222,7 @@
           nodeName: null,
           nodeType: null,
           nodeStatus: "Y",
+          autoCompletion: false,
           createTime: null,
           createBy: null,
           updateTime: null,
@@ -250,6 +253,16 @@
         const name = item.templateName || '未命名模板'
         const typeLabel = TASK_TEMPLATE_TYPE_LABELS[item.templateType] || item.templateType || '模板'
         return `${name}（${typeLabel}）`
+      },
+      handleTaskTemplateChange(row = {}, value) {
+        if (row.nodeType === '0') {
+          return
+        }
+
+        const selectedId = (value || row.nodeType || '').toString()
+        const template = this.taskTemplateOptions.find(item => (item.templateId || item.id || '').toString() === selectedId)
+        const autoCompletion = template && template.triggerMode === 'AUTO'
+        this.$set(row, 'autoCompletion', !!autoCompletion)
       },
     }
   };
