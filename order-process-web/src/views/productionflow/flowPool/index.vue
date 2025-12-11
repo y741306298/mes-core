@@ -517,6 +517,8 @@ const deepClone = data => {
   return JSON.parse(JSON.stringify(data))
 }
 
+const SYSTEM_NODE_TYPES = new Set(['0', '1', '2', '3', '4', '5', '6', '7'])
+
 const createEmptyFlowForm = () => ({
   flowId: '',
   templateId: '',
@@ -1002,6 +1004,16 @@ export default {
       }
       return nodeA === nodeB
     },
+    isTaskTemplateNode(node) {
+      if (!node || node.nodeType == null) {
+        return false
+      }
+      const nodeType = `${node.nodeType}`
+      if (SYSTEM_NODE_TYPES.has(nodeType)) {
+        return false
+      }
+      return Boolean(this.taskTemplateMap[nodeType])
+    },
     handleFlowNodeClick(node, record, event) {
       if (event && typeof event.stopPropagation === 'function') {
         event.stopPropagation()
@@ -1282,6 +1294,31 @@ export default {
         }
       })
     },
+    async applyFlowTemplateToOrders(flowDetail, orderIds = []) {
+      if (!flowDetail || !flowDetail.templateId || !Array.isArray(orderIds) || !orderIds.length) {
+        return
+      }
+      const template = flowDetail.flowTemplate || await this.ensureTemplate(flowDetail.templateId)
+      if (!template) {
+        return
+      }
+      for (const orderId of orderIds) {
+        let orderDetail = this.orderList.find(item => item.orderId === orderId) || null
+        if (!orderDetail || !Array.isArray(orderDetail.orderNodes) || !orderDetail.orderNodes.length) {
+          orderDetail = await this.refreshOrderRecord(orderId, { silent: true, updateDialog: false }) || orderDetail
+        }
+        if (!orderDetail) {
+          continue
+        }
+        const orderForm = Object.assign({}, deepClone(orderDetail), {
+          flowTemplate: template,
+          templateId: flowDetail.templateId,
+          flowPoolId: flowDetail.flowId,
+          flowPool: flowDetail
+        })
+        await this.triggerTemplateTasksForOrder(flowDetail.templateId, orderForm)
+      }
+    },
     updateFlowMetrics() {
       const selected = this.flowDialog.form.orderIds
       if (!selected || !selected.length) {
@@ -1360,6 +1397,7 @@ export default {
           this.flowDialog.visible = false
           const template = await this.ensureTemplate(payload.templateId)
           this.applyTemplateToOrders(payload.orderIds, template)
+          await this.applyFlowTemplateToOrders({ ...payload, flowTemplate: template }, payload.orderIds)
           await Promise.all([this.fetchFlowList(), this.fetchOrders()])
         } catch (error) {
           console.error(error)
@@ -1703,6 +1741,55 @@ export default {
 
       return queue
     },
+    async triggerTemplateTasksForOrder(templateId, orderForm) {
+      if (!templateId || !orderForm || !orderForm.orderId) {
+        return
+      }
+      try {
+        const template = await this.ensureTemplate(templateId)
+        if (!template || !Array.isArray(template.flowNodeList)) {
+          return
+        }
+        const templateInstance = deepClone(template)
+        if (this.hasPendingManualNode(orderForm, templateInstance)) {
+          return
+        }
+        const queue = this.buildAutoTriggerQueue(orderForm, templateInstance)
+        if (!queue.length) {
+          this.setOrderAutomationState(orderForm.orderId, {
+            templateId,
+            templateInstance,
+            orderForm: deepClone(orderForm),
+            status: 'success',
+            pendingNodes: [],
+            failedNode: null,
+            errorMessage: '',
+            responsePreview: ''
+          })
+          return
+        }
+        this.setOrderAutomationState(orderForm.orderId, {
+          templateId,
+          templateInstance,
+          orderForm: deepClone(orderForm),
+          status: 'running',
+          failedNode: null,
+          pendingNodes: queue.slice(),
+          errorMessage: '',
+          responsePreview: ''
+        })
+        await this.runTaskNodesSequence({
+          templateId,
+          template: templateInstance,
+          nodes: queue,
+          orderForm,
+          orderId: orderForm.orderId
+        })
+      } catch (error) {
+        console.error('自动任务执行失败', error)
+        this.$message.error('自动任务执行失败')
+      }
+    },
     hasPendingManualNode(order = {}, template) {
       const flowTemplate = template || order.flowTemplate || null
       if (!flowTemplate || !Array.isArray(flowTemplate.flowNodeList) || !flowTemplate.flowNodeList.length) {
@@ -1817,7 +1904,7 @@ export default {
       while (queue.length) {
         const currentNode = queue.shift()
         let result
-        if (!this.isManualOnlyFlowNode(currentNode)) {
+        if (this.isTaskTemplateNode(currentNode)) {
           result = await this.executeTaskNode(currentNode, orderForm)
         } else {
           result = {
@@ -2024,6 +2111,7 @@ export default {
         manual: true,
         message: remark
       })
+      let refreshedOrder = null
       if (orderId) {
         this.setOrderAutomationState(orderId, {
           templateId,
@@ -2035,7 +2123,7 @@ export default {
           errorMessage: '',
           responsePreview: ''
         })
-        await this.refreshOrderRecord(orderId, { silent: true, updateDialog: true })
+        refreshedOrder = await this.refreshOrderRecord(orderId, { silent: true, updateDialog: true })
       }
       const nextPendingNode = pendingNodes[0]
       const shouldAutoRunNext = nextPendingNode && this.isAutoTriggerNode(nextPendingNode)
@@ -2048,6 +2136,8 @@ export default {
           orderForm,
           orderId
         })
+      } else if (templateId && orderId && !pendingNodes.length) {
+        await this.triggerTemplateTasksForOrder(templateId, refreshedOrder || orderForm)
       }
     },
     handleDeleteFlow(flow) {
