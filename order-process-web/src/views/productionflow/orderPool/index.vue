@@ -509,7 +509,8 @@ import {
   getOrderPool,
   addOrderPool,
   updateOrderPool,
-  removeOrderPool
+  removeOrderPool,
+  clearOrderProcesses
 } from '@/api/productionflow/orderPool'
 import { listFlowPool, getFlowPool as getFlowPoolDetail, updateFlowPool } from '@/api/productionflow/flowPool'
 import { listFlowTemplateAll, getFlowTemplate } from '@/api/order/flowTemplate'
@@ -2025,37 +2026,46 @@ export default {
         templateId: form.templateId || ''
       }
     },
+    async deleteOrdersAndProcesses(orderIds = []) {
+      const ids = Array.isArray(orderIds)
+        ? orderIds.filter(id => !!id)
+        : []
+      if (!ids.length) {
+        return
+      }
+      const joined = ids.join(',')
+      await clearOrderProcesses(joined)
+      await removeOrderPool(joined)
+    },
     handleDeleteOrder(order) {
       this.$confirm(`确认删除订单【${order.orderId}】吗？`, '提示', {
         type: 'warning'
-      }).then(() => {
-        removeOrderPool(order.orderId)
-          .then(() => {
-            this.$message.success('删除成功')
-            this.fetchOrders()
-          })
-          .catch(() => {
-            this.$message.error('删除失败')
-          })
+      }).then(async () => {
+        try {
+          await this.deleteOrdersAndProcesses([order.orderId])
+          this.$message.success('删除成功')
+          await this.fetchOrders()
+        } catch (error) {
+          this.$message.error('删除失败')
+        }
       }).catch(() => {})
     },
     handleBatchDeleteOrders() {
       this.$confirm(`确认删除选中的 ${this.selectedOrders.length} 条订单吗？`, '提示', {
         type: 'warning'
-      }).then(() => {
-        const ids = this.selectedOrders.map(item => item.orderId)
-        if (!ids.length) {
-          return
+      }).then(async () => {
+        try {
+          const ids = this.selectedOrders.map(item => item.orderId)
+          if (!ids.length) {
+            return
+          }
+          await this.deleteOrdersAndProcesses(ids)
+          this.$message.success('删除成功')
+          this.selectedOrders = []
+          await this.fetchOrders()
+        } catch (error) {
+          this.$message.error('删除失败')
         }
-        removeOrderPool(ids.join(','))
-          .then(() => {
-            this.$message.success('删除成功')
-            this.selectedOrders = []
-            this.fetchOrders()
-          })
-          .catch(() => {
-            this.$message.error('删除失败')
-          })
       }).catch(() => {})
     },
     async viewOrder(order) {
@@ -2176,12 +2186,15 @@ export default {
     },
     buildFlowPoolPayload(flow = {}, orderQuantities = {}) {
       const base = this.normalizeFlow(flow)
+      const templateId = base.templateId
+        || (base.flowTemplate && base.flowTemplate.templateId)
+        || ''
       const orderAllocations = this.mergeOrderAllocations(base.orderAllocations, orderQuantities)
       const orderIds = Array.from(new Set([...(base.orderIds || []), ...Object.keys(orderQuantities || {})]))
       const totalQuantity = orderAllocations.reduce((sum, item) => sum + Number(item.quantity || 0), 0) || base.totalQuantity
       return {
         flowId: base.flowId,
-        templateId: base.templateId || '',
+        templateId,
         flowStatus: base.flowStatus || 'pending',
         orderIds,
         totalQuantity,
@@ -2269,9 +2282,18 @@ export default {
             this.$message.warning(`生产池【${flowId}】不存在或已删除`)
             continue
           }
-          const payload = this.buildFlowPoolPayload(detail, grouped[flowId].orders)
+          const flowTemplate = detail.flowTemplate || await this.ensureFlowTemplateDetails(detail.templateId)
+          const payload = this.buildFlowPoolPayload({
+            ...detail,
+            templateId: detail.templateId || (flowTemplate && flowTemplate.templateId) || '',
+            flowTemplate
+          }, grouped[flowId].orders)
           await updateFlowPool(payload)
-          await this.applyFlowTemplateToOrders(detail, Object.keys(grouped[flowId].orders || {}))
+          await this.applyFlowTemplateToOrders({
+            ...detail,
+            templateId: payload.templateId,
+            flowTemplate: payload.flowTemplate || flowTemplate
+          }, Object.keys(grouped[flowId].orders || {}))
         }
         this.$message.success('分配成功')
         this.poolAssignmentDialog.visible = false

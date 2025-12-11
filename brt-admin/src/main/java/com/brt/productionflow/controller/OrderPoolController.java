@@ -77,6 +77,15 @@ public class OrderPoolController extends BaseController {
     }
 
     /**
+     * 清理订单相关流程数据
+     */
+    @Log(title = "订单池", businessType = BusinessType.DELETE)
+    @DeleteMapping("/process/{orderIds}")
+    public AjaxResult clearOrderProcesses(@PathVariable String[] orderIds) {
+        return toAjax(orderPoolService.clearOrderProcessesByIds(orderIds));
+    }
+
+    /**
      * 查询生产流列表
      */
     @GetMapping("/flow/list")

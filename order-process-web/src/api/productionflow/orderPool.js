@@ -43,6 +43,14 @@ export function removeOrderPool(orderIds) {
   })
 }
 
+// 删除订单流程数据
+export function clearOrderProcesses(orderIds) {
+  return request({
+    url: `/productionflow/orderPool/process/${orderIds}`,
+    method: 'delete'
+  })
+}
+
 // 查询生产流列表
 export function listProductionFlows(query) {
   return request({

@@ -128,12 +128,18 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int deleteOrderPoolByIds(String[] orderIds) {
-        if (orderIds == null || orderIds.length == 0) {
+        List<String> ids = normalizeOrderIds(orderIds);
+        if (ids.isEmpty()) {
             return 0;
         }
-        List<String> ids = Arrays.stream(orderIds)
-            .filter(StringUtils::isNotBlank)
-            .collect(Collectors.toList());
+        clearOrderProcessesByIds(ids.toArray(new String[0]));
+        return orderPoolMapper.deleteBatchIds(ids);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int clearOrderProcessesByIds(String[] orderIds) {
+        List<String> ids = normalizeOrderIds(orderIds);
         if (ids.isEmpty()) {
             return 0;
         }
@@ -141,7 +147,7 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
             .in(BrtOrderNode::getOrderId, ids));
         orderTemplateService.remove(Wrappers.<BrtOrderTemplate>lambdaQuery()
             .in(BrtOrderTemplate::getOrderId, ids));
-        return orderPoolMapper.deleteBatchIds(ids);
+        return 1;
     }
 
     @Override
@@ -445,6 +451,15 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
             .eq(ProductionFlowOrderRel::getFlowId, flowId));
         productionFlowStepMapper.delete(Wrappers.<ProductionFlowStep>lambdaQuery()
             .eq(ProductionFlowStep::getFlowId, flowId));
+    }
+
+    private List<String> normalizeOrderIds(String[] orderIds) {
+        if (orderIds == null || orderIds.length == 0) {
+            return Collections.emptyList();
+        }
+        return Arrays.stream(orderIds)
+            .filter(StringUtils::isNotBlank)
+            .collect(Collectors.toList());
     }
 
     private void saveMaterials(String flowId, List<ProductionFlowMaterial> materials) {
