@@ -1221,7 +1221,10 @@ export default {
           return nestedCode
         }
       }
-      return false
+      if (response.error || response.message === 'error') {
+        return false
+      }
+      return true
     },
     prepareEmptyForm() {
       const form = createEmptyFlowForm()
