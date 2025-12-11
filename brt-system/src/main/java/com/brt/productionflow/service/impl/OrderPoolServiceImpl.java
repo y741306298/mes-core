@@ -495,8 +495,16 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
         if (StringUtils.isBlank(flowId) || CollectionUtils.isEmpty(orderIds)) {
             return;
         }
+        List<String> existingOrderIds = orderPoolMapper.selectList(Wrappers.<OrderPool>lambdaQuery()
+                .in(OrderPool::getOrderId, orderIds))
+            .stream()
+            .map(OrderPool::getOrderId)
+            .collect(Collectors.toList());
+
         orderIds.stream()
             .filter(StringUtils::isNotBlank)
+            .filter(existingOrderIds::contains)
+            .distinct()
             .map(orderId -> new ProductionFlowOrderRel()
                 .setId(null)
                 .setFlowId(flowId)
