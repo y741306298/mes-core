@@ -2176,12 +2176,15 @@ export default {
     },
     buildFlowPoolPayload(flow = {}, orderQuantities = {}) {
       const base = this.normalizeFlow(flow)
+      const templateId = base.templateId
+        || (base.flowTemplate && base.flowTemplate.templateId)
+        || ''
       const orderAllocations = this.mergeOrderAllocations(base.orderAllocations, orderQuantities)
       const orderIds = Array.from(new Set([...(base.orderIds || []), ...Object.keys(orderQuantities || {})]))
       const totalQuantity = orderAllocations.reduce((sum, item) => sum + Number(item.quantity || 0), 0) || base.totalQuantity
       return {
         flowId: base.flowId,
-        templateId: base.templateId || '',
+        templateId,
         flowStatus: base.flowStatus || 'pending',
         orderIds,
         totalQuantity,
@@ -2269,9 +2272,18 @@ export default {
             this.$message.warning(`生产池【${flowId}】不存在或已删除`)
             continue
           }
-          const payload = this.buildFlowPoolPayload(detail, grouped[flowId].orders)
+          const flowTemplate = detail.flowTemplate || await this.ensureFlowTemplateDetails(detail.templateId)
+          const payload = this.buildFlowPoolPayload({
+            ...detail,
+            templateId: detail.templateId || (flowTemplate && flowTemplate.templateId) || '',
+            flowTemplate
+          }, grouped[flowId].orders)
           await updateFlowPool(payload)
-          await this.applyFlowTemplateToOrders(detail, Object.keys(grouped[flowId].orders || {}))
+          await this.applyFlowTemplateToOrders({
+            ...detail,
+            templateId: payload.templateId,
+            flowTemplate: payload.flowTemplate || flowTemplate
+          }, Object.keys(grouped[flowId].orders || {}))
         }
         this.$message.success('分配成功')
         this.poolAssignmentDialog.visible = false
