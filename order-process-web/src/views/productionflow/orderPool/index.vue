@@ -509,7 +509,8 @@ import {
   getOrderPool,
   addOrderPool,
   updateOrderPool,
-  removeOrderPool
+  removeOrderPool,
+  clearOrderProcesses
 } from '@/api/productionflow/orderPool'
 import { listFlowPool, getFlowPool as getFlowPoolDetail, updateFlowPool } from '@/api/productionflow/flowPool'
 import { listFlowTemplateAll, getFlowTemplate } from '@/api/order/flowTemplate'
@@ -2025,37 +2026,46 @@ export default {
         templateId: form.templateId || ''
       }
     },
+    async deleteOrdersAndProcesses(orderIds = []) {
+      const ids = Array.isArray(orderIds)
+        ? orderIds.filter(id => !!id)
+        : []
+      if (!ids.length) {
+        return
+      }
+      const joined = ids.join(',')
+      await clearOrderProcesses(joined)
+      await removeOrderPool(joined)
+    },
     handleDeleteOrder(order) {
       this.$confirm(`确认删除订单【${order.orderId}】吗？`, '提示', {
         type: 'warning'
-      }).then(() => {
-        removeOrderPool(order.orderId)
-          .then(() => {
-            this.$message.success('删除成功')
-            this.fetchOrders()
-          })
-          .catch(() => {
-            this.$message.error('删除失败')
-          })
+      }).then(async () => {
+        try {
+          await this.deleteOrdersAndProcesses([order.orderId])
+          this.$message.success('删除成功')
+          await this.fetchOrders()
+        } catch (error) {
+          this.$message.error('删除失败')
+        }
       }).catch(() => {})
     },
     handleBatchDeleteOrders() {
       this.$confirm(`确认删除选中的 ${this.selectedOrders.length} 条订单吗？`, '提示', {
         type: 'warning'
-      }).then(() => {
-        const ids = this.selectedOrders.map(item => item.orderId)
-        if (!ids.length) {
-          return
+      }).then(async () => {
+        try {
+          const ids = this.selectedOrders.map(item => item.orderId)
+          if (!ids.length) {
+            return
+          }
+          await this.deleteOrdersAndProcesses(ids)
+          this.$message.success('删除成功')
+          this.selectedOrders = []
+          await this.fetchOrders()
+        } catch (error) {
+          this.$message.error('删除失败')
         }
-        removeOrderPool(ids.join(','))
-          .then(() => {
-            this.$message.success('删除成功')
-            this.selectedOrders = []
-            this.fetchOrders()
-          })
-          .catch(() => {
-            this.$message.error('删除失败')
-          })
       }).catch(() => {})
     },
     async viewOrder(order) {

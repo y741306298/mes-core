@@ -37,6 +37,8 @@ public interface IOrderPoolService {
      */
     int deleteOrderPoolByIds(String[] orderIds);
 
+    int clearOrderProcessesByIds(String[] orderIds);
+
     /**
      * 查询生产流列表
      */
