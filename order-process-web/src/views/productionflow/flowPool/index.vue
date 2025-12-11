@@ -1912,6 +1912,7 @@ export default {
         const currentNode = queue.shift()
         let result
         if (this.isTaskTemplateNode(currentNode)) {
+          console.log("executeTaskNode------------------")
           result = await this.executeTaskNode(currentNode, orderForm)
         } else {
           result = {
@@ -2135,7 +2136,13 @@ export default {
       const nextPendingNode = pendingNodes[0]
       const shouldAutoRunNext = nextPendingNode && this.isAutoTriggerNode(nextPendingNode)
       this.resetManualTaskDialog()
+      console.log("templateId",templateId);
+      console.log("template",template);
+      console.log("orderForm",orderForm);
+      console.log("pendingNodes.length",pendingNodes.length);
+      console.log("shouldAutoRunNext",shouldAutoRunNext);
       if (templateId && template && orderForm && pendingNodes.length && shouldAutoRunNext) {
+        console.log("runTaskNodesSequence-------------------------")
         this.runTaskNodesSequence({
           templateId,
           template,
