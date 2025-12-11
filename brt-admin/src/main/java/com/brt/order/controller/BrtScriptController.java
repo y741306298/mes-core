@@ -1,14 +1,11 @@
 package com.brt.order.controller;
 
 import com.brt.common.core.domain.AjaxResult;
+import com.brt.productionflow.vo.ProdApiQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
 
 @RestController
 @RequestMapping("/script/api")
@@ -22,6 +19,24 @@ public class BrtScriptController {
 
     @PostMapping("/second")
     public AjaxResult second(){
+        return AjaxResult.success();
+    }
+
+    @PostMapping("/flowFirst")
+    public AjaxResult flowFirst(@RequestBody ProdApiQuery param){
+        System.out.println(param);
+        return AjaxResult.success();
+    }
+
+    @PostMapping("/flowSecond")
+    public AjaxResult flowSecond(@RequestBody ProdApiQuery param){
+        System.out.println(param);
+        return AjaxResult.success();
+    }
+
+    @PostMapping("/flowThird")
+    public AjaxResult flowThird(@RequestBody ProdApiQuery param){
+        System.out.println(param);
         return AjaxResult.success();
     }
 
