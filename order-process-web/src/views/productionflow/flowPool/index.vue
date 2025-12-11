@@ -1869,6 +1869,16 @@ export default {
         })
         this.refreshOrderRecord(orderId, { silent: true, updateDialog: true }).catch(() => {})
       }
+      if (failedNode && failedNode.nodeName) {
+        this.$message.error(`节点「${failedNode.nodeName}」自动执行失败，请在生产池详情中人工处理`)
+      } else {
+        this.$message.error('自动任务执行失败，请人工处理')
+      }
+      if (orderId && failedNode) {
+        this.$nextTick(() => {
+          this.openManualTaskDialogForOrder(orderId)
+        })
+      }
     },
     openManualTaskDialogForOrder(orderId) {
       if (!orderId) {
@@ -1947,9 +1957,16 @@ export default {
       const templateId = this.manualTaskDialog.templateId
       const template = this.manualTaskDialog.template
       const orderForm = this.manualTaskDialog.orderForm
-      const pendingNodes = Array.isArray(this.manualTaskDialog.pendingNodes)
-        ? this.manualTaskDialog.pendingNodes.slice()
-        : []
+      const pendingNodes = (() => {
+        if (Array.isArray(this.manualTaskDialog.pendingNodes) && this.manualTaskDialog.pendingNodes.length) {
+          return this.manualTaskDialog.pendingNodes.slice()
+        }
+        const state = orderId && this.getOrderAutomationState(orderId)
+        if (state && Array.isArray(state.pendingNodes)) {
+          return state.pendingNodes.slice()
+        }
+        return []
+      })()
       const remark = (this.manualTaskDialog.remark || '').trim() || '人工处理完成'
       const orderNodesFromForm = (orderForm && Array.isArray(orderForm.orderNodes))
         ? this.normalizeOrderNodes(orderForm.orderNodes)
@@ -2018,9 +2035,20 @@ export default {
           errorMessage: '',
           responsePreview: ''
         })
-        await this.fetchOrders()
+        await this.refreshOrderRecord(orderId, { silent: true, updateDialog: true })
       }
+      const nextPendingNode = pendingNodes[0]
+      const shouldAutoRunNext = nextPendingNode && this.isAutoTriggerNode(nextPendingNode)
       this.resetManualTaskDialog()
+      if (templateId && template && orderForm && pendingNodes.length && shouldAutoRunNext) {
+        this.runTaskNodesSequence({
+          templateId,
+          template,
+          nodes: pendingNodes,
+          orderForm,
+          orderId
+        })
+      }
     },
     handleDeleteFlow(flow) {
       this.$confirm(`确认删除生产池【${flow.flowId}】吗？`, '提示', {
