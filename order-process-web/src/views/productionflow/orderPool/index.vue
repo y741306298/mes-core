@@ -2266,6 +2266,7 @@ export default {
         grouped[item.flowId].total += quantity
         grouped[item.flowId].orders[item.orderId] = (grouped[item.flowId].orders[item.orderId] || 0) + quantity
       })
+      await this.removeInvalidOrderAllocations(grouped)
       const flowIds = Object.keys(grouped)
       if (!flowIds.length) {
         this.$message.warning('请选择生产池后再提交')
@@ -2302,6 +2303,37 @@ export default {
       } finally {
         this.poolAssignmentDialog.submitting = false
       }
+    },
+    async removeInvalidOrderAllocations(grouped) {
+      const orderIds = new Set()
+      Object.values(grouped).forEach(item => {
+        Object.keys(item.orders || {}).forEach(orderId => orderIds.add(orderId))
+      })
+      if (!orderIds.size) return
+      const invalid = []
+      for (const orderId of orderIds) {
+        const detail = await this.refreshOrderRecord(orderId, { silent: true, updateDialog: false })
+        if (!detail) {
+          invalid.push(orderId)
+        }
+      }
+      if (!invalid.length) return
+      invalid.forEach(orderId => {
+        Object.keys(grouped).forEach(flowId => {
+          const orders = grouped[flowId].orders || {}
+          if (orders[orderId]) {
+            grouped[flowId].total -= Number(orders[orderId] || 0)
+            delete orders[orderId]
+          }
+          if (!Object.keys(orders).length) {
+            delete grouped[flowId]
+          }
+        })
+      })
+      this.poolAssignmentDialog.allocations = this.poolAssignmentDialog.allocations.filter(
+        item => !invalid.includes(item.orderId)
+      )
+      this.$message.warning(`以下订单已不存在或已被移除，已从分配中删除：${invalid.join('、')}`)
     },
     async handleOrderTemplateSelect(templateId) {
       this.orderDialog.form.templateId = templateId
