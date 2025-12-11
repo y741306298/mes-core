@@ -1004,15 +1004,31 @@ export default {
       }
       return nodeA === nodeB
     },
+    getNodeTaskTemplateId(node) {
+      if (!node) {
+        return ''
+      }
+      const explicitTemplateId = node.taskTemplateId
+        || (node.orderNode && node.orderNode.taskTemplateId)
+      if (explicitTemplateId !== undefined && explicitTemplateId !== null) {
+        return `${explicitTemplateId}`
+      }
+      const nodeType = node.nodeType
+      if (nodeType == null) {
+        return ''
+      }
+      const nodeTypeStr = `${nodeType}`
+      if (SYSTEM_NODE_TYPES.has(nodeTypeStr)) {
+        return ''
+      }
+      return nodeTypeStr
+    },
     isTaskTemplateNode(node) {
-      if (!node || node.nodeType == null) {
+      const templateId = this.getNodeTaskTemplateId(node)
+      if (!templateId) {
         return false
       }
-      const nodeType = `${node.nodeType}`
-      if (SYSTEM_NODE_TYPES.has(nodeType)) {
-        return false
-      }
-      return Boolean(this.taskTemplateMap[nodeType])
+      return Boolean(this.taskTemplateMap[templateId])
     },
     async handleFlowNodeClick(node, record, event) {
       if (event && typeof event.stopPropagation === 'function') {
@@ -1624,7 +1640,7 @@ export default {
       }
     },
     async executeTaskNode(node, orderForm) {
-      const nodeType = node && node.nodeType != null ? `${node.nodeType}` : ''
+      const templateId = this.getNodeTaskTemplateId(node)
       const orderId = orderForm && orderForm.orderId ? orderForm.orderId : ''
       const orderNodeId = node.orderNodeId
         || (node.orderNode && node.orderNode.orderNodeId)
@@ -1637,10 +1653,10 @@ export default {
         }
         return result
       }
-      if (!nodeType) {
+      if (!templateId) {
         return finalizeResult({ success: false, message: '节点类型为空' })
       }
-      const taskTemplate = this.taskTemplateMap[nodeType]
+      const taskTemplate = this.taskTemplateMap[templateId]
       if (!taskTemplate) {
         return finalizeResult({ success: false, message: '未找到任务模板配置' })
       }
