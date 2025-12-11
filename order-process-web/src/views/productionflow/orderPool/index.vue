@@ -509,8 +509,7 @@ import {
   getOrderPool,
   addOrderPool,
   updateOrderPool,
-  removeOrderPool,
-  clearOrderProcesses
+  removeOrderPool
 } from '@/api/productionflow/orderPool'
 import { listFlowPool, getFlowPool as getFlowPoolDetail, updateFlowPool } from '@/api/productionflow/flowPool'
 import { listFlowTemplateAll, getFlowTemplate } from '@/api/order/flowTemplate'
@@ -2033,9 +2032,7 @@ export default {
       if (!ids.length) {
         return
       }
-      const joined = ids.join(',')
-      await clearOrderProcesses(joined)
-      await removeOrderPool(joined)
+      await removeOrderPool(ids.join(','))
     },
     handleDeleteOrder(order) {
       this.$confirm(`确认删除订单【${order.orderId}】吗？`, '提示', {

@@ -459,6 +459,9 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
         }
         return Arrays.stream(orderIds)
             .filter(StringUtils::isNotBlank)
+            .flatMap(id -> Arrays.stream(id.split(",")))
+            .map(String::trim)
+            .filter(StringUtils::isNotBlank)
             .collect(Collectors.toList());
     }
 
