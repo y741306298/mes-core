@@ -381,7 +381,35 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
         saveSteps(flowId, flowVo.getProcess());
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean applyFlowTemplates(String flowId, Iterable<String> orderIds) {
+        if (StringUtils.isBlank(flowId) || orderIds == null) {
+            return false;
+        }
+        ProductionFlow flow = productionFlowMapper.selectById(flowId);
+        if (flow == null) {
+            return false;
+        }
+        Set<String> normalizedOrderIds = new HashSet<>();
+        orderIds.forEach(id -> {
+            if (StringUtils.isNotBlank(id)) {
+                normalizedOrderIds.add(id.trim());
+            }
+        });
+        if (normalizedOrderIds.isEmpty()) {
+            return false;
+        }
+        syncFlowTemplateToOrders(flow, normalizedOrderIds, LocalDateTime.now(), true);
+        return true;
+    }
+
     private void syncFlowTemplateToOrders(ProductionFlow flow, Set<String> orderIds, LocalDateTime now) {
+        syncFlowTemplateToOrders(flow, orderIds, now, false);
+    }
+
+    private void syncFlowTemplateToOrders(ProductionFlow flow, Set<String> orderIds, LocalDateTime now,
+        boolean forceCreateProcesses) {
         if (flow == null || StringUtils.isBlank(flow.getTemplateId()) || CollectionUtils.isEmpty(orderIds)) {
             return;
         }
@@ -394,18 +422,18 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
             order.setTemplateId(flow.getTemplateId());
             order.setUpdatedAt(now);
             orderPoolMapper.updateById(order);
-            createOrderProcessData(order);
+            createOrderProcessData(order, forceCreateProcesses);
         });
     }
 
-    private void createOrderProcessData(OrderPool orderPool) {
+    private void createOrderProcessData(OrderPool orderPool, boolean forceCreateProcesses) {
         if (orderPool == null || StringUtils.isBlank(orderPool.getOrderId()) || StringUtils.isBlank(orderPool.getTemplateId())) {
             return;
         }
         List<BrtOrderTemplate> existingTemplates = orderTemplateService.list(Wrappers.<BrtOrderTemplate>lambdaQuery()
             .eq(BrtOrderTemplate::getOrderId, orderPool.getOrderId())
             .eq(BrtOrderTemplate::getTemplateId, orderPool.getTemplateId()));
-        if (!CollectionUtils.isEmpty(existingTemplates)) {
+        if (!forceCreateProcesses && !CollectionUtils.isEmpty(existingTemplates)) {
             return;
         }
 

@@ -6,6 +6,7 @@ import com.brt.productionflow.service.IOrderPoolService;
 import com.brt.productionflow.vo.ProdApiQuery;
 import com.brt.productionflow.vo.ProductionFlowVo;
 import java.util.ArrayList;
+import java.util.Collections;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -70,6 +71,7 @@ public class BrtScriptController {
         }
 
         ProductionFlowVo updatedFlow = orderPoolService.updateProductionFlow(newFlow);
+        orderPoolService.applyFlowTemplates(newFlowId, Collections.singletonList(orderId));
         return AjaxResult.success(updatedFlow);
     }
 

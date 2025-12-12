@@ -66,4 +66,9 @@ public interface IOrderPoolService {
      * 删除生产流
      */
     int deleteProductionFlowByIds(String[] flowIds);
+
+    /**
+     * 将指定生产流的模板与节点任务同步到给定订单，保留已有记录。
+     */
+    boolean applyFlowTemplates(String flowId, Iterable<String> orderIds);
 }
