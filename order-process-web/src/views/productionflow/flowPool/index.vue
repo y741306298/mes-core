@@ -2031,7 +2031,10 @@ export default {
         return
       }
       const state = this.getOrderAutomationState(orderId)
-      if (!state || !state.failedNode) {
+      if (state && state.failedNode && state.status !== 'failed') {
+        this.setOrderAutomationState(orderId, { failedNode: null, errorMessage: '', responsePreview: '' })
+      }
+      if (!state || state.status !== 'failed' || !state.failedNode) {
         this.$message.warning('暂无需要人工处理的节点')
         return
       }
