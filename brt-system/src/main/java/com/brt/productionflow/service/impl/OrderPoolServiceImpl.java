@@ -433,6 +433,7 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
         List<BrtOrderTemplate> existingTemplates = orderTemplateService.list(Wrappers.<BrtOrderTemplate>lambdaQuery()
             .eq(BrtOrderTemplate::getOrderId, orderPool.getOrderId())
             .eq(BrtOrderTemplate::getTemplateId, orderPool.getTemplateId()));
+
         if (!forceCreateProcesses && !CollectionUtils.isEmpty(existingTemplates)) {
             return;
         }
@@ -442,15 +443,22 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
             return;
         }
 
-        BrtOrderTemplateVo orderTemplate = new BrtOrderTemplateVo();
-        orderTemplate.setOrderId(orderPool.getOrderId());
-        orderTemplate.setTemplateId(orderPool.getTemplateId());
-        orderTemplate.setOrderTemplateStatus(OrderTemplateStatusEnums.正常.getCode());
-        orderTemplate.setAuditStatus(AuditStatusEnums.通过.getCode());
-        orderTemplate.setTemplateType(OrderTemplateTypeEnums.订单模板.getCode());
-        orderTemplate.setOrderNum(Long.valueOf(orderPool.getQuantity()));
-        orderTemplate.setStatus("1");
-        orderTemplateService.insertBrtOrderTemplate(orderTemplate);
+        BrtOrderTemplateVo orderTemplate = null;
+        if (CollectionUtils.isEmpty(existingTemplates)) {
+            orderTemplate = new BrtOrderTemplateVo();
+            orderTemplate.setOrderId(orderPool.getOrderId());
+            orderTemplate.setTemplateId(orderPool.getTemplateId());
+            orderTemplate.setOrderTemplateStatus(OrderTemplateStatusEnums.正常.getCode());
+            orderTemplate.setAuditStatus(AuditStatusEnums.通过.getCode());
+            orderTemplate.setTemplateType(OrderTemplateTypeEnums.订单模板.getCode());
+            orderTemplate.setOrderNum(Long.valueOf(orderPool.getQuantity()));
+            orderTemplate.setStatus("1");
+            orderTemplateService.insertBrtOrderTemplate(orderTemplate);
+        }
+
+        BrtOrderTemplate targetTemplate = CollectionUtils.isEmpty(existingTemplates)
+            ? BeanUtil.copyProperties(orderTemplate, BrtOrderTemplate.class)
+            : existingTemplates.get(0);
 
         List<BrtFlowNodeVo> flowNodes = flowTemplate.getFlowNodeList();
         if (CollectionUtils.isEmpty(flowNodes)) {
@@ -462,11 +470,22 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
             return;
         }
 
-        AtomicInteger sort = new AtomicInteger(0);
+        List<BrtOrderNode> existingNodes = orderNodeService.list(Wrappers.<BrtOrderNode>lambdaQuery()
+            .eq(BrtOrderNode::getOrderId, orderPool.getOrderId())
+            .eq(BrtOrderNode::getTemplateId, orderPool.getTemplateId()));
+        Set<String> existingNodeIds = existingNodes.stream()
+            .map(BrtOrderNode::getNodeId)
+            .filter(StringUtils::isNotBlank)
+            .collect(Collectors.toSet());
+
+        AtomicInteger sort = new AtomicInteger(existingNodes.size());
         flowNodes.forEach(flowNode -> {
+            if (existingNodeIds.contains(flowNode.getNodeId())) {
+                return;
+            }
             BrtOrderNode orderNode = new BrtOrderNode();
-            orderNode.setOrderTemplateId(orderTemplate.getOrderTemplateId());
-            orderNode.setChildId(orderTemplate.getChildId());
+            orderNode.setOrderTemplateId(targetTemplate.getOrderTemplateId());
+            orderNode.setChildId(targetTemplate.getChildId());
             orderNode.setOrderId(orderPool.getOrderId());
             orderNode.setTemplateId(orderPool.getTemplateId());
             orderNode.setNodeId(flowNode.getNodeId());
