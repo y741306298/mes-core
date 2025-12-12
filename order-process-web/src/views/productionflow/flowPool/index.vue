@@ -602,7 +602,8 @@ export default {
         submitting: false
       },
       nodeClickHandling: false,
-      orderAutomationState: {}
+      orderAutomationState: {},
+      nodeExecutionLocks: new Set()
     }
   },
   computed: {
@@ -1702,10 +1703,20 @@ export default {
         || (node.orderNode && node.orderNode.orderNodeId)
         || ''
       const flowNodeId = node.nodeId || (node.orderNode && node.orderNode.nodeId) || ''
+      const executionKey = `${orderId || ''}::${flowNodeId || templateId || ''}`
+      if (executionKey && this.nodeExecutionLocks.has(executionKey)) {
+        return { success: false, message: '任务正在执行，请勿重复提交' }
+      }
+      if (executionKey) {
+        this.nodeExecutionLocks.add(executionKey)
+      }
       const finalizeResult = async result => {
         this.updateNodeExecutionState(node, result)
         if (orderId) {
           await this.refreshOrderRecord(orderId, { silent: true, updateDialog: true })
+        }
+        if (executionKey) {
+          this.nodeExecutionLocks.delete(executionKey)
         }
         return result
       }
