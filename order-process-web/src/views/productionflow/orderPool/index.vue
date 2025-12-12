@@ -1122,15 +1122,18 @@ export default {
             })
           } catch (error) {
             console.error('自动节点完成失败', error)
-            resultPayload.success = false
-            resultPayload.error = (error && error.message) || '节点完成失败'
+            if (this.isDuplicateSubmissionError(error)) {
+              resultPayload.success = true
+              resultPayload.message = resultPayload.message || '节点已完成'
+            } else {
+              resultPayload.success = false
+              resultPayload.error = this.extractErrorMessage(error) || '节点完成失败'
+            }
           }
         }
         return finalizeResult(resultPayload)
       } catch (error) {
-        const errorMessage = (error && error.responseData && (error.responseData.message || error.responseData.msg))
-          || (error && error.message)
-          || '接口调用失败'
+        const errorMessage = this.extractErrorMessage(error) || '接口调用失败'
         return finalizeResult({
           success: false,
           error: errorMessage,
@@ -1621,6 +1624,28 @@ export default {
         return true
       }
       return true
+    },
+    extractErrorMessage(error) {
+      if (!error) {
+        return ''
+      }
+      if (typeof error === 'string') {
+        return error
+      }
+      const responseData = error.responseData || (error.response && error.response.data) || {}
+      return (
+        responseData.message
+        || responseData.msg
+        || error.message
+        || ''
+      )
+    },
+    isDuplicateSubmissionError(error) {
+      const message = this.extractErrorMessage(error)
+      if (!message) {
+        return false
+      }
+      return message.includes('重复提交')
     },
     parseStatusCode(value) {
       if (value === undefined || value === null) {
