@@ -1616,7 +1616,11 @@ export default {
           return nestedCode
         }
       }
-      return false
+      const message = response.message || response.msg
+      if (typeof message === 'string' && message.indexOf('成功') !== -1) {
+        return true
+      }
+      return true
     },
     parseStatusCode(value) {
       if (value === undefined || value === null) {
@@ -1626,7 +1630,7 @@ export default {
       if (Number.isNaN(code)) {
         return null
       }
-      return code === 200
+      return code === 200 || code === 0
     },
     parseBooleanFlag(value) {
       if (value === undefined || value === null) {
@@ -2074,7 +2078,7 @@ export default {
       this.viewOrderDialog.visible = true
       await this.refreshOrderRecord(order.orderId, { silent: true, updateDialog: true, withLoading: true })
     },
-    openPoolAssignmentDialog() {
+    async openPoolAssignmentDialog() {
       if (!this.selectedOrders.length) {
         this.$message.warning('请先选择至少一个订单')
         return
@@ -2082,10 +2086,24 @@ export default {
       if (!this.flowPoolOptions.length) {
         this.fetchFlows()
       }
-      const orders = this.selectedOrders.map(item => ({
-        ...item,
-        quantity: Number(item.quantity || 0)
-      }))
+      const refreshedOrders = []
+      const missingOrders = []
+      for (const item of this.selectedOrders) {
+        const detail = await this.refreshOrderRecord(item.orderId, { silent: true, updateDialog: false })
+        if (detail) {
+          refreshedOrders.push({ ...detail, quantity: Number(detail.quantity || 0) })
+        } else {
+          missingOrders.push(item.orderId)
+        }
+      }
+      if (missingOrders.length) {
+        this.$message.warning(`以下订单已不存在或已被移除：${missingOrders.join('、')}`)
+      }
+      if (!refreshedOrders.length) {
+        return
+      }
+      this.selectedOrders = refreshedOrders
+      const orders = refreshedOrders
       const timestamp = Date.now()
       this.poolAssignmentDialog.orders = orders
       this.poolAssignmentDialog.allocations = orders.map((order, index) => ({
