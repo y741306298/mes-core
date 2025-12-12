@@ -1172,7 +1172,7 @@ export default {
       if (Number.isNaN(code)) {
         return null
       }
-      return code === 200
+      return code === 200 || code === 0
     },
     parseBooleanFlag(value) {
       if (value === undefined || value === null) {
@@ -1221,7 +1221,33 @@ export default {
           return nestedCode
         }
       }
-      return false
+      const message = response.message || response.msg
+      if (typeof message === 'string' && message.indexOf('成功') !== -1) {
+        return true
+      }
+      return true
+    },
+    extractErrorMessage(error) {
+      if (!error) {
+        return ''
+      }
+      if (typeof error === 'string') {
+        return error
+      }
+      const responseData = error.responseData || (error.response && error.response.data) || {}
+      return (
+        responseData.message
+        || responseData.msg
+        || error.message
+        || ''
+      )
+    },
+    isDuplicateSubmissionError(error) {
+      const message = this.extractErrorMessage(error)
+      if (!message) {
+        return false
+      }
+      return message.includes('重复提交')
     },
     prepareEmptyForm() {
       const form = createEmptyFlowForm()
@@ -1721,15 +1747,18 @@ export default {
             })
           } catch (error) {
             console.error('自动节点完成失败', error)
-            resultPayload.success = false
-            resultPayload.error = (error && error.message) || '节点完成失败'
+            if (this.isDuplicateSubmissionError(error)) {
+              resultPayload.success = true
+              resultPayload.message = resultPayload.message || '节点已完成'
+            } else {
+              resultPayload.success = false
+              resultPayload.error = this.extractErrorMessage(error) || '节点完成失败'
+            }
           }
         }
         return finalizeResult(resultPayload)
       } catch (error) {
-        const errorMessage = (error && error.responseData && (error.responseData.message || error.responseData.msg))
-          || (error && error.message)
-          || '接口调用失败'
+        const errorMessage = this.extractErrorMessage(error) || '接口调用失败'
         return finalizeResult({
           success: false,
           error: errorMessage,
@@ -2031,7 +2060,10 @@ export default {
         return
       }
       const state = this.getOrderAutomationState(orderId)
-      if (!state || !state.failedNode) {
+      if (state && state.failedNode && state.status !== 'failed') {
+        this.setOrderAutomationState(orderId, { failedNode: null, errorMessage: '', responsePreview: '' })
+      }
+      if (!state || state.status !== 'failed' || !state.failedNode) {
         this.$message.warning('暂无需要人工处理的节点')
         return
       }

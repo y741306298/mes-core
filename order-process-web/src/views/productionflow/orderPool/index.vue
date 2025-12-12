@@ -1122,15 +1122,18 @@ export default {
             })
           } catch (error) {
             console.error('自动节点完成失败', error)
-            resultPayload.success = false
-            resultPayload.error = (error && error.message) || '节点完成失败'
+            if (this.isDuplicateSubmissionError(error)) {
+              resultPayload.success = true
+              resultPayload.message = resultPayload.message || '节点已完成'
+            } else {
+              resultPayload.success = false
+              resultPayload.error = this.extractErrorMessage(error) || '节点完成失败'
+            }
           }
         }
         return finalizeResult(resultPayload)
       } catch (error) {
-        const errorMessage = (error && error.responseData && (error.responseData.message || error.responseData.msg))
-          || (error && error.message)
-          || '接口调用失败'
+        const errorMessage = this.extractErrorMessage(error) || '接口调用失败'
         return finalizeResult({
           success: false,
           error: errorMessage,
@@ -1616,7 +1619,33 @@ export default {
           return nestedCode
         }
       }
-      return false
+      const message = response.message || response.msg
+      if (typeof message === 'string' && message.indexOf('成功') !== -1) {
+        return true
+      }
+      return true
+    },
+    extractErrorMessage(error) {
+      if (!error) {
+        return ''
+      }
+      if (typeof error === 'string') {
+        return error
+      }
+      const responseData = error.responseData || (error.response && error.response.data) || {}
+      return (
+        responseData.message
+        || responseData.msg
+        || error.message
+        || ''
+      )
+    },
+    isDuplicateSubmissionError(error) {
+      const message = this.extractErrorMessage(error)
+      if (!message) {
+        return false
+      }
+      return message.includes('重复提交')
     },
     parseStatusCode(value) {
       if (value === undefined || value === null) {
@@ -1626,7 +1655,7 @@ export default {
       if (Number.isNaN(code)) {
         return null
       }
-      return code === 200
+      return code === 200 || code === 0
     },
     parseBooleanFlag(value) {
       if (value === undefined || value === null) {
@@ -2074,7 +2103,7 @@ export default {
       this.viewOrderDialog.visible = true
       await this.refreshOrderRecord(order.orderId, { silent: true, updateDialog: true, withLoading: true })
     },
-    openPoolAssignmentDialog() {
+    async openPoolAssignmentDialog() {
       if (!this.selectedOrders.length) {
         this.$message.warning('请先选择至少一个订单')
         return
@@ -2082,10 +2111,24 @@ export default {
       if (!this.flowPoolOptions.length) {
         this.fetchFlows()
       }
-      const orders = this.selectedOrders.map(item => ({
-        ...item,
-        quantity: Number(item.quantity || 0)
-      }))
+      const refreshedOrders = []
+      const missingOrders = []
+      for (const item of this.selectedOrders) {
+        const detail = await this.refreshOrderRecord(item.orderId, { silent: true, updateDialog: false })
+        if (detail) {
+          refreshedOrders.push({ ...detail, quantity: Number(detail.quantity || 0) })
+        } else {
+          missingOrders.push(item.orderId)
+        }
+      }
+      if (missingOrders.length) {
+        this.$message.warning(`以下订单已不存在或已被移除：${missingOrders.join('、')}`)
+      }
+      if (!refreshedOrders.length) {
+        return
+      }
+      this.selectedOrders = refreshedOrders
+      const orders = refreshedOrders
       const timestamp = Date.now()
       this.poolAssignmentDialog.orders = orders
       this.poolAssignmentDialog.allocations = orders.map((order, index) => ({
