@@ -1172,7 +1172,7 @@ export default {
       if (Number.isNaN(code)) {
         return null
       }
-      return code === 200
+      return code === 200 || code === 0
     },
     parseBooleanFlag(value) {
       if (value === undefined || value === null) {
@@ -1221,7 +1221,11 @@ export default {
           return nestedCode
         }
       }
-      return false
+      const message = response.message || response.msg
+      if (typeof message === 'string' && message.indexOf('成功') !== -1) {
+        return true
+      }
+      return true
     },
     prepareEmptyForm() {
       const form = createEmptyFlowForm()
