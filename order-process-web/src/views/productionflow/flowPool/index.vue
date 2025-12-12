@@ -603,7 +603,10 @@ export default {
       },
       nodeClickHandling: false,
       orderAutomationState: {},
-      nodeExecutionLocks: new Set()
+      nodeExecutionLocks: new Set(),
+      autoTriggerTimer: null,
+      autoTriggerIntervalMs: 3 * 60 * 1000,
+      autoTriggerRunning: false
     }
   },
   computed: {
@@ -654,8 +657,43 @@ export default {
   },
   created() {
     this.fetchInitialData()
+    this.startAutoTriggerScheduler()
+  },
+  beforeDestroy() {
+    this.stopAutoTriggerScheduler()
   },
   methods: {
+    startAutoTriggerScheduler() {
+      this.stopAutoTriggerScheduler()
+      this.runAutoTriggerBatch()
+      this.autoTriggerTimer = setInterval(() => {
+        this.runAutoTriggerBatch()
+      }, this.autoTriggerIntervalMs)
+    },
+    stopAutoTriggerScheduler() {
+      if (this.autoTriggerTimer) {
+        clearInterval(this.autoTriggerTimer)
+        this.autoTriggerTimer = null
+      }
+    },
+    async runAutoTriggerBatch() {
+      if (this.autoTriggerRunning) {
+        return
+      }
+      this.autoTriggerRunning = true
+      try {
+        await this.fetchOrders()
+        const orders = Array.isArray(this.orderList) ? this.orderList.slice() : []
+        for (const order of orders) {
+          // 自动执行处于自动触发节点的订单
+          await this.autoTriggerFromOrder(order)
+        }
+      } catch (error) {
+        console.error('自动触发批处理执行失败', error)
+      } finally {
+        this.autoTriggerRunning = false
+      }
+    },
     async fetchInitialData() {
       await Promise.all([
         this.fetchFlowList(),
