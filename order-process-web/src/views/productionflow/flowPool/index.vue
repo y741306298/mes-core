@@ -2093,7 +2093,7 @@ export default {
       this.manualTaskDialog.remark = ''
       this.manualTaskDialog.orderId = orderId
     },
-    async refreshOrderRecord(orderId, { silent = true, updateDialog = true } = {}) {
+    async refreshOrderRecord(orderId, { silent = true, updateDialog = true, allowAutoTrigger = true } = {}) {
       if (!orderId) {
         return null
       }
@@ -2123,7 +2123,9 @@ export default {
             templateId: this.viewFlowDialog.record.templateId || normalized.templateId || (normalized.flowTemplate && normalized.flowTemplate.templateId)
           }
         }
-        this.autoTriggerFromOrder(normalized)
+        if (allowAutoTrigger) {
+          this.autoTriggerFromOrder(normalized)
+        }
         return normalized
       } catch (error) {
         console.error('刷新订单详情失败', error)
@@ -2232,7 +2234,11 @@ export default {
       }
       let refreshedOrder = null
       if (orderId) {
-        refreshedOrder = await this.refreshOrderRecord(orderId, { silent: true, updateDialog: true })
+        refreshedOrder = await this.refreshOrderRecord(orderId, {
+          silent: true,
+          updateDialog: true,
+          allowAutoTrigger: false
+        })
       }
       const automationOrderForm = refreshedOrder || orderForm
       if (!Array.isArray(pendingNodes) || !pendingNodes.length) {
