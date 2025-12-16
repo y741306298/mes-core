@@ -5,6 +5,7 @@ import com.brt.productionflow.vo.OrderPoolVo;
 import com.brt.productionflow.vo.ProductionFlowQuery;
 import com.brt.productionflow.vo.ProductionFlowVo;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -70,5 +71,5 @@ public interface IOrderPoolService {
     /**
      * 将指定生产流的模板与节点任务同步到给定订单，保留已有记录。
      */
-    boolean applyFlowTemplates(String flowId, Iterable<String> orderIds);
+    boolean applyFlowTemplates(String flowId, Collection<String> orderIds);
 }

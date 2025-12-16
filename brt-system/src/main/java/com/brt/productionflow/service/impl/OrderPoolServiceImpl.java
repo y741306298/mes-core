@@ -108,7 +108,7 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
         entity.setCreatedAt(now);
         entity.setUpdatedAt(now);
         orderPoolMapper.insert(entity);
-        createOrderProcessData(entity);
+        createOrderProcessData(entity, false);
         return selectOrderPoolById(entity.getOrderId());
     }
 
@@ -383,7 +383,7 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean applyFlowTemplates(String flowId, Iterable<String> orderIds) {
+    public boolean applyFlowTemplates(String flowId, Collection<String> orderIds) {
         if (StringUtils.isBlank(flowId) || orderIds == null) {
             return false;
         }
