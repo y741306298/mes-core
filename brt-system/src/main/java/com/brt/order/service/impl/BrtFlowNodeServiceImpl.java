@@ -1,6 +1,7 @@
 package com.brt.order.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.conditions.query.QueryChainWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.brt.common.core.page.TableDataInfo;
@@ -79,6 +80,15 @@ public class BrtFlowNodeServiceImpl extends ServiceImpl<BrtFlowNodeMapper, BrtFl
      * @return:
      **/
     public void saveBefore(BrtFlowNodeVo brtFlowNodeVo){
+        if (brtFlowNodeVo == null) {
+            return;
+        }
+        brtFlowNodeVo.setInterfaceType(StrUtil.blankToDefault(brtFlowNodeVo.getInterfaceType(), "SYNC"));
+        if (StrUtil.isNotBlank(brtFlowNodeVo.getCallbackUrl())) {
+            brtFlowNodeVo.setCallbackUrl(brtFlowNodeVo.getCallbackUrl().trim());
+        } else {
+            brtFlowNodeVo.setCallbackUrl("");
+        }
         // 保存字段信息
 //        flowNodeFieldService.saveOrUpdateBatch(BeanUtil.copyToList(brtFlowNodeVo.getFlowNodeFieldList(), BrtFlowNodeField.class));
     }

@@ -18,6 +18,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="hour"    column="hour"    />
         <result property="minute"    column="minute"    />
         <result property="otherSetting"    column="other_setting"    />
+        <result property="interfaceType"    column="interface_type"    />
+        <result property="callbackUrl"    column="callback_url"    />
         <result property="createTime"    column="create_time"    />
         <result property="createBy"    column="create_by"    />
         <result property="updateTime"    column="update_time"    />
@@ -41,7 +43,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             A.create_time,
             A.create_by,
             A.update_time,
-        A.update_by
+        A.update_by,
+        A.interface_type,
+        A.callback_url
     </sql>
 
     <sql id="brtFlowNodeQuerySql">

@@ -9,6 +9,7 @@ import com.brt.common.enums.NodeStatusEnums;
 import com.brt.common.enums.OrderTemplateStatusEnums;
 import com.brt.common.enums.OrderTemplateTypeEnums;
 import com.brt.common.utils.StringUtils;
+import cn.hutool.core.util.StrUtil;
 import com.brt.order.domain.BrtOrderNode;
 import com.brt.order.domain.BrtOrderTemplate;
 import com.brt.order.service.IBrtFlowNodeService;
@@ -492,6 +493,8 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
             orderNode.setNodeRemark(flowNode.getNodeName());
             orderNode.setOperSetting(flowNode.getOtherSetting());
             orderNode.setTriggerMode(Boolean.TRUE.equals(flowNode.getAutoCompletion()) ? "AUTO" : "MANUAL");
+            orderNode.setInterfaceType(StrUtil.blankToDefault(flowNode.getInterfaceType(), "SYNC"));
+            orderNode.setCallbackUrl(StrUtil.blankToDefault(flowNode.getCallbackUrl(), ""));
             orderNode.setSort(flowNode.getSort() == null
                 ? Long.valueOf(sort.getAndIncrement())
                 : flowNode.getSort().longValue());

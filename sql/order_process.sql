@@ -9,8 +9,8 @@ CREATE TABLE `brt_task_template` (
   `trigger_mode` varchar(32) NOT NULL DEFAULT 'AUTO' COMMENT '触发模式(AUTO/MANUAL)',
   `config` longtext COMMENT '模板配置(JSON)',
   `result_statuses` longtext COMMENT '结果状态配置(JSON)',
-  `query_sql` longtext COMMENT '查询SQL',
-  `storage_sql` longtext COMMENT '存储SQL',
+  `interface_type` varchar(16) NOT NULL DEFAULT 'SYNC' COMMENT '接口类型(SYNC/ASYNC)',
+  `callback_url` varchar(512) DEFAULT NULL COMMENT '回调URL',
   `status` char(1) NOT NULL DEFAULT '0' COMMENT '状态(0=正常,1=停用)',
   `remark` varchar(512) DEFAULT NULL COMMENT '备注',
   `create_by` varchar(64) DEFAULT NULL COMMENT '创建者',
@@ -29,3 +29,14 @@ ALTER TABLE `brt_order_node`
 ALTER TABLE `brt_order_node`
     ADD COLUMN IF NOT EXISTS `trigger_mode` varchar(32) DEFAULT 'MANUAL' COMMENT '触发方式(AUTO=自动触发,MANUAL=人工触发)' AFTER `oper_setting`;
 
+ALTER TABLE `brt_order_node`
+    ADD COLUMN `interface_type` varchar(16) NOT NULL DEFAULT 'SYNC' COMMENT '接口类型(SYNC/ASYNC)' AFTER `trigger_mode`;
+
+ALTER TABLE `brt_order_node`
+    ADD COLUMN `callback_url` varchar(512) DEFAULT NULL COMMENT '回调URL' AFTER `interface_type`;
+
+ALTER TABLE `brt_flow_node`
+    ADD COLUMN `interface_type` varchar(16) NOT NULL DEFAULT 'SYNC' COMMENT '接口类型(SYNC/ASYNC)' AFTER `other_setting`;
+
+ALTER TABLE `brt_flow_node`
+    ADD COLUMN `callback_url` varchar(512) DEFAULT NULL COMMENT '回调URL' AFTER `interface_type`;
