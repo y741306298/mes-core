@@ -55,14 +55,16 @@ public class BrtTaskTemplate extends BaseEntity {
     private String resultStatuses;
 
     /**
-     * 查询SQL
+     * 接口类型(SYNC/ASYNC)
      */
-    private String querySql;
+    @Excel(name = "接口类型")
+    private String interfaceType;
 
     /**
-     * 存储SQL
+     * 回调URL
      */
-    private String storageSql;
+    @Excel(name = "回调URL")
+    private String callbackUrl;
 
     /**
      * 状态(0=正常,1=停用)
