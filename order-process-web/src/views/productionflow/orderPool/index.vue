@@ -536,13 +536,48 @@ const nowDateTimeHelper = () => formatDateHelper(new Date())
 const SYSTEM_NODE_TYPES = new Set(['0', '1', '2', '3', '4', '5', '6', '7'])
 
 const FLOW_SEGMENT_CLASS_MAP = {
-  firstCenter: { default: 'first-center', success: 'first-center-active', failed: 'first-center-refuse' },
-  firstRight: { default: 'first-right', success: 'first-right-active', failed: 'first-right-refuse' },
-  arrowLeft: { default: 'arrow-left', success: 'arrow-left-active', failed: 'arrow-left-refuse' },
-  arrowCenter: { default: 'arrow-center', success: 'arrow-center-active', failed: 'arrow-center-refuse' },
-  arrowRight: { default: 'arrow-right', success: 'arrow-right-active', failed: 'arrow-right-refuse' },
-  lastLeft: { default: 'last-left', success: 'last-left-active', failed: 'last-left-refuse' },
-  lastCenter: { default: 'last-center', success: 'last-center-active', failed: 'last-center-refuse' }
+  firstCenter: {
+    default: 'first-center',
+    processing: 'first-center-processing',
+    completed: 'first-center-completed',
+    timeout: 'first-center-timeout'
+  },
+  firstRight: {
+    default: 'first-right',
+    processing: 'first-right-processing',
+    completed: 'first-right-completed',
+    timeout: 'first-right-timeout'
+  },
+  arrowLeft: {
+    default: 'arrow-left',
+    processing: 'arrow-left-processing',
+    completed: 'arrow-left-completed',
+    timeout: 'arrow-left-timeout'
+  },
+  arrowCenter: {
+    default: 'arrow-center',
+    processing: 'arrow-center-processing',
+    completed: 'arrow-center-completed',
+    timeout: 'arrow-center-timeout'
+  },
+  arrowRight: {
+    default: 'arrow-right',
+    processing: 'arrow-right-processing',
+    completed: 'arrow-right-completed',
+    timeout: 'arrow-right-timeout'
+  },
+  lastLeft: {
+    default: 'last-left',
+    processing: 'last-left-processing',
+    completed: 'last-left-completed',
+    timeout: 'last-left-timeout'
+  },
+  lastCenter: {
+    default: 'last-center',
+    processing: 'last-center-processing',
+    completed: 'last-center-completed',
+    timeout: 'last-center-timeout'
+  }
 }
 
 const deepClone = data => {
@@ -1709,10 +1744,13 @@ export default {
       if (node && node.orderNode) {
         const status = `${node.orderNode.nodeStatus || '0'}`
         if (status === '2') {
-          return 'success'
+          return 'completed'
+        }
+        if (status === '1') {
+          return 'processing'
         }
         if (status === '3') {
-          return 'failed'
+          return 'timeout'
         }
         return 'pending'
       }
@@ -1720,10 +1758,10 @@ export default {
         return 'pending'
       }
       if (node.taskExecution.success) {
-        return 'success'
+        return 'completed'
       }
       if (node.taskExecution.success === false || node.taskExecution.error) {
-        return 'failed'
+        return 'timeout'
       }
       return 'pending'
     },
@@ -1733,13 +1771,7 @@ export default {
         return ''
       }
       const state = this.nodeVisualState(node)
-      if (state === 'success' && config.success) {
-        return config.success
-      }
-      if (state === 'failed' && config.failed) {
-        return config.failed
-      }
-      return config.default
+      return config[state] || config.default
     },
     isSameFlowNode(nodeA, nodeB) {
       if (!nodeA || !nodeB) {
@@ -2740,8 +2772,9 @@ export default {
 }
 
 .first-center,
-.first-center-active,
-.first-center-refuse {
+.first-center-processing,
+.first-center-completed,
+.first-center-timeout {
   width: 100px;
   text-align: center;
 }
@@ -2750,28 +2783,37 @@ export default {
   background-color: #cbcdd4;
 }
 
-.first-center-active {
+.first-center-processing {
+  background-color: #409eff;
+}
+
+.first-center-completed {
   background-color: #70eaa9;
 }
 
-.first-center-refuse {
-  background-color: #ca5f41;
+.first-center-timeout {
+  background-color: #f56c6c;
 }
 
 .first-right,
-.first-right-active,
-.first-right-refuse {
+.first-right-processing,
+.first-right-completed,
+.first-right-timeout {
   border-width: 19px;
   border-style: solid;
   border-color: transparent transparent transparent #cbcdd4;
 }
 
-.first-right-active {
+.first-right-processing {
+  border-color: transparent transparent transparent #409eff;
+}
+
+.first-right-completed {
   border-color: transparent transparent transparent #70eaa9;
 }
 
-.first-right-refuse {
-  border-color: transparent transparent transparent #ca5f41;
+.first-right-timeout {
+  border-color: transparent transparent transparent #f56c6c;
 }
 
 .arrow {
@@ -2780,24 +2822,30 @@ export default {
 }
 
 .arrow-left,
-.arrow-left-active,
-.arrow-left-refuse {
+.arrow-left-processing,
+.arrow-left-completed,
+.arrow-left-timeout {
   border-width: 19px;
   border-style: solid;
   border-color: #cbcdd4 #cbcdd4 #cbcdd4 transparent;
 }
 
-.arrow-left-active {
+.arrow-left-processing {
+  border-color: #409eff #409eff #409eff transparent;
+}
+
+.arrow-left-completed {
   border-color: #70eaa9 #70eaa9 #70eaa9 transparent;
 }
 
-.arrow-left-refuse {
-  border-color: #ca5f41 #ca5f41 #ca5f41 transparent;
+.arrow-left-timeout {
+  border-color: #f56c6c #f56c6c #f56c6c transparent;
 }
 
 .arrow-center,
-.arrow-center-active,
-.arrow-center-refuse {
+.arrow-center-processing,
+.arrow-center-completed,
+.arrow-center-timeout {
   width: 100px;
   text-align: center;
 }
@@ -2806,28 +2854,37 @@ export default {
   background-color: #cbcdd4;
 }
 
-.arrow-center-active {
+.arrow-center-processing {
+  background-color: #409eff;
+}
+
+.arrow-center-completed {
   background-color: #70eaa9;
 }
 
-.arrow-center-refuse {
-  background-color: #ca5f41;
+.arrow-center-timeout {
+  background-color: #f56c6c;
 }
 
 .arrow-right,
-.arrow-right-active,
-.arrow-right-refuse {
+.arrow-right-processing,
+.arrow-right-completed,
+.arrow-right-timeout {
   border-width: 19px;
   border-style: solid;
   border-color: transparent transparent transparent #cbcdd4;
 }
 
-.arrow-right-active {
+.arrow-right-processing {
+  border-color: transparent transparent transparent #409eff;
+}
+
+.arrow-right-completed {
   border-color: transparent transparent transparent #70eaa9;
 }
 
-.arrow-right-refuse {
-  border-color: transparent transparent transparent #ca5f41;
+.arrow-right-timeout {
+  border-color: transparent transparent transparent #f56c6c;
 }
 
 .arrow-last {
@@ -2836,24 +2893,30 @@ export default {
 }
 
 .last-left,
-.last-left-active,
-.last-left-refuse {
+.last-left-processing,
+.last-left-completed,
+.last-left-timeout {
   border-width: 19px;
   border-style: solid;
   border-color: #cbcdd4 #cbcdd4 #cbcdd4 transparent;
 }
 
-.last-left-active {
+.last-left-processing {
+  border-color: #409eff #409eff #409eff transparent;
+}
+
+.last-left-completed {
   border-color: #70eaa9 #70eaa9 #70eaa9 transparent;
 }
 
-.last-left-refuse {
-  border-color: #ca5f41 #ca5f41 #ca5f41 transparent;
+.last-left-timeout {
+  border-color: #f56c6c #f56c6c #f56c6c transparent;
 }
 
 .last-center,
-.last-center-active,
-.last-center-refuse {
+.last-center-processing,
+.last-center-completed,
+.last-center-timeout {
   width: 100px;
   text-align: center;
 }
@@ -2862,12 +2925,16 @@ export default {
   background-color: #cbcdd4;
 }
 
-.last-center-active {
+.last-center-processing {
+  background-color: #409eff;
+}
+
+.last-center-completed {
   background-color: #70eaa9;
 }
 
-.last-center-refuse {
-  background-color: #ca5f41;
+.last-center-timeout {
+  background-color: #f56c6c;
 }
 
 .last-right {
