@@ -1160,6 +1160,106 @@ export default {
       }
       return Boolean((node && node.taskTemplate) || (node && node.orderNode && node.orderNode.taskTemplate) || templateId)
     },
+    extractNodeIdentity(node) {
+      if (!node) {
+        return ''
+      }
+      const candidates = [
+        node.orderNodeId,
+        node.nodeId,
+        node.id,
+        node.orderNode && node.orderNode.orderNodeId,
+        node.orderNode && node.orderNode.nodeId
+      ]
+      const matched = candidates.find(item => item !== undefined && item !== null && `${item}` !== '')
+      return matched !== undefined && matched !== null ? `${matched}` : ''
+    },
+    normalizeInterfaceType(value) {
+      if (!value) {
+        return 'SYNC'
+      }
+      const normalized = `${value}`.toUpperCase()
+      return normalized === 'ASYNC' ? 'ASYNC' : 'SYNC'
+    },
+    getNodeInterfaceType(node, taskTemplate, orderNode) {
+      const candidates = [
+        node && node.interfaceType,
+        node && node.interface_type,
+        orderNode && orderNode.interfaceType,
+        orderNode && orderNode.interface_type,
+        taskTemplate && taskTemplate.interfaceType,
+        taskTemplate && taskTemplate.interface_type
+      ]
+      const matched = candidates.find(item => item !== undefined && item !== null && `${item}` !== '')
+      return this.normalizeInterfaceType(matched || 'SYNC')
+    },
+    findAsyncPendingNode(order = {}, template) {
+      const flowTemplate = template || order.flowTemplate || null
+      if (!flowTemplate || !Array.isArray(flowTemplate.flowNodeList) || !flowTemplate.flowNodeList.length) {
+        return null
+      }
+      const flowNodes = flowTemplate.flowNodeList.slice().sort((a, b) => {
+        const aSort = a && a.sort != null ? Number(a.sort) : 0
+        const bSort = b && b.sort != null ? Number(b.sort) : 0
+        return aSort - bSort
+      })
+      const orderNodes = this.normalizeOrderNodes(order.orderNodes)
+      const orderNodeMap = {}
+      orderNodes.forEach(item => {
+        if (item && item.nodeId) {
+          orderNodeMap[item.nodeId] = item
+        }
+      })
+      for (let i = 0; i < flowNodes.length; i += 1) {
+        const flowNode = flowNodes[i]
+        const mapped = flowNode && flowNode.nodeId ? orderNodeMap[flowNode.nodeId] : null
+        const statusStr = `${(mapped && mapped.nodeStatus) || '0'}`
+        const interfaceType = this.getNodeInterfaceType(flowNode, this.taskTemplateMap[this.getNodeTaskTemplateId(flowNode)], mapped)
+        if (interfaceType === 'ASYNC' && statusStr === '1') {
+          return {
+            flowNode,
+            orderNode: mapped,
+            waitingNodeId: this.extractNodeIdentity(mapped || flowNode)
+          }
+        }
+      }
+      return null
+    },
+    isOrderNodeCompleted(order = {}, nodeKey) {
+      if (!nodeKey) {
+        return false
+      }
+      const nodes = this.normalizeOrderNodes(order.orderNodes)
+      return nodes.some(item => {
+        if (!item) return false
+        const key = item.orderNodeId || item.nodeId
+        return key && `${key}` === `${nodeKey}` && `${item.nodeStatus || '0'}` === '2'
+      })
+    },
+    markNodeAsProcessing(node, orderForm, remark) {
+      const applyStatus = target => {
+        if (!target) return
+        this.$set(target, 'nodeStatus', '1')
+        if (remark) {
+          this.$set(target, 'nodeRemark', remark)
+        }
+      }
+      if (node && node.orderNode) {
+        applyStatus(node.orderNode)
+      }
+      const nodes = Array.isArray(orderForm && orderForm.orderNodes) ? orderForm.orderNodes : []
+      if (nodes.length) {
+        const matched = nodes.find(
+          item =>
+            item &&
+            (item.orderNodeId === node.orderNodeId
+              || item.nodeId === node.nodeId
+              || (node.orderNode && item.orderNodeId === node.orderNode.orderNodeId)
+              || (node.orderNode && item.nodeId === node.orderNode.nodeId))
+        )
+        applyStatus(matched)
+      }
+    },
     async handleFlowNodeClick(node, record, event) {
       if (event && typeof event.stopPropagation === 'function') {
         event.stopPropagation()
@@ -1687,7 +1787,8 @@ export default {
         pendingNodes: normalizedPendingNodes,
         failedNode: payload.failedNode !== undefined ? payload.failedNode : previous.failedNode,
         errorMessage: payload.errorMessage !== undefined ? payload.errorMessage : previous.errorMessage,
-        responsePreview: payload.responsePreview !== undefined ? payload.responsePreview : previous.responsePreview
+        responsePreview: payload.responsePreview !== undefined ? payload.responsePreview : previous.responsePreview,
+        waitingNodeId: payload.waitingNodeId !== undefined ? payload.waitingNodeId : previous.waitingNodeId
       }
       this.$set(this.orderAutomationState, key, next)
     },
@@ -1835,6 +1936,7 @@ export default {
       if (taskTemplate.triggerMode && taskTemplate.triggerMode !== 'AUTO') {
         return finalizeResult({ success: false, message: '任务模板未设置为自动触发' })
       }
+      const interfaceType = this.getNodeInterfaceType(node, taskTemplate, node.orderNode)
       const config = taskTemplate.parsedConfig || this.parseTaskTemplateConfig(taskTemplate.config)
       if (!config.requestUrl) {
         return finalizeResult({ success: false, message: '任务模板未配置接口URL' })
@@ -1845,9 +1947,21 @@ export default {
         const resultPayload = {
           success,
           response: responseData,
-          message: success ? '任务执行成功' : '接口返回未满足成功条件'
+          message: success ? '任务执行成功' : '接口返回未满足成功条件',
+          interfaceType
         }
-        if (success && orderId && orderNodeId) {
+        const isAsyncInterface = interfaceType === 'ASYNC'
+        if (success && isAsyncInterface) {
+          resultPayload.asyncPending = true
+          resultPayload.message = resultPayload.message || '异步接口已触发，等待回调完成'
+          const responseWrapper = responseData && typeof responseData === 'object' ? responseData : {}
+          resultPayload.response = {
+            ...responseWrapper,
+            nodeStatus: '1',
+            nodeRemark: resultPayload.message
+          }
+          this.markNodeAsProcessing(node, orderForm, resultPayload.message)
+        } else if (success && orderId && orderNodeId) {
           try {
             await complateNode({
               orderId,
@@ -1909,6 +2023,10 @@ export default {
         const triggerMode = this.normalizeTriggerMode((mapped && mapped.triggerMode) || flowNode.triggerMode)
         const statusStr = `${(mapped && mapped.nodeStatus) || '0'}`
         const isCompleted = statusStr === '2'
+        const interfaceType = this.getNodeInterfaceType(flowNode, this.taskTemplateMap[this.getNodeTaskTemplateId(flowNode)], mapped)
+        if (interfaceType === 'ASYNC' && statusStr === '1') {
+          break
+        }
 
         if (!mapped) {
           previousNodesCompleted = false
@@ -1950,6 +2068,21 @@ export default {
           return
         }
         const templateInstance = deepClone(template)
+        const pendingAsyncNode = this.findAsyncPendingNode(orderForm, templateInstance)
+        if (pendingAsyncNode) {
+          this.setOrderAutomationState(orderForm.orderId, {
+            templateId,
+            templateInstance,
+            orderForm: deepClone(orderForm),
+            status: 'pending_async',
+            pendingNodes: [],
+            failedNode: null,
+            errorMessage: '',
+            responsePreview: '',
+            waitingNodeId: pendingAsyncNode.waitingNodeId
+          })
+          return
+        }
         if (this.hasPendingManualNode(orderForm, templateInstance)) {
           return
         }
@@ -1963,7 +2096,8 @@ export default {
             pendingNodes: [],
             failedNode: null,
             errorMessage: '',
-            responsePreview: ''
+            responsePreview: '',
+            waitingNodeId: null
           })
           return
         }
@@ -1975,7 +2109,8 @@ export default {
           failedNode: null,
           pendingNodes: queue.slice(),
           errorMessage: '',
-          responsePreview: ''
+          responsePreview: '',
+          waitingNodeId: null
         })
         await this.runTaskNodesSequence({
           templateId,
@@ -2060,6 +2195,24 @@ export default {
       if (!template || !Array.isArray(template.flowNodeList) || !template.flowNodeList.length) {
         return
       }
+      const pendingAsyncNode = this.findAsyncPendingNode(orderDetail, template)
+      if (pendingAsyncNode) {
+        this.setOrderAutomationState(orderId, {
+          templateId: template.templateId,
+          templateInstance: template,
+          orderForm: orderDetail,
+          status: 'pending_async',
+          failedNode: null,
+          pendingNodes: [],
+          errorMessage: '',
+          responsePreview: '',
+          waitingNodeId: pendingAsyncNode.waitingNodeId
+        })
+        return
+      }
+      if (automationState && automationState.status === 'pending_async') {
+        this.setOrderAutomationState(orderId, { waitingNodeId: null, status: 'pending_resume' })
+      }
       if (this.hasPendingManualNode(orderDetail, template)) {
         return
       }
@@ -2075,7 +2228,8 @@ export default {
         failedNode: null,
         pendingNodes: queue.slice(),
         errorMessage: '',
-        responsePreview: ''
+        responsePreview: '',
+        waitingNodeId: null
       })
       this.runTaskNodesSequence({
         templateId: template.templateId,
@@ -2094,7 +2248,8 @@ export default {
             templateInstance: template,
             status: 'success',
             pendingNodes: [],
-            failedNode: null
+            failedNode: null,
+            waitingNodeId: null
           })
         }
         return
@@ -2128,6 +2283,18 @@ export default {
           })
           return
         }
+        if (result && result.asyncPending) {
+          this.handleAsyncNodeWaiting({
+            templateId,
+            template,
+            waitingNode: currentNode,
+            orderForm,
+            pendingNodes: queue.slice(),
+            result,
+            orderId: targetOrderId
+          })
+          return
+        }
       }
       if (targetOrderId) {
         this.setOrderAutomationState(targetOrderId, {
@@ -2137,7 +2304,8 @@ export default {
           pendingNodes: [],
           failedNode: null,
           errorMessage: '',
-          responsePreview: ''
+          responsePreview: '',
+          waitingNodeId: null
         })
       }
     },
@@ -2152,7 +2320,8 @@ export default {
           failedNode,
           pendingNodes,
           errorMessage,
-          responsePreview: this.formatTaskResponsePreview(result.response)
+          responsePreview: this.formatTaskResponsePreview(result.response),
+          waitingNodeId: null
         })
         this.refreshOrderRecord(orderId, { silent: true, updateDialog: true }).catch(() => {})
       }
@@ -2166,6 +2335,26 @@ export default {
           this.openManualTaskDialogForOrder(orderId)
         })
       }
+    },
+    handleAsyncNodeWaiting({ templateId, template, waitingNode, orderForm, pendingNodes = [], result = {}, orderId }) {
+      const message = (result && result.message) || '异步接口已触发，等待回调完成'
+      if (waitingNode && orderForm) {
+        this.markNodeAsProcessing(waitingNode, orderForm, message)
+      }
+      if (orderId) {
+        this.setOrderAutomationState(orderId, {
+          templateId,
+          templateInstance: template,
+          orderForm,
+          status: 'pending_async',
+          pendingNodes,
+          failedNode: null,
+          errorMessage: '',
+          responsePreview: this.formatTaskResponsePreview(result.response),
+          waitingNodeId: this.extractNodeIdentity(waitingNode)
+        })
+      }
+      this.$message.success(message)
     },
     openManualTaskDialogForOrder(orderId) {
       if (!orderId) {
@@ -2359,7 +2548,8 @@ export default {
           pendingNodes,
           failedNode: null,
           errorMessage: '',
-          responsePreview: ''
+          responsePreview: '',
+          waitingNodeId: null
         })
       }
       const nextPendingNode = pendingNodes[0]
