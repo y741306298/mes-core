@@ -54,6 +54,13 @@
           </el-radio-group>
         </el-form-item>
 
+        <el-form-item label="接口类型" prop="interfaceType">
+          <el-radio-group v-model="form.interfaceType">
+            <el-radio-button label="SYNC">同步接口</el-radio-button>
+            <el-radio-button label="ASYNC">异步接口</el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+
          <el-form-item label="触发模式" prop="triggerMode">
            <el-radio-group v-model="form.triggerMode">
              <el-radio-button label="AUTO">自动触发</el-radio-button>
@@ -86,27 +93,13 @@
            <div class="status-tip">建议至少保留“成功”和“失败”等关键状态，用于流程判断。</div>
         </el-form-item>
 
-        <el-form-item label="查询SQL" prop="querySql">
-          <el-input
-            v-model="form.querySql"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入用于查询任务执行结果的SQL语句"
-          />
-        </el-form-item>
-
-        <el-form-item label="存储SQL" prop="storageSql">
-          <el-input
-            v-model="form.storageSql"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入用于存储任务执行结果的SQL语句"
-          />
-        </el-form-item>
-
         <template v-if="isApiTemplate">
           <el-form-item label="请求接口URL" prop="requestUrl">
             <el-input v-model="form.requestUrl" placeholder="请输入接口URL" />
+          </el-form-item>
+
+          <el-form-item label="回调URL" prop="callbackUrl">
+            <el-input v-model="form.callbackUrl" placeholder="请输入回调URL（异步接口需配置）" />
           </el-form-item>
 
           <el-form-item label="请求入参">
@@ -201,6 +194,15 @@
           show-icon
         />
 
+        <el-form-item label="备注">
+          <el-input
+            v-model="form.remark"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入备注信息"
+          />
+        </el-form-item>
+
        </el-form>
        <div slot="footer" class="dialog-footer">
          <el-button type="primary" @click="submitForm">确 定</el-button>
@@ -242,6 +244,14 @@ const createEmptyResponseParam = () => ({
 export default {
   name: 'TaskTemplate',
   data() {
+    const validateCallbackUrl = (rule, value, callback) => {
+      if (this.form.interfaceType === 'ASYNC' && !value) {
+        callback(new Error('异步接口需填写回调URL'))
+      } else {
+        callback()
+      }
+    }
+
     return {
       loading: false,
       total: 0,
@@ -257,15 +267,22 @@ export default {
       rules: {
         templateName: [{ required: true, message: '模板名称不能为空', trigger: 'blur' }],
         templateType: [{ required: true, message: '请选择模板类型', trigger: 'change' }],
+        interfaceType: [{ required: true, message: '请选择接口类型', trigger: 'change' }],
         triggerMode: [{ required: true, message: '请选择触发模式', trigger: 'change' }],
-        querySql: [{ required: true, message: '查询SQL不能为空', trigger: 'blur' }],
-        storageSql: [{ required: true, message: '存储SQL不能为空', trigger: 'blur' }]
+        callbackUrl: [{ validator: validateCallbackUrl, trigger: 'blur' }]
       }
     }
   },
   computed: {
     isApiTemplate() {
       return this.form.templateType === 'API'
+    }
+  },
+  watch: {
+    'form.interfaceType'(value) {
+      if (value !== 'ASYNC' && this.$refs.form) {
+        this.$nextTick(() => this.$refs.form.clearValidate(['callbackUrl']))
+      }
     }
   },
   created() {
@@ -296,13 +313,14 @@ export default {
         templateId: null,
         templateName: '',
         templateType: 'API',
+        interfaceType: 'SYNC',
         triggerMode: 'AUTO',
         requestUrl: '',
+        callbackUrl: '',
         requestParams: [],
         responseParams: [],
         resultStatuses: defaultResultStatuses(),
-        querySql: '',
-        storageSql: ''
+        remark: ''
       }
       if (this.$refs.form) {
         this.resetForm('form')
@@ -330,9 +348,9 @@ export default {
       this.form.templateId = data.templateId || data.id
       this.form.templateName = data.templateName
       this.form.templateType = data.templateType || 'API'
+      this.form.interfaceType = data.interfaceType || 'SYNC'
       this.form.triggerMode = data.triggerMode || 'AUTO'
-      this.form.querySql = data.querySql || ''
-      this.form.storageSql = data.storageSql || ''
+      this.form.callbackUrl = data.callbackUrl || ''
       this.form.requestUrl = config.requestUrl || ''
       this.form.requestParams = Array.isArray(config.requestParams) ? config.requestParams : []
       this.form.responseParams = Array.isArray(config.responseParams) ? config.responseParams : []
@@ -342,6 +360,7 @@ export default {
           statusValue: item.statusValue || item.value || item.code
         }))
         : defaultResultStatuses()
+      this.form.remark = data.remark || ''
     },
      parseJsonField(value, allowArray = false) {
        if (value == null) return allowArray ? [] : {}
@@ -386,11 +405,12 @@ export default {
           templateId: this.form.templateId,
           templateName: this.form.templateName,
           templateType: this.form.templateType,
+          interfaceType: this.form.interfaceType,
           triggerMode: this.form.triggerMode,
           config: JSON.stringify(config),
           resultStatuses: JSON.stringify(resultStatusesPayload),
-          querySql: (this.form.querySql || '').trim(),
-          storageSql: (this.form.storageSql || '').trim()
+          callbackUrl: (this.form.callbackUrl || '').trim(),
+          remark: (this.form.remark || '').trim()
         }
         const request = payload.templateId ? updateTaskTemplate : addTaskTemplate
         request(payload).then(() => {
@@ -460,11 +480,11 @@ export default {
        if (!Array.isArray(result)) {
          return '-'
        }
-       return result.map(item => item.statusLabel || item.label || item.name || item.statusValue).join(' / ')
-     }
-   }
- }
- </script>
+      return result.map(item => item.statusLabel || item.label || item.name || item.statusValue).join(' / ')
+    }
+  }
+}
+</script>
 
  <style lang="scss" scoped>
  .task-template-page {

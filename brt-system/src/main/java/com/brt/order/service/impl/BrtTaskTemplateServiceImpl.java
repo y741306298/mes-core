@@ -109,14 +109,10 @@ public class BrtTaskTemplateServiceImpl extends ServiceImpl<BrtTaskTemplateMappe
         }
         template.setTemplateType(StrUtil.blankToDefault(template.getTemplateType(), "API"));
         template.setTriggerMode(StrUtil.blankToDefault(template.getTriggerMode(), "AUTO"));
+        template.setInterfaceType(StrUtil.blankToDefault(template.getInterfaceType(), "SYNC"));
         template.setConfig(StrUtil.blankToDefault(template.getConfig(), "{}"));
         template.setResultStatuses(StrUtil.blankToDefault(template.getResultStatuses(), "[]"));
-        if (StrUtil.isNotBlank(template.getQuerySql())) {
-            template.setQuerySql(template.getQuerySql().trim());
-        }
-        if (StrUtil.isNotBlank(template.getStorageSql())) {
-            template.setStorageSql(template.getStorageSql().trim());
-        }
+        template.setCallbackUrl(StrUtil.blankToDefault(template.getCallbackUrl(), ""));
         template.setStatus(StrUtil.blankToDefault(template.getStatus(), "0"));
     }
 }
