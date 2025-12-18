@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtTaskTemplateMapper">
+
+    <resultMap id="BrtTaskTemplateResult" type="com.brt.order.vo.BrtTaskTemplateVo">
+        <id     property="templateId"     column="template_id" />
+        <result property="templateName"   column="template_name" />
+        <result property="templateType"   column="template_type" />
+        <result property="triggerMode"    column="trigger_mode" />
+        <result property="config"         column="config" />
+        <result property="resultStatuses" column="result_statuses" />
+        <result property="interfaceType"  column="interface_type" />
+        <result property="callbackUrl"    column="callback_url" />
+        <result property="status"         column="status" />
+        <result property="remark"         column="remark" />
+        <result property="createBy"       column="create_by" />
+        <result property="createTime"     column="create_time" />
+        <result property="updateBy"       column="update_by" />
+        <result property="updateTime"     column="update_time" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        template_id, template_name, template_type, trigger_mode, config, result_statuses,
+        interface_type, callback_url, status, remark, create_by, create_time, update_by, update_time
+    </sql>
+
+</mapper>

@@ -3,6 +3,7 @@ package com.brt.order.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -393,7 +394,15 @@ public class BrtOrderNodeServiceImpl extends ServiceImpl<BrtOrderNodeMapper, Brt
      * @return:
      **/
     public void saveBefore(BrtOrderNodeVo brtOrderNodeVo){
-
+        if (brtOrderNodeVo == null) {
+            return;
+        }
+        brtOrderNodeVo.setInterfaceType(StrUtil.blankToDefault(brtOrderNodeVo.getInterfaceType(), "SYNC"));
+        if (StrUtil.isNotBlank(brtOrderNodeVo.getCallbackUrl())) {
+            brtOrderNodeVo.setCallbackUrl(brtOrderNodeVo.getCallbackUrl().trim());
+        } else {
+            brtOrderNodeVo.setCallbackUrl("");
+        }
     }
 
     /**
