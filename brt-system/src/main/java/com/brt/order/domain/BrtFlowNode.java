@@ -83,6 +83,18 @@ public class BrtFlowNode extends BaseEntity {
     private String otherSetting;
 
     /**
+     * 接口类型(SYNC/ASYNC)
+     */
+    @Excel(name = "接口类型")
+    private String interfaceType;
+
+    /**
+     * 回调URL
+     */
+    @Excel(name = "回调URL")
+    private String callbackUrl;
+
+    /**
      * 天
      */
     private String day;

@@ -34,3 +34,9 @@ ALTER TABLE `brt_order_node`
 
 ALTER TABLE `brt_order_node`
     ADD COLUMN `callback_url` varchar(512) DEFAULT NULL COMMENT '回调URL' AFTER `interface_type`;
+
+ALTER TABLE `brt_flow_node`
+    ADD COLUMN `interface_type` varchar(16) NOT NULL DEFAULT 'SYNC' COMMENT '接口类型(SYNC/ASYNC)' AFTER `other_setting`;
+
+ALTER TABLE `brt_flow_node`
+    ADD COLUMN `callback_url` varchar(512) DEFAULT NULL COMMENT '回调URL' AFTER `interface_type`;
