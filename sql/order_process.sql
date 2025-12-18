@@ -28,3 +28,9 @@ ALTER TABLE `brt_order_node`
 
 ALTER TABLE `brt_order_node`
     ADD COLUMN IF NOT EXISTS `trigger_mode` varchar(32) DEFAULT 'MANUAL' COMMENT '触发方式(AUTO=自动触发,MANUAL=人工触发)' AFTER `oper_setting`;
+
+ALTER TABLE `brt_order_node`
+    ADD COLUMN `interface_type` varchar(16) NOT NULL DEFAULT 'SYNC' COMMENT '接口类型(SYNC/ASYNC)' AFTER `trigger_mode`;
+
+ALTER TABLE `brt_order_node`
+    ADD COLUMN `callback_url` varchar(512) DEFAULT NULL COMMENT '回调URL' AFTER `interface_type`;

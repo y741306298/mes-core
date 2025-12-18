@@ -120,6 +120,18 @@ public class BrtOrderNode extends BaseEntity {
     private String triggerMode;
 
     /**
+     * 接口类型(SYNC/ASYNC)
+     */
+    @Excel(name = "接口类型")
+    private String interfaceType;
+
+    /**
+     * 回调URL
+     */
+    @Excel(name = "回调URL")
+    private String callbackUrl;
+
+    /**
      * 创建人ID
      */
     private String createId;
