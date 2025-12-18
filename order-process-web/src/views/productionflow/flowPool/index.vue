@@ -484,6 +484,8 @@ const FLOW_STATUS_LABELS = {
   frozen: '冻结'
 }
 
+const NODE_FAILED_STATUS = '3'
+
 const pad = value => `${value}`.padStart(2, '0')
 
 const formatDateHelper = value => {
@@ -968,6 +970,32 @@ export default {
         triggerMode: (node && node.triggerMode) ? `${node.triggerMode}` : 'MANUAL',
         sort: node && node.sort != null ? node.sort : index
       }))
+    },
+    markNodeAsFailed(node, orderForm, remark) {
+      if (!node) {
+        return
+      }
+      const failureRemark = remark || '自动节点完成失败'
+      this.$set(node, 'nodeStatus', NODE_FAILED_STATUS)
+      if (node.orderNode) {
+        this.$set(node.orderNode, 'nodeStatus', NODE_FAILED_STATUS)
+        this.$set(node.orderNode, 'nodeRemark', failureRemark)
+      }
+      if (orderForm && Array.isArray(orderForm.orderNodes)) {
+        const targetOrderNodeId = node.orderNodeId || (node.orderNode && node.orderNode.orderNodeId)
+        const targetNodeId = node.nodeId || (node.orderNode && node.orderNode.nodeId)
+        const nodeIndex = orderForm.orderNodes.findIndex(
+          item => item && (item.orderNodeId === targetOrderNodeId || item.nodeId === targetNodeId)
+        )
+        if (nodeIndex !== -1) {
+          const updatedNode = {
+            ...orderForm.orderNodes[nodeIndex],
+            nodeStatus: NODE_FAILED_STATUS,
+            nodeRemark: failureRemark
+          }
+          this.$set(orderForm.orderNodes, nodeIndex, updatedNode)
+        }
+      }
     },
     flowStepStatus(status) {
       const mapping = {
@@ -1836,6 +1864,7 @@ export default {
             } else {
               resultPayload.success = false
               resultPayload.error = this.extractErrorMessage(error) || '节点完成失败'
+              this.markNodeAsFailed(node, orderForm, resultPayload.error)
             }
           }
         }

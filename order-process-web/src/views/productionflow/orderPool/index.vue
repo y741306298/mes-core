@@ -535,6 +535,8 @@ const nowDateTimeHelper = () => formatDateHelper(new Date())
 
 const SYSTEM_NODE_TYPES = new Set(['0', '1', '2', '3', '4', '5', '6', '7'])
 
+const NODE_FAILED_STATUS = '3'
+
 const FLOW_SEGMENT_CLASS_MAP = {
   firstCenter: {
     default: 'first-center',
@@ -917,6 +919,32 @@ export default {
         sort: node && node.sort != null ? node.sort : index
       }))
     },
+    markNodeAsFailed(node, orderForm, remark) {
+      if (!node) {
+        return
+      }
+      const failureRemark = remark || '自动节点完成失败'
+      this.$set(node, 'nodeStatus', NODE_FAILED_STATUS)
+      if (node.orderNode) {
+        this.$set(node.orderNode, 'nodeStatus', NODE_FAILED_STATUS)
+        this.$set(node.orderNode, 'nodeRemark', failureRemark)
+      }
+      if (orderForm && Array.isArray(orderForm.orderNodes)) {
+        const targetOrderNodeId = node.orderNodeId || (node.orderNode && node.orderNode.orderNodeId)
+        const targetNodeId = node.nodeId || (node.orderNode && node.orderNode.nodeId)
+        const nodeIndex = orderForm.orderNodes.findIndex(
+          item => item && (item.orderNodeId === targetOrderNodeId || item.nodeId === targetNodeId)
+        )
+        if (nodeIndex !== -1) {
+          const updatedNode = {
+            ...orderForm.orderNodes[nodeIndex],
+            nodeStatus: NODE_FAILED_STATUS,
+            nodeRemark: failureRemark
+          }
+          this.$set(orderForm.orderNodes, nodeIndex, updatedNode)
+        }
+      }
+    },
     normalizeFlow(flow = {}) {
       const materialsSummary = Array.isArray(flow.materialsSummary)
         ? flow.materialsSummary.map((item, index) => ({
@@ -1163,6 +1191,7 @@ export default {
             } else {
               resultPayload.success = false
               resultPayload.error = this.extractErrorMessage(error) || '节点完成失败'
+              this.markNodeAsFailed(node, orderForm, resultPayload.error)
             }
           }
         }
