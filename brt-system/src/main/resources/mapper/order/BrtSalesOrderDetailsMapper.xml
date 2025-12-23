@@ -29,6 +29,42 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="boomFile"    column="boom_file"    />
         <result property="jobDrawing"    column="job_drawing"    />
         <result property="jobProgram"    column="job_program"    />
+        <result property="prodName"    column="prod_name"    />
+        <result property="prodCode"    column="prod_code"    />
+        <result property="prodType"    column="prod_type"    />
+        <result property="component"    column="component"    />
+        <result property="width"    column="width"    />
+        <result property="height"    column="height"    />
+        <result property="thickness"    column="thickness"    />
+        <result property="weight"    column="weight"    />
+        <result property="procsDesc"    column="procs_desc"    />
+        <result property="procsAttachpath"    column="procs_attachpath"    />
+        <result property="itemNumber"    column="item_number"    />
+        <result property="itemPrice"    column="item_price"    />
+        <result property="actualAmount"    column="actual_amount"    />
+        <result property="deliverySn"    column="delivery_sn"    />
+        <result property="deliveryId"    column="delivery_id"    />
+        <result property="itemStatus"    column="item_status"    />
+        <result property="shippingTime"    column="shipping_time"    />
+        <result property="shippingStatus"    column="shipping_status"    />
+        <result property="prodDescription"    column="prod_description"    />
+        <result property="imagefilePath"    column="imagefile_path"    />
+        <result property="comments"    column="comments"    />
+        <result property="previewImagePath"    column="preview_image_path"    />
+        <result property="thumbnailsPath"    column="thumbnails_path"    />
+        <result property="procCode"    column="proc_code"    />
+        <result property="itemSeq"    column="item_seq"    />
+        <result property="orderItemSn"    column="orderItem_sn"    />
+        <result property="urgent"    column="is_urgent"    />
+        <result property="deliveryDate"    column="delivery_date"    />
+        <result property="logisticsType"    column="logistics_type"    />
+        <result property="matCost"    column="mat_cost"    />
+        <result property="procCost"    column="proc_cost"    />
+        <result property="grossMargin"    column="gross_margin"    />
+        <result property="taxFee"    column="tax_fee"    />
+        <result property="colorFormat"    column="color_format"    />
+        <result property="prodAttrs"    column="prod_attrs"    />
+        <result property="snapshot"    column="snapshot"    />
         <result property="createTime"    column="create_time"    />
         <result property="createBy"    column="create_by"    />
         <result property="updateTime"    column="update_time"    />
@@ -75,6 +111,42 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             A.boom_file,
             A.job_drawing,
             A.job_program,
+            A.prod_name,
+            A.prod_code,
+            A.prod_type,
+            A.component,
+            A.width,
+            A.height,
+            A.thickness,
+            A.weight,
+            A.procs_desc,
+            A.procs_attachpath,
+            A.item_number,
+            A.item_price,
+            A.actual_amount,
+            A.delivery_sn,
+            A.delivery_id,
+            A.item_status,
+            A.shipping_time,
+            A.shipping_status,
+            A.prod_description,
+            A.imagefile_path,
+            A.comments,
+            A.preview_image_path,
+            A.thumbnails_path,
+            A.proc_code,
+            A.item_seq,
+            A.orderItem_sn,
+            A.is_urgent,
+            A.delivery_date,
+            A.logistics_type,
+            A.mat_cost,
+            A.proc_cost,
+            A.gross_margin,
+            A.tax_fee,
+            A.color_format,
+            A.prod_attrs,
+            A.snapshot,
             A.create_time,
             A.create_by,
             A.update_time,
