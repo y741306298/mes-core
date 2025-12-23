@@ -162,6 +162,129 @@ public class BrtSalesOrder extends BaseEntity {
      */
     private String postpone;
 
+    /**
+     * 订单编号（来源系统）
+     */
+    private String orderSn;
+
+    /**
+     * 客户ID（来源系统）
+     */
+    private String clientId;
+
+    /**
+     * 收货人
+     */
+    private String consignee;
+
+    /**
+     * 收货地址
+     */
+    private String address;
+
+    /**
+     * 收货电话
+     */
+    private String tel;
+
+    /**
+     * 订单金额
+     */
+    private BigDecimal orderAmount;
+
+    /**
+     * 运费
+     */
+    private BigDecimal shippingFee;
+
+    /**
+     * 已付金额
+     */
+    private BigDecimal moneyPaid;
+
+    /**
+     * 优惠金额
+     */
+    private BigDecimal discount;
+
+    /**
+     * 支付时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date payTime;
+
+    /**
+     * 生产方ID
+     */
+    private String manufacturerId;
+
+    /**
+     * 交货日期
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private Date deliveryDate;
+
+    /**
+     * 是否由MES创建
+     */
+    private String mes;
+
+    /**
+     * MES创建时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date mesTime;
+
+    /**
+     * 物流单号
+     */
+    private String logisticCode;
+
+    /**
+     * 是否撤回
+     */
+    private String isWithdraw;
+
+    /**
+     * 账号编码
+     */
+    private String userCode;
+
+    /**
+     * 账号组织编码
+     */
+    private String userOrgCode;
+
+    /**
+     * 订单转移状态
+     */
+    private String transferStatus;
+
+    /**
+     * 来源快照
+     */
+    private String snapshot;
+
+    /**
+     * 转移来源
+     */
+    private String transferFrom;
+
+    /**
+     * 结算金额
+     */
+    private BigDecimal settleOrderAmount;
+
+    /**
+     * 订单类型
+     */
+    private String type;
+
+    /**
+     * 外部订单号
+     */
+    private String outOrderNo;
+
         /***************************自定义字段*****************************/
 
 }

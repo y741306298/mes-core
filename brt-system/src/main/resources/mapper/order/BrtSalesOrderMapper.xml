@@ -11,6 +11,30 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="contact"    column="contact"    />
         <result property="contactTel"    column="contact_tel"    />
         <result property="deliveryAddress"    column="delivery_address"    />
+        <result property="orderSn"    column="order_sn"    />
+        <result property="clientId"    column="client_id"    />
+        <result property="consignee"    column="consignee"    />
+        <result property="address"    column="address"    />
+        <result property="tel"    column="tel"    />
+        <result property="orderAmount"    column="order_amount"    />
+        <result property="shippingFee"    column="shipping_fee"    />
+        <result property="moneyPaid"    column="money_paid"    />
+        <result property="discount"    column="discount"    />
+        <result property="payTime"    column="pay_time"    />
+        <result property="manufacturerId"    column="manufacturer_id"    />
+        <result property="deliveryDate"    column="delivery_date"    />
+        <result property="mes"    column="mes"    />
+        <result property="mesTime"    column="mes_time"    />
+        <result property="logisticCode"    column="logistic_code"    />
+        <result property="isWithdraw"    column="is_withdraw"    />
+        <result property="userCode"    column="user_code"    />
+        <result property="userOrgCode"    column="user_org_code"    />
+        <result property="transferStatus"    column="transfer_status"    />
+        <result property="snapshot"    column="snapshot"    />
+        <result property="transferFrom"    column="transfer_from"    />
+        <result property="settleOrderAmount"    column="settle_order_amount"    />
+        <result property="type"    column="type"    />
+        <result property="outOrderNo"    column="out_order_no"    />
         <result property="orderTime"    column="order_time"    />
         <result property="deliveryTime"    column="delivery_time"    />
         <result property="templateId"    column="template_id"    />
@@ -45,6 +69,30 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             A.contact,
             A.contact_tel,
             A.delivery_address,
+            A.order_sn,
+            A.client_id,
+            A.consignee,
+            A.address,
+            A.tel,
+            A.order_amount,
+            A.shipping_fee,
+            A.money_paid,
+            A.discount,
+            A.pay_time,
+            A.manufacturer_id,
+            A.delivery_date,
+            A.mes,
+            A.mes_time,
+            A.logistic_code,
+            A.is_withdraw,
+            A.user_code,
+            A.user_org_code,
+            A.transfer_status,
+            A.snapshot,
+            A.transfer_from,
+            A.settle_order_amount,
+            A.type,
+            A.out_order_no,
             A.order_time,
             A.delivery_time,
             A.template_id,

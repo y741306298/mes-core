@@ -59,6 +59,13 @@
             </el-row>
             <el-row>
               <el-col :span="24">
+                <el-form-item label="来源单号" prop="orderSn">
+                  <el-input v-model="form.orderSn" placeholder="请输入来源系统单号" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col :span="24">
                 <el-form-item label="交货日期" prop="deliveryTime">
                   <el-date-picker class="drag-screenful-contnet" v-model="form.deliveryTime" type="date"
                     value-format="yyyy-MM-dd" placeholder="请选择交货日期">
@@ -553,6 +560,7 @@
         this.form = {
           orderId: null,
           orderNo: null,
+          orderSn: null,
           customerId: null,
           contact: null,
           contactTel: null,

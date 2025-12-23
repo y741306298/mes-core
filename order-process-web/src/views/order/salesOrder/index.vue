@@ -15,6 +15,9 @@
           start-placeholder="开始日期" end-placeholder="结束日期">
         </el-date-picker>
       </el-form-item>
+      <el-form-item label="来源单号" prop="orderSn">
+        <el-input v-model="queryParams.orderSn" placeholder="请输入来源单号" clearable @keyup.enter.native="handleQuery" />
+      </el-form-item>
       <el-form-item label="客户名称" prop="customerId">
         <el-select v-model="queryParams.customerId" placeholder="请输入客户名称" clearable filterable>
           <el-option v-for="(item, index) in customerList" :value="item.customerId"
@@ -189,6 +192,7 @@ export default {
         pageNum: 1,
         pageSize: 10,
         orderNo: null,
+        orderSn: null,
         customerId: null,
         contact: null,
         contactTel: null,
@@ -217,6 +221,13 @@ export default {
         align: "center",
         type: "other",
         width: 150
+      },
+      {
+        label: "来源单号",
+        prop: "orderSn",
+        visible: true,
+        align: "center",
+        width: 180
       },
       {
         label: "客户名称",

@@ -15,6 +15,9 @@
           end-placeholder="结束日期">
         </el-date-picker>
       </el-form-item>
+      <el-form-item label="来源单号" prop="orderSn">
+        <el-input v-model="queryParams.orderSn" placeholder="请输入来源单号" clearable @keyup.enter.native="handleQuery" />
+      </el-form-item>
       <el-form-item label="单号" prop="orderNo">
         <el-input v-model="queryParams.orderNo" placeholder="请输入单号" clearable @keyup.enter.native="handleQuery" />
       </el-form-item>
@@ -115,6 +118,7 @@
           pageNum: 1,
           pageSize: 10,
           orderNo: null,
+          orderSn: null,
           customerId: null,
           contact: null,
           contactTel: null,
@@ -143,6 +147,13 @@
             align: "center",
             type: "other",
             width: 150
+          },
+          {
+            label: "来源单号",
+            prop: "orderSn",
+            visible: true,
+            align: "center",
+            width: 180
           },
           {
             label: "日期",
