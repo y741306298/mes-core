@@ -3,22 +3,27 @@ package com.brt.hub.controller;
 import com.alibaba.fastjson2.JSON;
 import com.brt.common.utils.MD5Util;
 import com.brt.common.utils.Sha256;
+import com.brt.common.core.domain.AjaxResult;
 import com.brt.dto.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.util.Base64Utils;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @RestController
 @RequestMapping("/hub")
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
+@Slf4j
 public class HubProductionController {
 
     //hub平台为api用户预先配置的 <api用户名, api密码>
@@ -84,26 +89,61 @@ public class HubProductionController {
 //        String response = callBiz5(authResponse);
 
 //        String response = callBiz5(authResponse);
-        String response = manuMatList(authResponse);
+        String response = manuMatList(authResponse, null);
         List<Mat> matList = JSON.parseArray(response, Mat.class);
 
-        response = manuProdList(authResponse);
+        response = manuProdList(authResponse, null);
         List<Prod> prodList = JSON.parseArray(response, Prod.class);
 
-        response = manuProcList(authResponse);
+        response = manuProcList(authResponse, null);
         List<Proc> procList = JSON.parseArray(response, Proc.class);
         return "ok";
     }
 
-    private String manuMatList(AuthResponse authResponse) {
+    @GetMapping("/manuMatList")
+    public AjaxResult manuMatList(@RequestParam(value = "manufacturerCode", required = false) String manufacturerCode) {
+        try {
+            AuthResponse authResponse = getAuth();
+            List<Mat> mats = JSON.parseArray(manuMatList(authResponse, manufacturerCode), Mat.class);
+            return AjaxResult.success(mats);
+        } catch (Exception ex) {
+            log.error("查询材料列表失败", ex);
+            return AjaxResult.error("查询材料列表失败");
+        }
+    }
+
+    @GetMapping("/manuProdList")
+    public AjaxResult manuProdList(@RequestParam(value = "manufacturerCode", required = false) String manufacturerCode) {
+        try {
+            AuthResponse authResponse = getAuth();
+            List<Prod> prods = JSON.parseArray(manuProdList(authResponse, manufacturerCode), Prod.class);
+            return AjaxResult.success(prods);
+        } catch (Exception ex) {
+            log.error("查询产品列表失败", ex);
+            return AjaxResult.error("查询产品列表失败");
+        }
+    }
+
+    @GetMapping("/manuProcList")
+    public AjaxResult manuProcList(@RequestParam(value = "manufacturerCode", required = false) String manufacturerCode) {
+        try {
+            AuthResponse authResponse = getAuth();
+            List<Proc> procs = JSON.parseArray(manuProcList(authResponse, manufacturerCode), Proc.class);
+            return AjaxResult.success(procs);
+        } catch (Exception ex) {
+            log.error("查询工艺列表失败", ex);
+            return AjaxResult.error("查询工艺列表失败");
+        }
+    }
+
+    private String manuMatList(AuthResponse authResponse, String manufacturerCode) {
         HttpHeaders headers = new HttpHeaders();
         MediaType type = MediaType.parseMediaType("application/json; charset=UTF-8");
         headers.setContentType(type);
         headers.add("Authorization", AUTHORIZATION_PREFIX + authResponse.getToken());
         HttpEntity entity = new HttpEntity(null, headers);
 
-        //String bizTestUrl = "http://" + HUB_HOST + ":" + HUB_PORT + "/business/manufacturers?client_code=CL10200&addr_id=330783004&manufacturer_type=喷印输出中心";
-        String bizTestUrl = "http://" + HUB_HOST + ":" + HUB_PORT + "/business/manumatlist?manufacturer_code=SP2000100";
+        String bizTestUrl = "http://" + HUB_HOST + ":" + HUB_PORT + "/business/manumatlist?manufacturer_code=" + getManufacturerCode(manufacturerCode);
 
 
         RestTemplate restTemplate = new RestTemplate();
@@ -112,15 +152,14 @@ public class HubProductionController {
         return body;
     }
 
-    private String manuProdList(AuthResponse authResponse) {
+    private String manuProdList(AuthResponse authResponse, String manufacturerCode) {
         HttpHeaders headers = new HttpHeaders();
         MediaType type = MediaType.parseMediaType("application/json; charset=UTF-8");
         headers.setContentType(type);
         headers.add("Authorization", AUTHORIZATION_PREFIX + authResponse.getToken());
         HttpEntity entity = new HttpEntity(null, headers);
 
-        //String bizTestUrl = "http://" + HUB_HOST + ":" + HUB_PORT + "/business/manufacturers?client_code=CL10200&addr_id=330783004&manufacturer_type=喷印输出中心";
-        String bizTestUrl = "http://" + HUB_HOST + ":" + HUB_PORT + "/business/manuprodlist?manufacturer_code=SP2000100";
+        String bizTestUrl = "http://" + HUB_HOST + ":" + HUB_PORT + "/business/manuprodlist?manufacturer_code=" + getManufacturerCode(manufacturerCode);
 
 
         RestTemplate restTemplate = new RestTemplate();
@@ -129,15 +168,14 @@ public class HubProductionController {
         return body;
     }
 
-    private String manuProcList(AuthResponse authResponse) {
+    private String manuProcList(AuthResponse authResponse, String manufacturerCode) {
         HttpHeaders headers = new HttpHeaders();
         MediaType type = MediaType.parseMediaType("application/json; charset=UTF-8");
         headers.setContentType(type);
         headers.add("Authorization", AUTHORIZATION_PREFIX + authResponse.getToken());
         HttpEntity entity = new HttpEntity(null, headers);
 
-        //String bizTestUrl = "http://" + HUB_HOST + ":" + HUB_PORT + "/business/manufacturers?client_code=CL10200&addr_id=330783004&manufacturer_type=喷印输出中心";
-        String bizTestUrl = "http://" + HUB_HOST + ":" + HUB_PORT + "/business/processlist?manufacturer_code=SP2000100";
+        String bizTestUrl = "http://" + HUB_HOST + ":" + HUB_PORT + "/business/processlist?manufacturer_code=" + getManufacturerCode(manufacturerCode);
 
 
         RestTemplate restTemplate = new RestTemplate();
@@ -348,5 +386,10 @@ public class HubProductionController {
 //        authResponse.setRandomKey("ag8q5k");
 //        authResponse.setToken("eyJhbGciOiJIUzUxMiJ9.eyJyYW5kb21LZXkiOiJhZzhxNWsiLCJzdWIiOiJTUE1FUzAwMDEiLCJleHAiOjE2OTc2MjM0NDEsImlhdCI6MTY5NzAxODY0MX0.69VmYWXV0BjOu_g8LGS1_e7q843fr30v0KGRz1G-YrKtwXpwnqhPjv8KKA6bD--KJ39dAEWVpDN-gTWR9tqJ1g");
 //        return authResponse;
+    }
+
+    private String getManufacturerCode(String manufacturerCode) {
+        return Optional.ofNullable(StringUtils.hasText(manufacturerCode) ? manufacturerCode : null)
+                .orElse("SP2000100");
     }
 }
