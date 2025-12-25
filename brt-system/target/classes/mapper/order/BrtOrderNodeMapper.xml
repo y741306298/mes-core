@@ -27,6 +27,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="nodePrincipal"    column="node_principal"    />
         <result property="timeout"    column="timeout"    />
         <result property="triggerMode"    column="trigger_mode"    />
+        <result property="interfaceType"    column="interface_type"    />
+        <result property="callbackUrl"    column="callback_url"    />
         <association property="flowNodeVo" javaType="com.brt.order.vo.BrtFlowNodeVo" column="node_id" select="com.brt.order.mapper.BrtFlowNodeMapper.queryBrtFlowNodeByNodeId" />
         <association property="user" javaType="com.brt.common.core.domain.entity.SysUser" column="user_id" select="com.brt.system.mapper.SysUserMapper.selectUserById" />
         <association property="nodePrincipalVo" javaType="com.brt.common.core.domain.entity.SysUser" column="node_principal" select="com.brt.system.mapper.SysUserMapper.selectUserById" />
@@ -66,7 +68,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             A.update_by,
             A.create_id,
             A.child_id,
-            A.trigger_mode
+            A.trigger_mode,
+            A.interface_type,
+            A.callback_url
     </sql>
 
     <sql id="brtOrderNodeQuerySql">
@@ -93,6 +97,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         A.create_by,
         A.update_time,
         A.update_by,
+        A.interface_type,
+        A.callback_url,
         A.trigger_mode,
         T.order_no,
         T.customer_id,
@@ -148,6 +154,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         A.create_by,
         A.update_time,
         A.update_by,
+        A.interface_type,
+        A.callback_url,
         A.trigger_mode,
         T.order_no,
         T.customer_id,
