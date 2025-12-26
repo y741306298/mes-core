@@ -1,24 +1,38 @@
 package com.brt.hub.controller;
 
 import com.alibaba.fastjson2.JSON;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.brt.common.core.domain.AjaxResult;
+import com.brt.common.core.page.TableDataInfo;
 import com.brt.common.utils.MD5Util;
 import com.brt.common.utils.Sha256;
-import com.brt.common.core.domain.AjaxResult;
+import com.brt.hub.domain.HubMat;
+import com.brt.hub.domain.HubProc;
+import com.brt.hub.domain.HubProd;
+import com.brt.hub.service.IHubMatService;
+import com.brt.hub.service.IHubProcService;
+import com.brt.hub.service.IHubProdService;
+import com.brt.hub.vo.HubMatVo;
+import com.brt.hub.vo.HubProcVo;
+import com.brt.hub.vo.HubProdVo;
 import com.brt.dto.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.util.Base64Utils;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/hub")
@@ -49,94 +63,136 @@ public class HubProductionController {
     private final static String HUB_HOST = "139.196.181.226";//测试
     private final static Integer HUB_PORT = 8070;
 
-    @GetMapping("/json")
-    public ResponseEntity<String> json() {
-        String json = "[{\"name\":\"glk\", \"age\":42, \"children\":[{\"name\":\"a\", \"age\":1},{\"name\":\"b\",\"age\":2}]}]";
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(json);
-//        People people = new People();
-//        people.setName("John");
-//        people.setAge(30);
-//        return ResponseEntity.ok(people);
-    }
+    private final IHubMatService hubMatService;
+    private final IHubProdService hubProdService;
+    private final IHubProcService hubProcService;
 
     @GetMapping("/test")
-    public String test() {
-        /**
-         * 1.API用户获取身份鉴权信息
-         */
+    public AjaxResult syncHubData() {
+        try {
+            doSyncHubData();
+            return AjaxResult.success("同步完成");
+        } catch (Exception ex) {
+            log.error("同步Hub数据失败", ex);
+            return AjaxResult.error("同步失败");
+        }
+    }
+
+    @Scheduled(cron = "0 30 5 * * ?")
+    public void autoSyncHubData() {
+        try {
+            doSyncHubData();
+        } catch (Exception ex) {
+            log.error("定时同步Hub数据失败", ex);
+        }
+    }
+
+    public void doSyncHubData() {
         AuthResponse authResponse = getAuth();
 
-        /**
-         * 2.API用户调用业务API
-         */
-//        BizDTO bizDTO = new BizDTO();
-//        bizDTO.setName("Joe");
-//        String response1 = callBiz1(authResponse, bizDTO);
+        List<Mat> matList = JSON.parseArray(fetchManuMatList(authResponse, null), Mat.class);
+        List<Prod> prodList = JSON.parseArray(fetchManuProdList(authResponse, null), Prod.class);
+        List<Proc> procList = JSON.parseArray(fetchManuProcList(authResponse, null), Proc.class);
 
-//        Integer pageNo = 1;
-//        while (true) {
-//            String response2 = callBiz2(authResponse, pageNo);
-//            pageNo += 1;
-//            if (pageNo > 500) {
-//                break;
-//            }
-//        }
-
-//        String response = callBiz3(authResponse);
-
-//        String response = callBiz5(authResponse);
-
-//        String response = callBiz5(authResponse);
-        String response = manuMatList(authResponse, null);
-        List<Mat> matList = JSON.parseArray(response, Mat.class);
-
-        response = manuProdList(authResponse, null);
-        List<Prod> prodList = JSON.parseArray(response, Prod.class);
-
-        response = manuProcList(authResponse, null);
-        List<Proc> procList = JSON.parseArray(response, Proc.class);
-        return "ok";
+        refreshMatList(matList);
+        refreshProdList(prodList);
+        refreshProcList(procList);
     }
 
     @GetMapping("/manuMatList")
-    public AjaxResult manuMatList(@RequestParam(value = "manufacturerCode", required = false) String manufacturerCode) {
-        try {
-            AuthResponse authResponse = getAuth();
-            List<Mat> mats = JSON.parseArray(manuMatList(authResponse, manufacturerCode), Mat.class);
-            return AjaxResult.success(mats);
-        } catch (Exception ex) {
-            log.error("查询材料列表失败", ex);
-            return AjaxResult.error("查询材料列表失败");
-        }
+    public TableDataInfo<HubMatVo> manuMatList(HubMatVo hubMatVo) {
+        return hubMatService.queryHubMatList(hubMatVo);
     }
 
     @GetMapping("/manuProdList")
-    public AjaxResult manuProdList(@RequestParam(value = "manufacturerCode", required = false) String manufacturerCode) {
-        try {
-            AuthResponse authResponse = getAuth();
-            List<Prod> prods = JSON.parseArray(manuProdList(authResponse, manufacturerCode), Prod.class);
-            return AjaxResult.success(prods);
-        } catch (Exception ex) {
-            log.error("查询产品列表失败", ex);
-            return AjaxResult.error("查询产品列表失败");
-        }
+    public TableDataInfo<HubProdVo> manuProdList(HubProdVo hubProdVo) {
+        return hubProdService.queryHubProdList(hubProdVo);
     }
 
     @GetMapping("/manuProcList")
-    public AjaxResult manuProcList(@RequestParam(value = "manufacturerCode", required = false) String manufacturerCode) {
-        try {
-            AuthResponse authResponse = getAuth();
-            List<Proc> procs = JSON.parseArray(manuProcList(authResponse, manufacturerCode), Proc.class);
-            return AjaxResult.success(procs);
-        } catch (Exception ex) {
-            log.error("查询工艺列表失败", ex);
-            return AjaxResult.error("查询工艺列表失败");
-        }
+    public TableDataInfo<HubProcVo> manuProcList(HubProcVo hubProcVo) {
+        return hubProcService.queryHubProcList(hubProcVo);
     }
 
-    private String manuMatList(AuthResponse authResponse, String manufacturerCode) {
+    private void refreshMatList(List<Mat> matList) {
+        if (CollectionUtils.isEmpty(matList)) {
+            log.warn("未获取到材料数据，跳过同步");
+            return;
+        }
+        hubMatService.remove(Wrappers.emptyWrapper());
+        List<HubMat> hubMats = matList.stream()
+                .map(mat -> new HubMat()
+                        .setMatCode(mat.getMat_code())
+                        .setMatName(mat.getMat_name())
+                        .setMatCategory(mat.getMat_category())
+                        .setMatColor(mat.getMat_color())
+                        .setMatBrand(mat.getMat_brand())
+                        .setMatSupplier(mat.getMat_supplier())
+                        .setMatWidth(mat.getMat_width())
+                        .setMatLength(mat.getMat_length())
+                        .setMatThickness(mat.getMat_thickness())
+                        .setPackageName(mat.getPackage_name())
+                        .setMeasureUnitInt(mat.getMeasure_unitInt())
+                        .setMeasureUnit(mat.getMeasure_unit())
+                        .setUnitWeight(mat.getUnit_weight())
+                        .setUnitPrice(mat.getUnit_price())
+                        .setValid(mat.getIs_valid())
+                        .setComments(mat.getComments()))
+                .collect(Collectors.toList());
+        hubMatService.saveBatch(hubMats);
+    }
+
+    private void refreshProdList(List<Prod> prodList) {
+        if (CollectionUtils.isEmpty(prodList)) {
+            log.warn("未获取到产品数据，跳过同步");
+            return;
+        }
+        hubProdService.remove(Wrappers.emptyWrapper());
+        List<HubProd> hubProds = prodList.stream()
+                .map(prod -> new HubProd()
+                        .setProdCode(prod.getProd_code())
+                        .setProdType(prod.getProd_type())
+                        .setProdName(prod.getProd_name())
+                        .setMinLength(prod.getMin_length())
+                        .setMaxLength(prod.getMax_length())
+                        .setMinWidth(prod.getMin_width())
+                        .setMaxWidth(prod.getMax_width())
+                        .setMaterialCode(prod.getMaterial_code())
+                        .setMaterialName(prod.getMaterial_name())
+                        .setMaterialColor(prod.getMaterial_color())
+                        .setMaterialBrand(prod.getMaterial_brand())
+                        .setMaterialSupplier(prod.getMaterial_supplier())
+                        .setMeasureUnitInt(prod.getMeasure_unitInt())
+                        .setMeasureUnit(prod.getMeasure_unit())
+                        .setUnitWeight(prod.getUnit_weight())
+                        .setAdditionalUnitfee(prod.getAdditional_unitfee())
+                        .setComments(prod.getComments())
+                        .setMerchandise(prod.getIs_merchandise()))
+                .collect(Collectors.toList());
+        hubProdService.saveBatch(hubProds);
+    }
+
+    private void refreshProcList(List<Proc> procList) {
+        if (CollectionUtils.isEmpty(procList)) {
+            log.warn("未获取到工艺数据，跳过同步");
+            return;
+        }
+        hubProcService.remove(Wrappers.emptyWrapper());
+        List<HubProc> hubProcs = procList.stream()
+                .map(proc -> new HubProc()
+                        .setProcCode(proc.getProc_code())
+                        .setProcName(proc.getProc_name())
+                        .setProcAttachmentTypeList(proc.getProc_attachmentTypeList())
+                        .setMeasureUnit(proc.getMeasure_unit())
+                        .setMeasureUnitStr(proc.getMeasure_unitStr())
+                        .setProcPrice(proc.getProc_price())
+                        .setValid(proc.getIs_valid())
+                        .setComments(proc.getComments()))
+                .collect(Collectors.toList());
+        hubProcService.saveBatch(hubProcs);
+    }
+
+    private String fetchManuMatList(AuthResponse authResponse, String manufacturerCode) {
         HttpHeaders headers = new HttpHeaders();
         MediaType type = MediaType.parseMediaType("application/json; charset=UTF-8");
         headers.setContentType(type);
@@ -152,7 +208,7 @@ public class HubProductionController {
         return body;
     }
 
-    private String manuProdList(AuthResponse authResponse, String manufacturerCode) {
+    private String fetchManuProdList(AuthResponse authResponse, String manufacturerCode) {
         HttpHeaders headers = new HttpHeaders();
         MediaType type = MediaType.parseMediaType("application/json; charset=UTF-8");
         headers.setContentType(type);
@@ -168,7 +224,7 @@ public class HubProductionController {
         return body;
     }
 
-    private String manuProcList(AuthResponse authResponse, String manufacturerCode) {
+    private String fetchManuProcList(AuthResponse authResponse, String manufacturerCode) {
         HttpHeaders headers = new HttpHeaders();
         MediaType type = MediaType.parseMediaType("application/json; charset=UTF-8");
         headers.setContentType(type);

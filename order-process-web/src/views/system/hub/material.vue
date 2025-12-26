@@ -6,12 +6,20 @@
       size="small"
       :inline="true"
       v-show="showSearch"
-      label-width="120px"
+      label-width="80px"
     >
-      <el-form-item label="生产方编码" prop="manufacturerCode">
+      <el-form-item label="材料编码" prop="matCode">
         <el-input
-          v-model="queryParams.manufacturerCode"
-          placeholder="请输入生产方编码"
+          v-model="queryParams.matCode"
+          placeholder="请输入材料编码"
+          clearable
+          @keyup.enter.native="handleQuery"
+        />
+      </el-form-item>
+      <el-form-item label="材料名称" prop="matName">
+        <el-input
+          v-model="queryParams.matName"
+          placeholder="请输入材料名称"
           clearable
           @keyup.enter.native="handleQuery"
         />
@@ -25,25 +33,33 @@
     <right-toolbar :showSearch.sync="showSearch" @queryTable="getList" />
 
     <el-table v-loading="loading" :data="list">
-      <el-table-column label="材料编码" align="center" prop="mat_code" width="160" />
-      <el-table-column label="材料名称" align="center" prop="mat_name" width="180" />
-      <el-table-column label="类别" align="center" prop="mat_category" width="120" />
-      <el-table-column label="颜色" align="center" prop="mat_color" width="120" />
-      <el-table-column label="品牌" align="center" prop="mat_brand" width="120" />
-      <el-table-column label="供应商" align="center" prop="mat_supplier" width="140" />
-      <el-table-column label="宽度" align="center" prop="mat_width" width="120" />
-      <el-table-column label="长度" align="center" prop="mat_length" width="120" />
-      <el-table-column label="厚度" align="center" prop="mat_thickness" width="120" />
-      <el-table-column label="计量单位" align="center" prop="measure_unit" width="120" />
-      <el-table-column label="单位重量" align="center" prop="unit_weight" width="120" />
-      <el-table-column label="单价" align="center" prop="unit_price" width="120" />
-      <el-table-column label="是否有效" align="center" prop="is_valid" width="100">
+      <el-table-column label="材料编码" align="center" prop="matCode" width="160" />
+      <el-table-column label="材料名称" align="center" prop="matName" width="180" />
+      <el-table-column label="类别" align="center" prop="matCategory" width="120" />
+      <el-table-column label="颜色" align="center" prop="matColor" width="120" />
+      <el-table-column label="品牌" align="center" prop="matBrand" width="120" />
+      <el-table-column label="供应商" align="center" prop="matSupplier" width="140" />
+      <el-table-column label="宽度" align="center" prop="matWidth" width="120" />
+      <el-table-column label="长度" align="center" prop="matLength" width="120" />
+      <el-table-column label="厚度" align="center" prop="matThickness" width="120" />
+      <el-table-column label="计量单位" align="center" prop="measureUnit" width="120" />
+      <el-table-column label="单位重量" align="center" prop="unitWeight" width="120" />
+      <el-table-column label="单价" align="center" prop="unitPrice" width="120" />
+      <el-table-column label="是否有效" align="center" prop="valid" width="100">
         <template slot-scope="scope">
-          <dict-tag :options="validOptions" :value="scope.row.is_valid" />
+          <dict-tag :options="validOptions" :value="scope.row.valid" />
         </template>
       </el-table-column>
       <el-table-column label="备注" align="center" prop="comments" min-width="180" show-overflow-tooltip />
     </el-table>
+
+    <pagination
+      v-show="total > 0"
+      :total="total"
+      :page.sync="queryParams.pageNum"
+      :limit.sync="queryParams.pageSize"
+      @pagination="getList"
+    />
   </div>
 </template>
 
@@ -57,8 +73,12 @@ export default {
       loading: false,
       showSearch: true,
       list: [],
+      total: 0,
       queryParams: {
-        manufacturerCode: ''
+        pageNum: 1,
+        pageSize: 10,
+        matCode: '',
+        matName: ''
       },
       validOptions: [
         { label: '是', value: true },
@@ -73,16 +93,19 @@ export default {
     getList() {
       this.loading = true
       manuMatList(this.queryParams).then(response => {
-        this.list = response.data || []
+        this.list = response.rows || []
+        this.total = response.total || 0
       }).finally(() => {
         this.loading = false
       })
     },
     handleQuery() {
+      this.queryParams.pageNum = 1
       this.getList()
     },
     resetQuery() {
       this.resetForm('queryForm')
+      this.queryParams.pageNum = 1
       this.handleQuery()
     }
   }
