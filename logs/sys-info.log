@@ -189,3 +189,30 @@ java.io.IOException: 杩滅▼涓绘満寮鸿揩鍏抽棴浜嗕竴涓幇鏈�
 19:25:40.913 [restartedMain] INFO  o.q.c.QuartzScheduler - [start,547] - Scheduler quartzScheduler_$_NON_CLUSTERED started.
 19:25:40.923 [restartedMain] INFO  c.b.RuoYiApplication - [logStarted,61] - Started RuoYiApplication in 14.524 seconds (JVM running for 522.139)
 19:28:59.172 [SpringApplicationShutdownHook] INFO  o.q.c.QuartzScheduler - [standby,585] - Scheduler quartzScheduler_$_NON_CLUSTERED paused.
+19:38:54.496 [restartedMain] INFO  c.b.RuoYiApplication - [logStarting,55] - Starting RuoYiApplication using Java 1.8.0_322 on LAPTOP-E35JHJUB with PID 5860 (D:\work\order-process-main\brt-admin\target\classes started by dada in D:\work\order-process-main)
+19:38:54.500 [restartedMain] INFO  c.b.RuoYiApplication - [logStartupProfileInfo,686] - The following 2 profiles are active: "druid", "dev"
+19:38:54.502 [background-preinit] INFO  o.h.v.i.util.Version - [<clinit>,21] - HV000001: Hibernate Validator 6.2.3.Final
+19:38:56.801 [restartedMain] INFO  o.a.c.h.Http11NioProtocol - [log,173] - Initializing ProtocolHandler ["http-nio-8080"]
+19:38:56.801 [restartedMain] INFO  o.a.c.c.StandardService - [log,173] - Starting service [Tomcat]
+19:38:56.802 [restartedMain] INFO  o.a.c.c.StandardEngine - [log,173] - Starting Servlet engine: [Apache Tomcat/9.0.63]
+19:38:56.892 [restartedMain] INFO  o.a.c.c.C.[.[.[/order-process-server] - [log,173] - Initializing Spring embedded WebApplicationContext
+19:39:03.634 [restartedMain] INFO  c.a.d.p.DruidDataSource - [init,996] - {dataSource-1} inited
+19:39:12.552 [restartedMain] INFO  o.q.i.StdSchedulerFactory - [instantiate,1220] - Using default implementation for ThreadExecutor
+19:39:12.576 [restartedMain] INFO  o.q.c.SchedulerSignalerImpl - [<init>,61] - Initialized Scheduler Signaller of type: class org.quartz.core.SchedulerSignalerImpl
+19:39:12.577 [restartedMain] INFO  o.q.c.QuartzScheduler - [<init>,229] - Quartz Scheduler v.2.3.2 created.
+19:39:12.579 [restartedMain] INFO  o.q.s.RAMJobStore - [initialize,155] - RAMJobStore initialized.
+19:39:12.581 [restartedMain] INFO  o.q.c.QuartzScheduler - [initialize,294] - Scheduler meta-data: Quartz Scheduler (v2.3.2) 'quartzScheduler' with instanceId 'NON_CLUSTERED'
+  Scheduler class: 'org.quartz.core.QuartzScheduler' - running locally.
+  NOT STARTED.
+  Currently in standby mode.
+  Number of jobs executed: 0
+  Using thread pool 'org.quartz.simpl.SimpleThreadPool' - with 10 threads.
+  Using job-store 'org.quartz.simpl.RAMJobStore' - which does not support persistence. and is not clustered.
+
+19:39:12.581 [restartedMain] INFO  o.q.i.StdSchedulerFactory - [instantiate,1374] - Quartz scheduler 'quartzScheduler' initialized from an externally provided properties instance.
+19:39:12.581 [restartedMain] INFO  o.q.i.StdSchedulerFactory - [instantiate,1378] - Quartz scheduler version: 2.3.2
+19:39:12.582 [restartedMain] INFO  o.q.c.QuartzScheduler - [setJobFactory,2293] - JobFactory set to: org.springframework.scheduling.quartz.SpringBeanJobFactory@38c32993
+19:39:15.087 [restartedMain] INFO  o.a.c.h.Http11NioProtocol - [log,173] - Starting ProtocolHandler ["http-nio-8080"]
+19:39:15.610 [restartedMain] INFO  o.q.c.QuartzScheduler - [start,547] - Scheduler quartzScheduler_$_NON_CLUSTERED started.
+19:39:15.628 [restartedMain] INFO  c.b.RuoYiApplication - [logStarted,61] - Started RuoYiApplication in 21.572 seconds (JVM running for 23.602)
+19:39:19.819 [SpringApplicationShutdownHook] INFO  o.q.c.QuartzScheduler - [standby,585] - Scheduler quartzScheduler_$_NON_CLUSTERED paused.
