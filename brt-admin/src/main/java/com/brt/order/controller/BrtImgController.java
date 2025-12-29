@@ -13,6 +13,7 @@ import java.util.concurrent.Executor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -95,7 +96,7 @@ public class BrtImgController {
     private void submitAsyncRequest(String path, Object body, String recordId) {
         taskExecutor.execute(() -> {
             try {
-                restTemplate.postForEntity(mattingBaseUrl + path, body, Void.class);
+                ResponseEntity<String> voidResponseEntity = restTemplate.postForEntity(mattingBaseUrl + path, body, String.class);
                 callRecordService.lambdaUpdate()
                     .eq(BrtCommonCallRecord::getRecordId, recordId)
                     .set(BrtCommonCallRecord::getStatus, "SENT")
