@@ -54,7 +54,8 @@ spring:
     # 国际化资源文件路径
     basename: i18n/messages
   profiles:
-    active: druid,dev
+    active: dev
+    include: druid
   # 文件上传
   servlet:
     multipart:
@@ -136,3 +137,13 @@ xss:
   excludes: /system/notice
   # 匹配链接
   urlPatterns: /system/*,/monitor/*,/tool/*
+
+# 助通科技 短信
+zt:
+  userName: ${ZT_USERNAME:}
+  passWord: ${ZT_PASSWORD:}
+  signature: ${ZT_SIGNATURE:}
+  signID: ${ZT_SIGN_ID:}
+  templateID: ${ZT_TEMPLATE_ID:}
+  url:
+    template: ${ZT_TEMPLATE_URL:https://api.mix2.zthysms.com/v2/sendSmsTp}
