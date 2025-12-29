@@ -22,6 +22,7 @@ import org.springframework.web.client.RestTemplate;
 @Slf4j
 public class BrtImgController {
 
+    private static final String callbackBaseUrl = "http://118.31.58.44:8080/order-process-server/img/";
     private static final String mattingBaseUrl = "http://101.132.41.254:9929/";
 
     @Qualifier("threadPoolTaskExecutor")
@@ -32,14 +33,30 @@ public class BrtImgController {
     @PostMapping("/svgMatting")
     public SvgMattingResponse svgMatting(@RequestBody SvgMattingRequest request) {
         log.info("接收到svgMatting请求: {}", request);
-        submitAsyncRequest("svgMatting", request);
+        request.setImgFileName("svg/test/yazi.png");
+        request.setSvgFileName("svg/test/4.svg");
+        request.setOssCode("photoai");
+        request.setResultDir("svg/temp");
+        request.setCallbackUrl(callbackBaseUrl + "svgMattingCallback");
+        request.setSplit(false);
+        submitAsyncRequest("img/split", request);
         return SvgMattingResponse.ok();
     }
 
     @PostMapping("/svgMattingCutting")
     public SvgMattingResponse svgMattingCutting(@RequestBody SvgMattingCuttingRequest request) {
         log.info("接收到svgMattingCutting请求: {}", request);
-        submitAsyncRequest("svgMattingCutting", request);
+        request.setImgFileName("svg/test/yazi.png");
+        request.setSvgFileName("svg/test/yazi1.svg");
+        request.setOssCode("photoai");
+        request.setResultDir("svg/temp");
+        request.setCallbackUrl(callbackBaseUrl + "svgMattingCallback");
+        request.setSplit(false);
+        request.setStartX(500);
+        request.setStartY(500);
+        request.setEndX(1000);
+        request.setEndY(1000);
+        submitAsyncRequest("img/cut", request);
         return SvgMattingResponse.ok();
     }
 
