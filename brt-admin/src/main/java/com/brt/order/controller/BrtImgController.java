@@ -10,7 +10,6 @@ import com.brt.order.dto.SvgMattingResponse;
 import com.brt.order.service.IBrtCommonCallRecordService;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import java.util.concurrent.Executor;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -24,19 +23,25 @@ import org.springframework.web.client.RestTemplate;
 
 @RestController
 @RequestMapping("/img")
-@RequiredArgsConstructor(onConstructor_ = @Autowired)
 @Slf4j
 public class BrtImgController {
 
     private static final String callbackBaseUrl = "http://118.31.58.44:8080/order-process-server/img/";
     private static final String mattingBaseUrl = "http://101.132.41.254:9929/";
 
-    @Qualifier("threadPoolTaskExecutor")
     private final Executor taskExecutor;
 
     private final IBrtCommonCallRecordService callRecordService;
 
     private final RestTemplate restTemplate = new RestTemplate();
+
+    @Autowired
+    public BrtImgController(
+        @Qualifier("threadPoolTaskExecutor") Executor taskExecutor,
+        IBrtCommonCallRecordService callRecordService) {
+        this.taskExecutor = taskExecutor;
+        this.callRecordService = callRecordService;
+    }
 
     @PostMapping("/svgMatting")
     public SvgMattingResponse svgMatting(@RequestBody SvgMattingRequest request) {
