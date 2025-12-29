@@ -1,5 +1,6 @@
 package com.brt.order.controller;
 
+import com.brt.common.annotation.Anonymous;
 import com.brt.common.core.domain.AjaxResult;
 import com.alibaba.fastjson2.JSON;
 import com.brt.order.domain.BrtCommonCallRecord;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
+@Anonymous
 @RestController
 @RequestMapping("/img")
 @Slf4j
