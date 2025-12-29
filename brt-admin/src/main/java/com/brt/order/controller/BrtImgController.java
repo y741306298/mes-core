@@ -27,7 +27,7 @@ import org.springframework.web.client.RestTemplate;
 @Slf4j
 public class BrtImgController {
 
-    private static final String callbackBaseUrl = "http://118.31.58.44:8080/order-process-server/img/";
+    private static final String callbackBaseUrl = "http://118.31.58.44:9030/order-process-server/img/";
     private static final String mattingBaseUrl = "http://101.132.41.254:9929/";
 
     private final Executor taskExecutor;
