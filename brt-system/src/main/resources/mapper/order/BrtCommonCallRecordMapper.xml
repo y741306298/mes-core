@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtCommonCallRecordMapper">
+
+    <resultMap type="com.brt.order.domain.BrtCommonCallRecord" id="BrtCommonCallRecordResult">
+        <result property="recordId" column="record_id" />
+        <result property="interfaceName" column="interface_name" />
+        <result property="requestPath" column="request_path" />
+        <result property="callbackUrl" column="callback_url" />
+        <result property="requestPayload" column="request_payload" />
+        <result property="callbackPayload" column="callback_payload" />
+        <result property="status" column="status" />
+        <result property="errorMessage" column="error_message" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+    </resultMap>
+
+    <sql id="BrtCommonCallRecordColumns">
+        record_id,
+        interface_name,
+        request_path,
+        callback_url,
+        request_payload,
+        callback_payload,
+        status,
+        error_message,
+        create_by,
+        create_time,
+        update_by,
+        update_time
+    </sql>
+
+    <select id="selectById" resultMap="BrtCommonCallRecordResult">
+        select <include refid="BrtCommonCallRecordColumns"/>
+        from brt_common_call_record
+        where record_id = #{id}
+    </select>
+
+</mapper>
+
