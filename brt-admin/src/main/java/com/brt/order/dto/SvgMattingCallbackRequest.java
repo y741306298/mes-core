@@ -16,4 +16,7 @@ public class SvgMattingCallbackRequest {
 
     @JsonProperty("error_message")
     private String errorMessage;
+
+    @JsonProperty("record_id")
+    private String recordId;
 }

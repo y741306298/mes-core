@@ -1,6 +1,24 @@
 -- ----------------------------
 -- Table structure for brt_task_template
 -- ----------------------------
+DROP TABLE IF EXISTS `brt_common_call_record`;
+CREATE TABLE `brt_common_call_record` (
+  `record_id` varchar(64) NOT NULL COMMENT '记录ID',
+  `interface_name` varchar(128) NOT NULL COMMENT '接口名称',
+  `request_path` varchar(512) DEFAULT NULL COMMENT '目标路径',
+  `callback_url` varchar(512) DEFAULT NULL COMMENT '回调地址',
+  `request_payload` longtext COMMENT '请求报文',
+  `callback_payload` longtext COMMENT '回调报文',
+  `status` varchar(32) DEFAULT NULL COMMENT '状态',
+  `error_message` varchar(512) DEFAULT NULL COMMENT '错误信息',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建者',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新者',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`record_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='通用接口调用记录';
+
+-- ----------------------------
 DROP TABLE IF EXISTS `brt_task_template`;
 CREATE TABLE `brt_task_template` (
   `template_id` varchar(64) NOT NULL COMMENT '模板ID',
