@@ -23,4 +23,7 @@ public class SvgMattingRequest {
 
     @JsonProperty("is_split")
     private Boolean split;
+
+    @JsonProperty("record_id")
+    private String recordId;
 }
