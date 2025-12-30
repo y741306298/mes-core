@@ -270,6 +270,50 @@
           </el-descriptions>
 
           <h4 class="section-title">生产池流转</h4>
+          <div v-if="viewOrderPoolAllocations.length" class="pool-allocation-grid">
+            <div
+              v-for="allocation in viewOrderPoolAllocations"
+              :key="allocation.flowId"
+              class="pool-allocation-card"
+            >
+              <div class="pool-allocation-header">
+                <div class="pool-allocation-title">
+                  <span class="pool-name">{{ allocation.flowId }}</span>
+                  <span v-if="allocation.templateName" class="pool-template">（{{ allocation.templateName }}）</span>
+                </div>
+                <el-tag size="mini" :type="flowStatusTagType(allocation.flowStatus)">
+                  {{ flowStatusLabels[allocation.flowStatus] || allocation.flowStatus || '未知状态' }}
+                </el-tag>
+              </div>
+              <div class="pool-allocation-body">
+                <div class="allocation-row">
+                  <span class="label">数量</span>
+                  <span class="value">{{ allocation.quantity || 0 }}</span>
+                </div>
+                <div class="allocation-row">
+                  <span class="label">当前节点</span>
+                  <div class="value">
+                    <span>{{ allocation.currentStepName || '—' }}</span>
+                    <el-tag
+                      v-if="allocation.currentStepStatus"
+                      size="mini"
+                      :type="flowStepTagType(allocation.currentStepStatus)"
+                      class="ml6"
+                    >
+                      {{ flowStepStatusLabels[allocation.currentStepStatus] || allocation.currentStepStatus }}
+                    </el-tag>
+                  </div>
+                </div>
+                <div v-if="allocation.currentStepRemark" class="allocation-row remark-row">
+                  <span class="label">备注</span>
+                  <span class="value">{{ allocation.currentStepRemark }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-else class="template-empty">暂无生产池流转记录</div>
+
+          <h4 class="section-title">生产池流转轨迹</h4>
           <div v-if="viewOrderFlowRelations.length" class="flow-pool-track">
             <template v-for="(flow, index) in viewOrderFlowRelations">
               <div :key="flow.flowId || index" class="flow-pool-chip">
@@ -601,6 +645,12 @@ export default {
         high: '高',
         urgent: '紧急'
       },
+      flowStepStatusLabels: {
+        pending: '待开始',
+        processing: '进行中',
+        completed: '已完成',
+        timeout: '已超时'
+      },
       orderSearch: {
         keyword: '',
         status: '',
@@ -738,16 +788,37 @@ export default {
         return Object.assign({}, node, { orderNode: matchedNode })
       })
     },
-    viewOrderFlowRelations() {
-      const record = this.viewOrderDialog.record
-      if (!record || !record.orderId) {
-        return []
+      viewOrderFlowRelations() {
+        const record = this.viewOrderDialog.record
+        if (!record || !record.orderId) {
+          return []
+        }
+        const flows = this.flowList.filter(flow => Array.isArray(flow.orderIds) && flow.orderIds.includes(record.orderId))
+        return flows.slice().sort((a, b) => this.toTimestamp(a.createdAt) - this.toTimestamp(b.createdAt))
+      },
+      viewOrderPoolAllocations() {
+        const record = this.viewOrderDialog.record
+        if (!record || !record.orderId) {
+          return []
+        }
+        return this.viewOrderFlowRelations.map(flow => {
+          const allocation = Array.isArray(flow.orderAllocations)
+            ? flow.orderAllocations.find(item => item && item.orderId === record.orderId)
+            : null
+          const currentStep = this.resolveFlowCurrentStep(flow)
+          return {
+            flowId: flow.flowId || '',
+            templateName: flow.flowTemplate && flow.flowTemplate.templateName,
+            flowStatus: flow.flowStatus,
+            quantity: allocation ? Number(allocation.quantity || 0) : 0,
+            currentStepName: currentStep.name,
+            currentStepStatus: currentStep.status,
+            currentStepRemark: currentStep.remark
+          }
+        })
       }
-      const flows = this.flowList.filter(flow => Array.isArray(flow.orderIds) && flow.orderIds.includes(record.orderId))
-      return flows.slice().sort((a, b) => this.toTimestamp(a.createdAt) - this.toTimestamp(b.createdAt))
-    }
-  },
-  methods: {
+    },
+    methods: {
     async initializeData() {
       await Promise.all([
         this.fetchFlowTemplates(),
@@ -1033,6 +1104,40 @@ export default {
         this.$message.error('获取流程模板详情失败')
       }
       return null
+    },
+    resolveFlowCurrentStep(flow = {}) {
+      const steps = Array.isArray(flow.process)
+        ? flow.process.slice().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+        : []
+      if (!steps.length) {
+        return { name: '', status: '', remark: '' }
+      }
+      const prioritized = steps.find(step => step && step.stepStatus === 'processing')
+        || steps.find(step => step && step.stepStatus === 'timeout')
+        || steps.find(step => step && step.stepStatus === 'pending')
+      const current = prioritized || steps[steps.length - 1]
+      const name = this.resolveFlowStepName(current, flow)
+      return {
+        name,
+        status: current && current.stepStatus,
+        remark: (current && current.remark) || ''
+      }
+    },
+    resolveFlowStepName(step, flow = {}) {
+      if (!step) {
+        return ''
+      }
+      if (step.stepName) {
+        return step.stepName
+      }
+      const nodeId = step.nodeId
+      if (nodeId && flow.flowTemplate && Array.isArray(flow.flowTemplate.flowNodeList)) {
+        const matched = flow.flowTemplate.flowNodeList.find(item => item && item.nodeId === nodeId)
+        if (matched && matched.nodeName) {
+          return matched.nodeName
+        }
+      }
+      return nodeId || ''
     },
     applyTemplateDetailUpdate(templateId, templateData) {
       if (!templateId || !templateData) {
@@ -2716,6 +2821,15 @@ export default {
       const date = value instanceof Date ? value : new Date(value)
       return Number.isNaN(date.getTime()) ? 0 : date.getTime()
     },
+    flowStepTagType(status) {
+      const map = {
+        pending: 'info',
+        processing: 'warning',
+        completed: 'success',
+        timeout: 'danger'
+      }
+      return map[status] || 'info'
+    },
     flowStatusTagType(status) {
       const map = {
         pending: 'info',
@@ -2979,6 +3093,73 @@ export default {
 
   .allocation-actions {
     text-align: right;
+  }
+
+  .pool-allocation-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .pool-allocation-card {
+    border: 1px solid #ebeef5;
+    border-radius: 6px;
+    padding: 12px;
+    background-color: #f9fafc;
+  }
+
+  .pool-allocation-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .pool-allocation-title {
+    font-weight: 600;
+    color: #303133;
+  }
+
+  .pool-template {
+    color: #606266;
+    font-weight: 400;
+    margin-left: 4px;
+  }
+
+  .pool-allocation-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+    color: #606266;
+  }
+
+  .allocation-row {
+    display: flex;
+    align-items: center;
+  }
+
+  .allocation-row .label {
+    width: 68px;
+    color: #909399;
+    flex-shrink: 0;
+  }
+
+  .allocation-row .value {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    color: #303133;
+  }
+
+  .remark-row .value {
+    color: #606266;
+  }
+
+  .ml6 {
+    margin-left: 6px;
   }
 }
 
