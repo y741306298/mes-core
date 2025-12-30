@@ -48,8 +48,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -203,9 +205,11 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
         entity.setCreatedAt(now);
         entity.setUpdatedAt(now);
         productionFlowMapper.insert(entity);
+        Set<String> orderIds = resolveOrderIds(productionFlowVo);
+        productionFlowVo.setOrderIds(new ArrayList<>(orderIds));
         saveFlowRelations(entity.getFlowId(), productionFlowVo);
-        syncFlowTemplateToOrders(entity, toSafeSet(productionFlowVo.getOrderIds()), now);
-        updateOrdersStatus(toSafeSet(productionFlowVo.getOrderIds()), "已入池", now);
+        syncFlowTemplateToOrders(entity, orderIds, now);
+        updateOrdersStatus(orderIds, "已入池", now);
         return selectProductionFlowById(entity.getFlowId());
     }
 
@@ -220,15 +224,16 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
         entity.setUpdatedAt(now);
         productionFlowMapper.updateById(entity);
 
-        Map<String, List<String>> previousRelations = loadFlowOrderIds(Collections.singleton(entity.getFlowId()));
-        Set<String> previousOrderIds = new HashSet<>(previousRelations.getOrDefault(entity.getFlowId(), Collections.emptyList()));
+        Map<String, List<ProductionFlowOrderRel>> previousRelations = loadFlowOrderRelations(Collections.singleton(entity.getFlowId()));
+        Set<String> previousOrderIds = extractOrderIds(previousRelations.get(entity.getFlowId()));
 
         clearFlowRelations(entity.getFlowId());
         saveFlowRelations(entity.getFlowId(), productionFlowVo);
 
-        syncFlowTemplateToOrders(entity, toSafeSet(productionFlowVo.getOrderIds()), now);
+        Set<String> newOrderIds = resolveOrderIds(productionFlowVo);
+        productionFlowVo.setOrderIds(new ArrayList<>(newOrderIds));
+        syncFlowTemplateToOrders(entity, newOrderIds, now);
 
-        Set<String> newOrderIds = toSafeSet(productionFlowVo.getOrderIds());
         updateOrdersStatus(newOrderIds, "已入池", now);
         previousOrderIds.removeAll(newOrderIds);
         updateOrdersStatus(previousOrderIds, "待处理", now);
@@ -247,7 +252,7 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
         if (ids.isEmpty()) {
             return 0;
         }
-        Map<String, List<String>> flowOrders = loadFlowOrderIds(new HashSet<>(ids));
+        Map<String, List<ProductionFlowOrderRel>> flowOrders = loadFlowOrderRelations(new HashSet<>(ids));
         productionFlowMaterialMapper.delete(Wrappers.<ProductionFlowMaterial>lambdaQuery()
             .in(ProductionFlowMaterial::getFlowId, ids));
         productionFlowOrderRelMapper.delete(Wrappers.<ProductionFlowOrderRel>lambdaQuery()
@@ -256,7 +261,7 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
             .in(ProductionFlowStep::getFlowId, ids));
         int rows = productionFlowMapper.deleteBatchIds(ids);
         Set<String> orderIds = flowOrders.values().stream()
-            .flatMap(List::stream)
+            .flatMap(list -> extractOrderIds(list).stream())
             .collect(Collectors.toSet());
         if (!orderIds.isEmpty()) {
             updateOrdersStatus(orderIds, "待处理", LocalDateTime.now());
@@ -345,11 +350,16 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
             return;
         }
         Map<String, List<ProductionFlowMaterial>> materialMap = loadFlowMaterials(flowIds);
-        Map<String, List<String>> orderMap = loadFlowOrderIds(flowIds);
+        Map<String, List<ProductionFlowOrderRel>> orderMap = loadFlowOrderRelations(flowIds);
         Map<String, List<ProductionFlowStep>> stepMap = loadFlowSteps(flowIds);
         flowMap.forEach((flowId, vo) -> {
+            List<ProductionFlowOrderRel> relations = new ArrayList<>(orderMap.getOrDefault(flowId, Collections.emptyList()));
             vo.setMaterialsSummary(new ArrayList<>(materialMap.getOrDefault(flowId, Collections.emptyList())));
-            vo.setOrderIds(new ArrayList<>(orderMap.getOrDefault(flowId, Collections.emptyList())));
+            vo.setOrderAllocations(relations);
+            vo.setOrderIds(relations.stream()
+                .map(ProductionFlowOrderRel::getOrderId)
+                .filter(StringUtils::isNotBlank)
+                .collect(Collectors.toList()));
             vo.setProcess(new ArrayList<>(stepMap.getOrDefault(flowId, Collections.emptyList())));
         });
     }
@@ -365,20 +375,18 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
         return materials.stream().collect(Collectors.groupingBy(ProductionFlowMaterial::getFlowId));
     }
 
-    private Map<String, List<String>> loadFlowOrderIds(Set<String> flowIds) {
+    private Map<String, List<ProductionFlowOrderRel>> loadFlowOrderRelations(Set<String> flowIds) {
         if (CollectionUtils.isEmpty(flowIds)) {
             return Collections.emptyMap();
         }
         List<ProductionFlowOrderRel> relations = productionFlowOrderRelMapper.selectList(Wrappers.<ProductionFlowOrderRel>lambdaQuery()
             .in(ProductionFlowOrderRel::getFlowId, flowIds));
-        Map<String, List<String>> result = new HashMap<>();
-        relations.forEach(rel -> result.computeIfAbsent(rel.getFlowId(), key -> new ArrayList<>()).add(rel.getOrderId()));
-        return result;
+        return relations.stream().collect(Collectors.groupingBy(ProductionFlowOrderRel::getFlowId));
     }
 
     private void saveFlowRelations(String flowId, ProductionFlowVo flowVo) {
         saveMaterials(flowId, flowVo.getMaterialsSummary());
-        saveOrderRelations(flowId, flowVo.getOrderIds());
+        saveOrderRelations(flowId, flowVo);
         saveSteps(flowId, flowVo.getProcess());
     }
 
@@ -524,6 +532,62 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
             .collect(Collectors.toList());
     }
 
+    private Set<String> resolveOrderIds(ProductionFlowVo flowVo) {
+        Set<String> result = new HashSet<>();
+        if (flowVo == null) {
+            return result;
+        }
+        if (!CollectionUtils.isEmpty(flowVo.getOrderAllocations())) {
+            flowVo.getOrderAllocations().stream()
+                .filter(Objects::nonNull)
+                .map(ProductionFlowOrderRel::getOrderId)
+                .filter(StringUtils::isNotBlank)
+                .map(String::trim)
+                .forEach(result::add);
+        }
+        if (!CollectionUtils.isEmpty(flowVo.getOrderIds())) {
+            flowVo.getOrderIds().stream()
+                .filter(StringUtils::isNotBlank)
+                .map(String::trim)
+                .forEach(result::add);
+        }
+        return result;
+    }
+
+    private Set<String> extractOrderIds(Collection<ProductionFlowOrderRel> relations) {
+        if (CollectionUtils.isEmpty(relations)) {
+            return new HashSet<>();
+        }
+        return relations.stream()
+            .filter(Objects::nonNull)
+            .map(ProductionFlowOrderRel::getOrderId)
+            .filter(StringUtils::isNotBlank)
+            .map(String::trim)
+            .collect(Collectors.toSet());
+    }
+
+    private Map<String, Integer> aggregateOrderQuantities(ProductionFlowVo flowVo) {
+        Map<String, Integer> result = new LinkedHashMap<>();
+        if (flowVo == null) {
+            return result;
+        }
+        if (!CollectionUtils.isEmpty(flowVo.getOrderAllocations())) {
+            flowVo.getOrderAllocations().stream()
+                .filter(Objects::nonNull)
+                .filter(rel -> StringUtils.isNotBlank(rel.getOrderId()))
+                .forEach(rel -> result.merge(rel.getOrderId().trim(),
+                    rel.getQuantity(),
+                    (oldVal, newVal) -> (oldVal == null ? 0 : oldVal) + (newVal == null ? 0 : newVal)));
+        }
+        if (result.isEmpty() && !CollectionUtils.isEmpty(flowVo.getOrderIds())) {
+            flowVo.getOrderIds().stream()
+                .filter(StringUtils::isNotBlank)
+                .map(String::trim)
+                .forEach(orderId -> result.put(orderId, null));
+        }
+        return result;
+    }
+
     private void saveMaterials(String flowId, List<ProductionFlowMaterial> materials) {
         if (StringUtils.isBlank(flowId) || CollectionUtils.isEmpty(materials)) {
             return;
@@ -541,17 +605,19 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
             .forEach(productionFlowMaterialMapper::insert);
     }
 
-    private void saveOrderRelations(String flowId, List<String> orderIds) {
-        if (StringUtils.isBlank(flowId) || CollectionUtils.isEmpty(orderIds)) {
+    private void saveOrderRelations(String flowId, ProductionFlowVo flowVo) {
+        if (StringUtils.isBlank(flowId) || flowVo == null) {
             return;
         }
-        orderIds.stream()
-            .filter(StringUtils::isNotBlank)
-            .map(orderId -> new ProductionFlowOrderRel()
-                .setId(null)
-                .setFlowId(flowId)
-                .setOrderId(orderId))
-            .forEach(productionFlowOrderRelMapper::insert);
+        Map<String, Integer> quantityMap = aggregateOrderQuantities(flowVo);
+        if (quantityMap.isEmpty()) {
+            return;
+        }
+        quantityMap.forEach((orderId, quantity) -> productionFlowOrderRelMapper.insert(new ProductionFlowOrderRel()
+            .setId(null)
+            .setFlowId(flowId)
+            .setOrderId(orderId)
+            .setQuantity(quantity == null ? 0 : quantity)));
     }
 
     private void saveSteps(String flowId, List<ProductionFlowStep> steps) {

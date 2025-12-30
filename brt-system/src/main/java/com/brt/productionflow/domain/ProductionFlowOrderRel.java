@@ -23,4 +23,7 @@ public class ProductionFlowOrderRel {
 
     @TableField("order_id")
     private String orderId;
+
+    @TableField("quantity")
+    private Integer quantity;
 }
