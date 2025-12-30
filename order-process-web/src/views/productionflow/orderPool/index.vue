@@ -270,28 +270,46 @@
           </el-descriptions>
 
           <h4 class="section-title">生产池流转</h4>
-          <div v-if="viewOrderFlowRelations.length" class="flow-pool-track">
-            <template v-for="(flow, index) in viewOrderFlowRelations">
-              <div :key="flow.flowId || index" class="flow-pool-chip">
-                <div class="flow-pool-title">
-                  <span class="flow-pool-name">{{ flow.flowId || '未命名生产池' }}</span>
-                  <span v-if="flow.flowTemplate" class="flow-pool-template">
-                    （{{ flow.flowTemplate.templateName }}）
-                  </span>
+          <div v-if="viewOrderPoolAllocations.length" class="pool-allocation-grid">
+            <div
+              v-for="allocation in viewOrderPoolAllocations"
+              :key="allocation.flowId"
+              class="pool-allocation-card"
+            >
+              <div class="pool-allocation-header">
+                <div class="pool-allocation-title">
+                  <span class="pool-name">{{ allocation.flowId }}</span>
+                  <span v-if="allocation.templateName" class="pool-template">（{{ allocation.templateName }}）</span>
                 </div>
-                <el-tag size="mini" :type="flowStatusTagType(flow.flowStatus)">
-                  {{ flowStatusLabels[flow.flowStatus] || flow.flowStatus || '未知状态' }}
+                <el-tag size="mini" :type="flowStatusTagType(allocation.flowStatus)">
+                  {{ flowStatusLabels[allocation.flowStatus] || allocation.flowStatus || '未知状态' }}
                 </el-tag>
-                <div v-if="flow.createdAt" class="flow-pool-time">{{ formatDateDisplay(flow.createdAt) }}</div>
               </div>
-              <div
-                v-if="index < viewOrderFlowRelations.length - 1"
-                :key="`${flow.flowId || index}-arrow`"
-                class="flow-pool-arrow"
-              >
-                →
+              <div class="pool-allocation-body">
+                <div class="allocation-row">
+                  <span class="label">数量</span>
+                  <span class="value">{{ allocation.quantity || 0 }}</span>
+                </div>
+                <div class="allocation-row">
+                  <span class="label">当前节点</span>
+                  <div class="value">
+                    <span>{{ allocation.currentStepName || '—' }}</span>
+                    <el-tag
+                      v-if="allocation.currentStepStatus"
+                      size="mini"
+                      :type="flowStepTagType(allocation.currentStepStatus)"
+                      class="ml6"
+                    >
+                      {{ flowStepStatusLabels[allocation.currentStepStatus] || allocation.currentStepStatus }}
+                    </el-tag>
+                  </div>
+                </div>
+                <div v-if="allocation.currentStepRemark" class="allocation-row remark-row">
+                  <span class="label">备注</span>
+                  <span class="value">{{ allocation.currentStepRemark }}</span>
+                </div>
               </div>
-            </template>
+            </div>
           </div>
           <div v-else class="template-empty">暂无生产池流转记录</div>
 
@@ -393,7 +411,7 @@
                 <div class="order-customer">客户：{{ order.customerInfo || '未填写' }}</div>
               </div>
               <div class="order-quantity">
-                数量：{{ order.quantity }}，已分配 {{ allocationTotal(order.orderId) }}，剩余 {{ Math.max(0, order.quantity - allocationTotal(order.orderId)) }}
+                数量：{{ order.quantity }}，已分配 {{ existingAllocationQuantity(order.orderId) + allocationTotal(order.orderId) }}，剩余 {{ Math.max(0, order.quantity - existingAllocationQuantity(order.orderId) - allocationTotal(order.orderId)) }}
               </div>
             </div>
 
@@ -427,7 +445,7 @@
                   <el-input-number
                     v-model="scope.row.quantity"
                     :min="1"
-                    :max="order.quantity"
+                    :max="Math.max(1, order.quantity - existingAllocationQuantity(order.orderId))"
                     :step="1"
                     controls-position="right"
                   />
@@ -601,6 +619,12 @@ export default {
         high: '高',
         urgent: '紧急'
       },
+      flowStepStatusLabels: {
+        pending: '待开始',
+        processing: '进行中',
+        completed: '已完成',
+        timeout: '已超时'
+      },
       orderSearch: {
         keyword: '',
         status: '',
@@ -738,16 +762,37 @@ export default {
         return Object.assign({}, node, { orderNode: matchedNode })
       })
     },
-    viewOrderFlowRelations() {
-      const record = this.viewOrderDialog.record
-      if (!record || !record.orderId) {
-        return []
+      viewOrderFlowRelations() {
+        const record = this.viewOrderDialog.record
+        if (!record || !record.orderId) {
+          return []
+        }
+        const flows = this.flowList.filter(flow => Array.isArray(flow.orderIds) && flow.orderIds.includes(record.orderId))
+        return flows.slice().sort((a, b) => this.toTimestamp(a.createdAt) - this.toTimestamp(b.createdAt))
+      },
+      viewOrderPoolAllocations() {
+        const record = this.viewOrderDialog.record
+        if (!record || !record.orderId) {
+          return []
+        }
+        return this.viewOrderFlowRelations.map(flow => {
+          const allocation = Array.isArray(flow.orderAllocations)
+            ? flow.orderAllocations.find(item => item && item.orderId === record.orderId)
+            : null
+          const currentStep = this.resolveFlowCurrentStep(flow)
+          return {
+            flowId: flow.flowId || '',
+            templateName: flow.flowTemplate && flow.flowTemplate.templateName,
+            flowStatus: flow.flowStatus,
+            quantity: allocation ? Number(allocation.quantity || 0) : 0,
+            currentStepName: currentStep.name,
+            currentStepStatus: currentStep.status,
+            currentStepRemark: currentStep.remark
+          }
+        })
       }
-      const flows = this.flowList.filter(flow => Array.isArray(flow.orderIds) && flow.orderIds.includes(record.orderId))
-      return flows.slice().sort((a, b) => this.toTimestamp(a.createdAt) - this.toTimestamp(b.createdAt))
-    }
-  },
-  methods: {
+    },
+    methods: {
     async initializeData() {
       await Promise.all([
         this.fetchFlowTemplates(),
@@ -1033,6 +1078,40 @@ export default {
         this.$message.error('获取流程模板详情失败')
       }
       return null
+    },
+    resolveFlowCurrentStep(flow = {}) {
+      const steps = Array.isArray(flow.process)
+        ? flow.process.slice().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+        : []
+      if (!steps.length) {
+        return { name: '', status: '', remark: '' }
+      }
+      const prioritized = steps.find(step => step && step.stepStatus === 'processing')
+        || steps.find(step => step && step.stepStatus === 'timeout')
+        || steps.find(step => step && step.stepStatus === 'pending')
+      const current = prioritized || steps[steps.length - 1]
+      const name = this.resolveFlowStepName(current, flow)
+      return {
+        name,
+        status: current && current.stepStatus,
+        remark: (current && current.remark) || ''
+      }
+    },
+    resolveFlowStepName(step, flow = {}) {
+      if (!step) {
+        return ''
+      }
+      if (step.stepName) {
+        return step.stepName
+      }
+      const nodeId = step.nodeId
+      if (nodeId && flow.flowTemplate && Array.isArray(flow.flowTemplate.flowNodeList)) {
+        const matched = flow.flowTemplate.flowNodeList.find(item => item && item.nodeId === nodeId)
+        if (matched && matched.nodeName) {
+          return matched.nodeName
+        }
+      }
+      return nodeId || ''
     },
     applyTemplateDetailUpdate(templateId, templateData) {
       if (!templateId || !templateData) {
@@ -2352,6 +2431,7 @@ export default {
       }
       this.viewOrderDialog.record = this.buildViewOrderRecord(order)
       this.viewOrderDialog.visible = true
+      await this.ensureFlowsForOrder(order.orderId)
       await this.refreshOrderRecord(order.orderId, { silent: true, updateDialog: true, withLoading: true })
     },
     async openPoolAssignmentDialog() {
@@ -2359,9 +2439,7 @@ export default {
         this.$message.warning('请先选择至少一个订单')
         return
       }
-      if (!this.flowPoolOptions.length) {
-        this.fetchFlows()
-      }
+      await this.fetchFlows()
       const refreshedOrders = []
       const missingOrders = []
       for (const item of this.selectedOrders) {
@@ -2381,13 +2459,29 @@ export default {
       this.selectedOrders = refreshedOrders
       const orders = refreshedOrders
       const timestamp = Date.now()
-      this.poolAssignmentDialog.orders = orders
-      this.poolAssignmentDialog.allocations = orders.map((order, index) => ({
-        key: `${order.orderId}-${timestamp}-${index}`,
-        orderId: order.orderId,
-        flowId: '',
-        quantity: order.quantity
-      }))
+      const skipped = []
+      const allocations = []
+      orders.forEach((order, index) => {
+        const remaining = Math.max(0, Number(order.quantity || 0) - this.existingAllocationQuantity(order.orderId))
+        if (remaining <= 0) {
+          skipped.push(order.orderId)
+          return
+        }
+        allocations.push({
+          key: `${order.orderId}-${timestamp}-${index}`,
+          orderId: order.orderId,
+          flowId: '',
+          quantity: remaining
+        })
+      })
+      if (skipped.length) {
+        this.$message.warning(`以下订单已全部入池，无法继续分配：${skipped.join('、')}`)
+      }
+      if (!allocations.length) {
+        return
+      }
+      this.poolAssignmentDialog.orders = orders.filter(order => !skipped.includes(order.orderId))
+      this.poolAssignmentDialog.allocations = allocations
       this.poolAssignmentDialog.submitting = false
       this.poolAssignmentDialog.visible = true
     },
@@ -2399,7 +2493,8 @@ export default {
     },
     addAllocation(order) {
       if (!order || !order.orderId) return
-      const remaining = Math.max(1, Number(order.quantity || 0) - this.allocationTotal(order.orderId))
+      const remainingBase = Number(order.quantity || 0) - this.existingAllocationQuantity(order.orderId) - this.allocationTotal(order.orderId)
+      const remaining = Math.max(1, remainingBase)
       this.poolAssignmentDialog.allocations.push({
         key: `${order.orderId}-${Date.now()}-${Math.random()}`,
         orderId: order.orderId,
@@ -2432,8 +2527,9 @@ export default {
           return false
         }
         const total = allocations.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
-        if (total > Number(order.quantity || 0)) {
-          this.$message.warning(`订单【${order.orderId}】分配数量不能超过订单数量`)
+        const existing = this.existingAllocationQuantity(order.orderId)
+        if (total + existing > Number(order.quantity || 0)) {
+          this.$message.warning(`订单【${order.orderId}】分配数量不能超过剩余可分配数量（已分配：${existing}）`)
           return false
         }
       }
@@ -2569,11 +2665,11 @@ export default {
       this.poolAssignmentDialog.submitting = true
       try {
         for (const flowId of flowIds) {
-          const detail = await this.ensureFlowPoolDetail(flowId)
-          if (!detail) {
-            this.$message.warning(`生产池【${flowId}】不存在或已删除`)
-            continue
-          }
+        const detail = await this.ensureFlowPoolDetail(flowId)
+        if (!detail) {
+          this.$message.warning(`生产池【${flowId}】不存在或已删除`)
+          continue
+        }
           const flowTemplate = detail.flowTemplate || await this.ensureFlowTemplateDetails(detail.templateId)
           const payload = this.buildFlowPoolPayload({
             ...detail,
@@ -2581,16 +2677,17 @@ export default {
             flowTemplate
           }, grouped[flowId].orders)
           await updateFlowPool(payload)
-          await this.applyFlowTemplateToOrders({
-            ...detail,
-            templateId: payload.templateId,
-            flowTemplate: payload.flowTemplate || flowTemplate
-          }, Object.keys(grouped[flowId].orders || {}))
+        const mergedDetail = {
+          ...detail,
+          ...payload
         }
-        this.$message.success('分配成功')
-        this.poolAssignmentDialog.visible = false
-        this.selectedOrders = []
-        await Promise.all([this.fetchFlows(), this.fetchOrders()])
+        this.updateLocalFlowCache(flowId, mergedDetail)
+        await this.applyFlowTemplateToOrders(mergedDetail, Object.keys(grouped[flowId].orders || {}))
+      }
+      this.$message.success('分配成功')
+      this.poolAssignmentDialog.visible = false
+      this.selectedOrders = []
+      await Promise.all([this.fetchFlows(), this.fetchOrders()])
       } catch (error) {
         console.error(error)
         this.$message.error('分配失败，请稍后重试')
@@ -2628,6 +2725,60 @@ export default {
         item => !invalid.includes(item.orderId)
       )
       this.$message.warning(`以下订单已不存在或已被移除，已从分配中删除：${invalid.join('、')}`)
+    },
+    existingAllocationQuantity(orderId) {
+      if (!orderId) return 0
+      const flowsFromList = this.flowList.filter(flow => Array.isArray(flow.orderIds) && flow.orderIds.includes(orderId))
+      const flowsFromCache = Object.values(this.flowPoolDetailMap || {}).filter(
+        flow => Array.isArray(flow.orderIds) && flow.orderIds.includes(orderId)
+      )
+      const seen = new Set()
+      const mergedFlows = [...flowsFromList, ...flowsFromCache].filter(flow => {
+        if (!flow || !flow.flowId) return false
+        if (seen.has(flow.flowId)) return false
+        seen.add(flow.flowId)
+        return true
+      })
+      return mergedFlows.reduce((sum, flow) => sum + this.getFlowOrderAllocationQuantity(flow, orderId), 0)
+    },
+    updateLocalFlowCache(flowId, flowData) {
+      if (!flowId || !flowData) return
+      const normalized = this.normalizeFlow(flowData)
+      this.$set(this.flowPoolDetailMap, flowId, normalized)
+      const index = this.flowList.findIndex(item => item && item.flowId === flowId)
+      if (index !== -1) {
+        this.$set(this.flowList, index, normalized)
+      }
+    },
+    getFlowOrderAllocationQuantity(flow, orderId) {
+      if (!flow || !orderId) return 0
+      const flowData = this.flowPoolDetailMap[flow.flowId] || flow
+      const allocation = Array.isArray(flowData.orderAllocations)
+        ? flowData.orderAllocations.find(item => item && item.orderId === orderId)
+        : null
+      if (allocation && allocation.quantity !== undefined && allocation.quantity !== null) {
+        return Number(allocation.quantity || 0)
+      }
+      return 0
+    },
+    async ensureFlowsForOrder(orderId) {
+      if (!orderId) return
+      const relatedFlows = this.flowList.filter(flow => Array.isArray(flow.orderIds) && flow.orderIds.includes(orderId))
+      const updated = this.flowList.slice()
+      for (const flow of relatedFlows) {
+        if (Array.isArray(flow.orderAllocations) && flow.orderAllocations.length) {
+          continue
+        }
+        const detail = await this.ensureFlowPoolDetail(flow.flowId)
+        if (detail) {
+          const index = updated.findIndex(item => item.flowId === flow.flowId)
+          if (index !== -1) {
+            this.$set(updated, index, detail)
+          }
+          this.$set(this.flowPoolDetailMap, flow.flowId, detail)
+        }
+      }
+      this.flowList = updated
     },
     async handleOrderTemplateSelect(templateId) {
       this.orderDialog.form.templateId = templateId
@@ -2715,6 +2866,15 @@ export default {
       if (!value) return 0
       const date = value instanceof Date ? value : new Date(value)
       return Number.isNaN(date.getTime()) ? 0 : date.getTime()
+    },
+    flowStepTagType(status) {
+      const map = {
+        pending: 'info',
+        processing: 'warning',
+        completed: 'success',
+        timeout: 'danger'
+      }
+      return map[status] || 'info'
     },
     flowStatusTagType(status) {
       const map = {
@@ -2806,49 +2966,6 @@ export default {
 
   .flow-template-visual {
     overflow-x: auto;
-  }
-
-  .flow-pool-track {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 0 10px;
-  }
-
-  .flow-pool-chip {
-    display: flex;
-    flex-direction: column;
-    padding: 8px 10px;
-    background: #f5f7fa;
-    border: 1px solid #e4e7ed;
-    border-radius: 6px;
-    min-width: 160px;
-    box-sizing: border-box;
-  }
-
-  .flow-pool-title {
-    font-weight: 600;
-    color: #303133;
-    margin-bottom: 4px;
-  }
-
-  .flow-pool-template {
-    color: #606266;
-    font-weight: 400;
-    margin-left: 6px;
-  }
-
-  .flow-pool-time {
-    margin-top: 4px;
-    color: #909399;
-    font-size: 12px;
-  }
-
-  .flow-pool-arrow {
-    color: #c0c4cc;
-    font-size: 18px;
-    padding: 0 4px;
   }
 
   .flow-track {
@@ -2979,6 +3096,73 @@ export default {
 
   .allocation-actions {
     text-align: right;
+  }
+
+  .pool-allocation-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .pool-allocation-card {
+    border: 1px solid #ebeef5;
+    border-radius: 6px;
+    padding: 12px;
+    background-color: #f9fafc;
+  }
+
+  .pool-allocation-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .pool-allocation-title {
+    font-weight: 600;
+    color: #303133;
+  }
+
+  .pool-template {
+    color: #606266;
+    font-weight: 400;
+    margin-left: 4px;
+  }
+
+  .pool-allocation-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+    color: #606266;
+  }
+
+  .allocation-row {
+    display: flex;
+    align-items: center;
+  }
+
+  .allocation-row .label {
+    width: 68px;
+    color: #909399;
+    flex-shrink: 0;
+  }
+
+  .allocation-row .value {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    color: #303133;
+  }
+
+  .remark-row .value {
+    color: #606266;
+  }
+
+  .ml6 {
+    margin-left: 6px;
   }
 }
 
