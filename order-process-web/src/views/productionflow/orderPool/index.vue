@@ -313,32 +313,6 @@
           </div>
           <div v-else class="template-empty">暂无生产池流转记录</div>
 
-          <h4 class="section-title">生产池流转轨迹</h4>
-          <div v-if="viewOrderFlowRelations.length" class="flow-pool-track">
-            <template v-for="(flow, index) in viewOrderFlowRelations">
-              <div :key="flow.flowId || index" class="flow-pool-chip">
-                <div class="flow-pool-title">
-                  <span class="flow-pool-name">{{ flow.flowId || '未命名生产池' }}</span>
-                  <span v-if="flow.flowTemplate" class="flow-pool-template">
-                    （{{ flow.flowTemplate.templateName }}）
-                  </span>
-                </div>
-                <el-tag size="mini" :type="flowStatusTagType(flow.flowStatus)">
-                  {{ flowStatusLabels[flow.flowStatus] || flow.flowStatus || '未知状态' }}
-                </el-tag>
-                <div v-if="flow.createdAt" class="flow-pool-time">{{ formatDateDisplay(flow.createdAt) }}</div>
-              </div>
-              <div
-                v-if="index < viewOrderFlowRelations.length - 1"
-                :key="`${flow.flowId || index}-arrow`"
-                class="flow-pool-arrow"
-              >
-                →
-              </div>
-            </template>
-          </div>
-          <div v-else class="template-empty">暂无生产池流转记录</div>
-
           <h4 class="section-title">流程模板</h4>
           <div v-if="viewOrderFlowNodes.length">
             <div class="template-summary">
@@ -437,7 +411,7 @@
                 <div class="order-customer">客户：{{ order.customerInfo || '未填写' }}</div>
               </div>
               <div class="order-quantity">
-                数量：{{ order.quantity }}，已分配 {{ allocationTotal(order.orderId) }}，剩余 {{ Math.max(0, order.quantity - allocationTotal(order.orderId)) }}
+                数量：{{ order.quantity }}，已分配 {{ existingAllocationQuantity(order.orderId) + allocationTotal(order.orderId) }}，剩余 {{ Math.max(0, order.quantity - existingAllocationQuantity(order.orderId) - allocationTotal(order.orderId)) }}
               </div>
             </div>
 
@@ -2464,9 +2438,7 @@ export default {
         this.$message.warning('请先选择至少一个订单')
         return
       }
-      if (!this.flowPoolOptions.length) {
-        this.fetchFlows()
-      }
+      await this.fetchFlows()
       const refreshedOrders = []
       const missingOrders = []
       for (const item of this.selectedOrders) {
@@ -2486,13 +2458,29 @@ export default {
       this.selectedOrders = refreshedOrders
       const orders = refreshedOrders
       const timestamp = Date.now()
-      this.poolAssignmentDialog.orders = orders
-      this.poolAssignmentDialog.allocations = orders.map((order, index) => ({
-        key: `${order.orderId}-${timestamp}-${index}`,
-        orderId: order.orderId,
-        flowId: '',
-        quantity: order.quantity
-      }))
+      const skipped = []
+      const allocations = []
+      orders.forEach((order, index) => {
+        const remaining = Math.max(0, Number(order.quantity || 0) - this.existingAllocationQuantity(order.orderId))
+        if (remaining <= 0) {
+          skipped.push(order.orderId)
+          return
+        }
+        allocations.push({
+          key: `${order.orderId}-${timestamp}-${index}`,
+          orderId: order.orderId,
+          flowId: '',
+          quantity: remaining
+        })
+      })
+      if (skipped.length) {
+        this.$message.warning(`以下订单已全部入池，无法继续分配：${skipped.join('、')}`)
+      }
+      if (!allocations.length) {
+        return
+      }
+      this.poolAssignmentDialog.orders = orders.filter(order => !skipped.includes(order.orderId))
+      this.poolAssignmentDialog.allocations = allocations
       this.poolAssignmentDialog.submitting = false
       this.poolAssignmentDialog.visible = true
     },
@@ -2504,7 +2492,8 @@ export default {
     },
     addAllocation(order) {
       if (!order || !order.orderId) return
-      const remaining = Math.max(1, Number(order.quantity || 0) - this.allocationTotal(order.orderId))
+      const remainingBase = Number(order.quantity || 0) - this.existingAllocationQuantity(order.orderId) - this.allocationTotal(order.orderId)
+      const remaining = Math.max(1, remainingBase)
       this.poolAssignmentDialog.allocations.push({
         key: `${order.orderId}-${Date.now()}-${Math.random()}`,
         orderId: order.orderId,
@@ -2537,8 +2526,9 @@ export default {
           return false
         }
         const total = allocations.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
-        if (total > Number(order.quantity || 0)) {
-          this.$message.warning(`订单【${order.orderId}】分配数量不能超过订单数量`)
+        const existing = this.existingAllocationQuantity(order.orderId)
+        if (total + existing > Number(order.quantity || 0)) {
+          this.$message.warning(`订单【${order.orderId}】分配数量不能超过剩余可分配数量（已分配：${existing}）`)
           return false
         }
       }
@@ -2734,6 +2724,21 @@ export default {
       )
       this.$message.warning(`以下订单已不存在或已被移除，已从分配中删除：${invalid.join('、')}`)
     },
+    existingAllocationQuantity(orderId) {
+      if (!orderId) return 0
+      const flows = this.flowList.filter(flow => Array.isArray(flow.orderIds) && flow.orderIds.includes(orderId))
+      return flows.reduce((sum, flow) => sum + this.getFlowOrderAllocationQuantity(flow, orderId), 0)
+    },
+    getFlowOrderAllocationQuantity(flow, orderId) {
+      if (!flow || !orderId) return 0
+      const allocation = Array.isArray(flow.orderAllocations)
+        ? flow.orderAllocations.find(item => item && item.orderId === orderId)
+        : null
+      if (allocation && allocation.quantity !== undefined && allocation.quantity !== null) {
+        return Number(allocation.quantity || 0)
+      }
+      return 0
+    },
     async handleOrderTemplateSelect(templateId) {
       this.orderDialog.form.templateId = templateId
       const template = await this.ensureFlowTemplateDetails(templateId)
@@ -2920,49 +2925,6 @@ export default {
 
   .flow-template-visual {
     overflow-x: auto;
-  }
-
-  .flow-pool-track {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 0 10px;
-  }
-
-  .flow-pool-chip {
-    display: flex;
-    flex-direction: column;
-    padding: 8px 10px;
-    background: #f5f7fa;
-    border: 1px solid #e4e7ed;
-    border-radius: 6px;
-    min-width: 160px;
-    box-sizing: border-box;
-  }
-
-  .flow-pool-title {
-    font-weight: 600;
-    color: #303133;
-    margin-bottom: 4px;
-  }
-
-  .flow-pool-template {
-    color: #606266;
-    font-weight: 400;
-    margin-left: 6px;
-  }
-
-  .flow-pool-time {
-    margin-top: 4px;
-    color: #909399;
-    font-size: 12px;
-  }
-
-  .flow-pool-arrow {
-    color: #c0c4cc;
-    font-size: 18px;
-    padding: 0 4px;
   }
 
   .flow-track {
