@@ -445,7 +445,7 @@
                   <el-input-number
                     v-model="scope.row.quantity"
                     :min="1"
-                    :max="order.quantity"
+                    :max="Math.max(1, order.quantity - existingAllocationQuantity(order.orderId))"
                     :step="1"
                     controls-position="right"
                   />
@@ -2431,6 +2431,7 @@ export default {
       }
       this.viewOrderDialog.record = this.buildViewOrderRecord(order)
       this.viewOrderDialog.visible = true
+      await this.ensureFlowsForOrder(order.orderId)
       await this.refreshOrderRecord(order.orderId, { silent: true, updateDialog: true, withLoading: true })
     },
     async openPoolAssignmentDialog() {
@@ -2664,11 +2665,11 @@ export default {
       this.poolAssignmentDialog.submitting = true
       try {
         for (const flowId of flowIds) {
-          const detail = await this.ensureFlowPoolDetail(flowId)
-          if (!detail) {
-            this.$message.warning(`生产池【${flowId}】不存在或已删除`)
-            continue
-          }
+        const detail = await this.ensureFlowPoolDetail(flowId)
+        if (!detail) {
+          this.$message.warning(`生产池【${flowId}】不存在或已删除`)
+          continue
+        }
           const flowTemplate = detail.flowTemplate || await this.ensureFlowTemplateDetails(detail.templateId)
           const payload = this.buildFlowPoolPayload({
             ...detail,
@@ -2676,16 +2677,17 @@ export default {
             flowTemplate
           }, grouped[flowId].orders)
           await updateFlowPool(payload)
-          await this.applyFlowTemplateToOrders({
-            ...detail,
-            templateId: payload.templateId,
-            flowTemplate: payload.flowTemplate || flowTemplate
-          }, Object.keys(grouped[flowId].orders || {}))
+        const mergedDetail = {
+          ...detail,
+          ...payload
         }
-        this.$message.success('分配成功')
-        this.poolAssignmentDialog.visible = false
-        this.selectedOrders = []
-        await Promise.all([this.fetchFlows(), this.fetchOrders()])
+        this.updateLocalFlowCache(flowId, mergedDetail)
+        await this.applyFlowTemplateToOrders(mergedDetail, Object.keys(grouped[flowId].orders || {}))
+      }
+      this.$message.success('分配成功')
+      this.poolAssignmentDialog.visible = false
+      this.selectedOrders = []
+      await Promise.all([this.fetchFlows(), this.fetchOrders()])
       } catch (error) {
         console.error(error)
         this.$message.error('分配失败，请稍后重试')
@@ -2726,18 +2728,57 @@ export default {
     },
     existingAllocationQuantity(orderId) {
       if (!orderId) return 0
-      const flows = this.flowList.filter(flow => Array.isArray(flow.orderIds) && flow.orderIds.includes(orderId))
-      return flows.reduce((sum, flow) => sum + this.getFlowOrderAllocationQuantity(flow, orderId), 0)
+      const flowsFromList = this.flowList.filter(flow => Array.isArray(flow.orderIds) && flow.orderIds.includes(orderId))
+      const flowsFromCache = Object.values(this.flowPoolDetailMap || {}).filter(
+        flow => Array.isArray(flow.orderIds) && flow.orderIds.includes(orderId)
+      )
+      const seen = new Set()
+      const mergedFlows = [...flowsFromList, ...flowsFromCache].filter(flow => {
+        if (!flow || !flow.flowId) return false
+        if (seen.has(flow.flowId)) return false
+        seen.add(flow.flowId)
+        return true
+      })
+      return mergedFlows.reduce((sum, flow) => sum + this.getFlowOrderAllocationQuantity(flow, orderId), 0)
+    },
+    updateLocalFlowCache(flowId, flowData) {
+      if (!flowId || !flowData) return
+      const normalized = this.normalizeFlow(flowData)
+      this.$set(this.flowPoolDetailMap, flowId, normalized)
+      const index = this.flowList.findIndex(item => item && item.flowId === flowId)
+      if (index !== -1) {
+        this.$set(this.flowList, index, normalized)
+      }
     },
     getFlowOrderAllocationQuantity(flow, orderId) {
       if (!flow || !orderId) return 0
-      const allocation = Array.isArray(flow.orderAllocations)
-        ? flow.orderAllocations.find(item => item && item.orderId === orderId)
+      const flowData = this.flowPoolDetailMap[flow.flowId] || flow
+      const allocation = Array.isArray(flowData.orderAllocations)
+        ? flowData.orderAllocations.find(item => item && item.orderId === orderId)
         : null
       if (allocation && allocation.quantity !== undefined && allocation.quantity !== null) {
         return Number(allocation.quantity || 0)
       }
       return 0
+    },
+    async ensureFlowsForOrder(orderId) {
+      if (!orderId) return
+      const relatedFlows = this.flowList.filter(flow => Array.isArray(flow.orderIds) && flow.orderIds.includes(orderId))
+      const updated = this.flowList.slice()
+      for (const flow of relatedFlows) {
+        if (Array.isArray(flow.orderAllocations) && flow.orderAllocations.length) {
+          continue
+        }
+        const detail = await this.ensureFlowPoolDetail(flow.flowId)
+        if (detail) {
+          const index = updated.findIndex(item => item.flowId === flow.flowId)
+          if (index !== -1) {
+            this.$set(updated, index, detail)
+          }
+          this.$set(this.flowPoolDetailMap, flow.flowId, detail)
+        }
+      }
+      this.flowList = updated
     },
     async handleOrderTemplateSelect(templateId) {
       this.orderDialog.form.templateId = templateId
