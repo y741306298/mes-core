@@ -291,6 +291,19 @@
                   <span class="value">{{ allocation.quantity || 0 }}</span>
                 </div>
                 <div class="allocation-row">
+                  <span class="label">任务状态</span>
+                  <div class="value">
+                    <el-tag
+                      v-if="allocation.orderStatus"
+                      size="mini"
+                      :type="flowStepTagType(allocation.orderStatus)"
+                    >
+                      {{ flowStepStatusLabels[allocation.orderStatus] || allocation.orderStatus }}
+                    </el-tag>
+                    <span v-else>—</span>
+                  </div>
+                </div>
+                <div class="allocation-row">
                   <span class="label">当前节点</span>
                   <div class="value">
                     <span>{{ allocation.currentStepName || '—' }}</span>
@@ -785,6 +798,7 @@ export default {
             templateName: flow.flowTemplate && flow.flowTemplate.templateName,
             flowStatus: flow.flowStatus,
             quantity: allocation ? Number(allocation.quantity || 0) : 0,
+            orderStatus: allocation ? allocation.status || '' : '',
             currentStepName: currentStep.name,
             currentStepStatus: currentStep.status,
             currentStepRemark: currentStep.remark
@@ -1002,7 +1016,11 @@ export default {
       const orderAllocations = Array.isArray(flow.orderAllocations)
         ? flow.orderAllocations
           .filter(item => item && item.orderId)
-          .map(item => ({ orderId: item.orderId, quantity: Number(item.quantity || 0) }))
+          .map(item => ({
+            orderId: item.orderId,
+            quantity: Number(item.quantity || 0),
+            status: item.status || ''
+          }))
         : []
       return {
         flowId: flow.flowId || '',
