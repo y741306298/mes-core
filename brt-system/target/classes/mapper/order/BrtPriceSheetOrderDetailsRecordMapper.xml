@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtPriceSheetOrderDetailsRecordMapper">
+
+    <resultMap type="com.brt.order.vo.BrtPriceSheetOrderDetailsRecordVo" id="BrtPriceSheetOrderDetailsRecordResult">
+        <result property="detailsRecordId"    column="details_record_id"    />
+        <result property="detailsId"    column="details_id"    />
+        <result property="detailsNo"    column="details_no"    />
+        <result property="orderId"    column="order_id"    />
+        <result property="materielId"    column="materiel_id"    />
+        <result property="materielType"    column="materiel_type"    />
+        <result property="materielSize"    column="materiel_size"    />
+        <result property="yieldNo"    column="yield_no"    />
+        <result property="drawingNo"    column="drawing_no"    />
+        <result property="customerPn"    column="customer_pn"    />
+        <result property="detailsNum"    column="details_num"    />
+        <result property="materielUnit"    column="materiel_unit"    />
+        <result property="detailsPrice"    column="details_price"    />
+        <result property="detailsAmount"    column="details_amount"    />
+        <result property="packageModel"    column="package_model"    />
+        <result property="packageTypeId"    column="package_type_id"    />
+        <result property="packageSize"    column="package_size"    />
+        <result property="pagkageNum"    column="pagkage_num"    />
+        <result property="testTypeId"    column="test_type_id"    />
+        <result property="testMode"    column="test_mode"    />
+        <result property="detailsRemark"    column="details_remark"    />
+        <result property="attachments"    column="attachments"    />
+        <result property="boomFile"    column="boom_file"    />
+        <result property="jobDrawing"    column="job_drawing"    />
+        <result property="jobProgram"    column="job_program"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="updateBy"    column="update_by"    />
+    </resultMap>
+
+    <sql id="brtPriceSheetOrderDetailsRecordAllField">
+            A.details_record_id,
+            A.details_id,
+            A.details_no,
+            A.order_id,
+            A.materiel_id,
+            A.materiel_type,
+            A.materiel_size,
+            A.yield_no,
+            A.drawing_no,
+            A.customer_pn,
+            A.details_num,
+            A.materiel_unit,
+            A.details_price,
+            A.details_amount,
+            A.package_model,
+            A.package_type_id,
+            A.package_size,
+            A.pagkage_num,
+            A.test_type_id,
+            A.test_mode,
+            A.details_remark,
+            A.attachments,
+            A.boom_file,
+            A.job_drawing,
+            A.job_program,
+            A.create_time,
+            A.create_by,
+            A.update_time,
+        A.update_by
+    </sql>
+
+    <sql id="brtPriceSheetOrderDetailsRecordQuerySql">
+        select <include refid="brtPriceSheetOrderDetailsRecordAllField"/>
+        from brt_price_sheet_order_details_record A
+    </sql>
+
+    <select id="queryBrtPriceSheetOrderDetailsRecordList" parameterType="com.brt.order.vo.BrtPriceSheetOrderDetailsRecordVo" resultMap="BrtPriceSheetOrderDetailsRecordResult">
+        <include refid="brtPriceSheetOrderDetailsRecordQuerySql"/>
+        <where>
+            <if test="brtPriceSheetOrderDetailsRecordVo.detailsRecordId != null  and brtPriceSheetOrderDetailsRecordVo.detailsRecordId != ''"> and A.details_record_id = #{brtPriceSheetOrderDetailsRecordVo.detailsRecordId}</if>
+            <if test="brtPriceSheetOrderDetailsRecordVo.detailsNo != null  and brtPriceSheetOrderDetailsRecordVo.detailsNo != ''"> and A.details_no = #{brtPriceSheetOrderDetailsRecordVo.detailsNo}</if>
+            <if test="brtPriceSheetOrderDetailsRecordVo.orderId != null  and brtPriceSheetOrderDetailsRecordVo.orderId != ''"> and A.order_id = #{brtPriceSheetOrderDetailsRecordVo.orderId}</if>
+            <if test="brtPriceSheetOrderDetailsRecordVo.materielId != null  and brtPriceSheetOrderDetailsRecordVo.materielId != ''"> and A.materiel_id = #{brtPriceSheetOrderDetailsRecordVo.materielId}</if>
+            <if test="brtPriceSheetOrderDetailsRecordVo.materielType != null  and brtPriceSheetOrderDetailsRecordVo.materielType != ''"> and A.materiel_type = #{brtPriceSheetOrderDetailsRecordVo.materielType}</if>
+            <if test="brtPriceSheetOrderDetailsRecordVo.materielSize != null  and brtPriceSheetOrderDetailsRecordVo.materielSize != ''"> and A.materiel_size = #{brtPriceSheetOrderDetailsRecordVo.materielSize}</if>
+            <if test="brtPriceSheetOrderDetailsRecordVo.yieldNo != null  and brtPriceSheetOrderDetailsRecordVo.yieldNo != ''"> and A.yield_no = #{brtPriceSheetOrderDetailsRecordVo.yieldNo}</if>
+            <if test="brtPriceSheetOrderDetailsRecordVo.drawingNo != null  and brtPriceSheetOrderDetailsRecordVo.drawingNo != ''"> and A.drawing_no = #{brtPriceSheetOrderDetailsRecordVo.drawingNo}</if>
+            <if test="brtPriceSheetOrderDetailsRecordVo.customerPn != null  and brtPriceSheetOrderDetailsRecordVo.customerPn != ''"> and A.customer_pn = #{brtPriceSheetOrderDetailsRecordVo.customerPn}</if>
+            <if test="brtPriceSheetOrderDetailsRecordVo.detailsNum != null "> and A.details_num = #{brtPriceSheetOrderDetailsRecordVo.detailsNum}</if>
+            <if test="brtPriceSheetOrderDetailsRecordVo.materielUnit != null  and brtPriceSheetOrderDetailsRecordVo.materielUnit != ''"> and A.materiel_unit = #{brtPriceSheetOrderDetailsRecordVo.materielUnit}</if>
+            <if test="brtPriceSheetOrderDetailsRecordVo.detailsPrice != null "> and A.details_price = #{brtPriceSheetOrderDetailsRecordVo.detailsPrice}</if>
+            <if test="brtPriceSheetOrderDetailsRecordVo.detailsAmount != null "> and A.details_amount = #{brtPriceSheetOrderDetailsRecordVo.detailsAmount}</if>
+            <if test="brtPriceSheetOrderDetailsRecordVo.packageModel != null  and brtPriceSheetOrderDetailsRecordVo.packageModel != ''"> and A.package_model = #{brtPriceSheetOrderDetailsRecordVo.packageModel}</if>
+            <if test="brtPriceSheetOrderDetailsRecordVo.packageTypeId != null  and brtPriceSheetOrderDetailsRecordVo.packageTypeId != ''"> and A.package_type_id = #{brtPriceSheetOrderDetailsRecordVo.packageTypeId}</if>
+            <if test="brtPriceSheetOrderDetailsRecordVo.packageSize != null  and brtPriceSheetOrderDetailsRecordVo.packageSize != ''"> and A.package_size = #{brtPriceSheetOrderDetailsRecordVo.packageSize}</if>
+            <if test="brtPriceSheetOrderDetailsRecordVo.pagkageNum != null "> and A.pagkage_num = #{brtPriceSheetOrderDetailsRecordVo.pagkageNum}</if>
+            <if test="brtPriceSheetOrderDetailsRecordVo.testTypeId != null  and brtPriceSheetOrderDetailsRecordVo.testTypeId != ''"> and A.test_type_id = #{brtPriceSheetOrderDetailsRecordVo.testTypeId}</if>
+            <if test="brtPriceSheetOrderDetailsRecordVo.testMode != null  and brtPriceSheetOrderDetailsRecordVo.testMode != ''"> and A.test_mode = #{brtPriceSheetOrderDetailsRecordVo.testMode}</if>
+            <if test="brtPriceSheetOrderDetailsRecordVo.detailsRemark != null  and brtPriceSheetOrderDetailsRecordVo.detailsRemark != ''"> and A.details_remark = #{brtPriceSheetOrderDetailsRecordVo.detailsRemark}</if>
+            <if test="brtPriceSheetOrderDetailsRecordVo.attachments != null  and brtPriceSheetOrderDetailsRecordVo.attachments != ''"> and A.attachments = #{brtPriceSheetOrderDetailsRecordVo.attachments}</if>
+            <if test="brtPriceSheetOrderDetailsRecordVo.boomFile != null  and brtPriceSheetOrderDetailsRecordVo.boomFile != ''"> and A.boom_file = #{brtPriceSheetOrderDetailsRecordVo.boomFile}</if>
+            <if test="brtPriceSheetOrderDetailsRecordVo.jobDrawing != null  and brtPriceSheetOrderDetailsRecordVo.jobDrawing != ''"> and A.job_drawing = #{brtPriceSheetOrderDetailsRecordVo.jobDrawing}</if>
+            <if test="brtPriceSheetOrderDetailsRecordVo.jobProgram != null  and brtPriceSheetOrderDetailsRecordVo.jobProgram != ''"> and A.job_program = #{brtPriceSheetOrderDetailsRecordVo.jobProgram}</if>
+        </where>
+        order by A.create_time desc
+    </select>
+
+    <select id="queryBrtPriceSheetOrderDetailsRecordByDetailsId" resultMap="BrtPriceSheetOrderDetailsRecordResult">
+        <include refid="brtPriceSheetOrderDetailsRecordQuerySql"/>
+        where A.details_id = #{DetailsId}
+    </select>
+</mapper>

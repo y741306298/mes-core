@@ -1,0 +1,149 @@
+17:21:54.478 [restartedMain] INFO  c.b.RuoYiApplication - [logStarting,55] - Starting RuoYiApplication using Java 1.8.0_322 on LAPTOP-E35JHJUB with PID 14856 (D:\work\order-process-main\brt-admin\target\classes started by dada in D:\work\order-process-main)
+17:21:54.488 [background-preinit] INFO  o.h.v.i.util.Version - [<clinit>,21] - HV000001: Hibernate Validator 6.2.3.Final
+17:21:54.497 [restartedMain] INFO  c.b.RuoYiApplication - [logStartupProfileInfo,686] - The following 2 profiles are active: "druid", "dev"
+17:21:57.938 [restartedMain] INFO  o.a.c.h.Http11NioProtocol - [log,173] - Initializing ProtocolHandler ["http-nio-9030"]
+17:21:57.940 [restartedMain] INFO  o.a.c.c.StandardService - [log,173] - Starting service [Tomcat]
+17:21:57.941 [restartedMain] INFO  o.a.c.c.StandardEngine - [log,173] - Starting Servlet engine: [Apache Tomcat/9.0.63]
+17:21:58.171 [restartedMain] INFO  o.a.c.c.C.[.[.[/order-process-server] - [log,173] - Initializing Spring embedded WebApplicationContext
+17:22:52.546 [restartedMain] INFO  c.b.RuoYiApplication - [logStarting,55] - Starting RuoYiApplication using Java 1.8.0_322 on LAPTOP-E35JHJUB with PID 21124 (D:\work\order-process-main\brt-admin\target\classes started by dada in D:\work\order-process-main)
+17:22:52.550 [restartedMain] INFO  c.b.RuoYiApplication - [logStartupProfileInfo,686] - The following 2 profiles are active: "druid", "dev"
+17:22:52.554 [background-preinit] INFO  o.h.v.i.util.Version - [<clinit>,21] - HV000001: Hibernate Validator 6.2.3.Final
+17:22:55.001 [restartedMain] INFO  o.a.c.h.Http11NioProtocol - [log,173] - Initializing ProtocolHandler ["http-nio-9030"]
+17:22:55.002 [restartedMain] INFO  o.a.c.c.StandardService - [log,173] - Starting service [Tomcat]
+17:22:55.002 [restartedMain] INFO  o.a.c.c.StandardEngine - [log,173] - Starting Servlet engine: [Apache Tomcat/9.0.63]
+17:22:55.099 [restartedMain] INFO  o.a.c.c.C.[.[.[/order-process-server] - [log,173] - Initializing Spring embedded WebApplicationContext
+17:23:01.312 [restartedMain] INFO  c.a.d.p.DruidDataSource - [init,996] - {dataSource-1} inited
+17:23:07.853 [restartedMain] INFO  o.q.i.StdSchedulerFactory - [instantiate,1220] - Using default implementation for ThreadExecutor
+17:23:07.864 [restartedMain] INFO  o.q.c.SchedulerSignalerImpl - [<init>,61] - Initialized Scheduler Signaller of type: class org.quartz.core.SchedulerSignalerImpl
+17:23:07.865 [restartedMain] INFO  o.q.c.QuartzScheduler - [<init>,229] - Quartz Scheduler v.2.3.2 created.
+17:23:07.866 [restartedMain] INFO  o.q.s.RAMJobStore - [initialize,155] - RAMJobStore initialized.
+17:23:07.867 [restartedMain] INFO  o.q.c.QuartzScheduler - [initialize,294] - Scheduler meta-data: Quartz Scheduler (v2.3.2) 'quartzScheduler' with instanceId 'NON_CLUSTERED'
+  Scheduler class: 'org.quartz.core.QuartzScheduler' - running locally.
+  NOT STARTED.
+  Currently in standby mode.
+  Number of jobs executed: 0
+  Using thread pool 'org.quartz.simpl.SimpleThreadPool' - with 10 threads.
+  Using job-store 'org.quartz.simpl.RAMJobStore' - which does not support persistence. and is not clustered.
+
+17:23:07.867 [restartedMain] INFO  o.q.i.StdSchedulerFactory - [instantiate,1374] - Quartz scheduler 'quartzScheduler' initialized from an externally provided properties instance.
+17:23:07.867 [restartedMain] INFO  o.q.i.StdSchedulerFactory - [instantiate,1378] - Quartz scheduler version: 2.3.2
+17:23:07.867 [restartedMain] INFO  o.q.c.QuartzScheduler - [setJobFactory,2293] - JobFactory set to: org.springframework.scheduling.quartz.SpringBeanJobFactory@20e54198
+17:23:09.794 [restartedMain] INFO  o.a.c.h.Http11NioProtocol - [log,173] - Starting ProtocolHandler ["http-nio-9030"]
+17:23:10.328 [restartedMain] INFO  o.q.c.QuartzScheduler - [start,547] - Scheduler quartzScheduler_$_NON_CLUSTERED started.
+17:23:10.346 [restartedMain] INFO  c.b.RuoYiApplication - [logStarted,61] - Started RuoYiApplication in 18.194 seconds (JVM running for 20.248)
+17:25:19.322 [SpringApplicationShutdownHook] INFO  o.q.c.QuartzScheduler - [standby,585] - Scheduler quartzScheduler_$_NON_CLUSTERED paused.
+17:25:24.313 [restartedMain] INFO  c.b.RuoYiApplication - [logStarting,55] - Starting RuoYiApplication using Java 1.8.0_322 on LAPTOP-E35JHJUB with PID 21892 (D:\work\order-process-main\brt-admin\target\classes started by dada in D:\work\order-process-main)
+17:25:24.317 [restartedMain] INFO  c.b.RuoYiApplication - [logStartupProfileInfo,686] - The following 2 profiles are active: "druid", "dev"
+17:25:24.321 [background-preinit] INFO  o.h.v.i.util.Version - [<clinit>,21] - HV000001: Hibernate Validator 6.2.3.Final
+17:25:26.806 [restartedMain] INFO  o.a.c.h.Http11NioProtocol - [log,173] - Initializing ProtocolHandler ["http-nio-8080"]
+17:25:26.807 [restartedMain] INFO  o.a.c.c.StandardService - [log,173] - Starting service [Tomcat]
+17:25:26.807 [restartedMain] INFO  o.a.c.c.StandardEngine - [log,173] - Starting Servlet engine: [Apache Tomcat/9.0.63]
+17:25:26.898 [restartedMain] INFO  o.a.c.c.C.[.[.[/order-process-server] - [log,173] - Initializing Spring embedded WebApplicationContext
+17:25:33.106 [restartedMain] INFO  c.a.d.p.DruidDataSource - [init,996] - {dataSource-1} inited
+17:25:39.516 [restartedMain] INFO  o.q.i.StdSchedulerFactory - [instantiate,1220] - Using default implementation for ThreadExecutor
+17:25:39.526 [restartedMain] INFO  o.q.c.SchedulerSignalerImpl - [<init>,61] - Initialized Scheduler Signaller of type: class org.quartz.core.SchedulerSignalerImpl
+17:25:39.527 [restartedMain] INFO  o.q.c.QuartzScheduler - [<init>,229] - Quartz Scheduler v.2.3.2 created.
+17:25:39.527 [restartedMain] INFO  o.q.s.RAMJobStore - [initialize,155] - RAMJobStore initialized.
+17:25:39.528 [restartedMain] INFO  o.q.c.QuartzScheduler - [initialize,294] - Scheduler meta-data: Quartz Scheduler (v2.3.2) 'quartzScheduler' with instanceId 'NON_CLUSTERED'
+  Scheduler class: 'org.quartz.core.QuartzScheduler' - running locally.
+  NOT STARTED.
+  Currently in standby mode.
+  Number of jobs executed: 0
+  Using thread pool 'org.quartz.simpl.SimpleThreadPool' - with 10 threads.
+  Using job-store 'org.quartz.simpl.RAMJobStore' - which does not support persistence. and is not clustered.
+
+17:25:39.528 [restartedMain] INFO  o.q.i.StdSchedulerFactory - [instantiate,1374] - Quartz scheduler 'quartzScheduler' initialized from an externally provided properties instance.
+17:25:39.528 [restartedMain] INFO  o.q.i.StdSchedulerFactory - [instantiate,1378] - Quartz scheduler version: 2.3.2
+17:25:39.528 [restartedMain] INFO  o.q.c.QuartzScheduler - [setJobFactory,2293] - JobFactory set to: org.springframework.scheduling.quartz.SpringBeanJobFactory@46952c6a
+17:25:41.269 [restartedMain] INFO  o.a.c.h.Http11NioProtocol - [log,173] - Starting ProtocolHandler ["http-nio-8080"]
+17:25:41.802 [restartedMain] INFO  o.q.c.QuartzScheduler - [start,547] - Scheduler quartzScheduler_$_NON_CLUSTERED started.
+17:25:41.821 [restartedMain] INFO  c.b.RuoYiApplication - [logStarted,61] - Started RuoYiApplication in 17.913 seconds (JVM running for 19.88)
+17:31:39.306 [container-2] INFO  c.b.f.r.RedisKeyExpirationListener - [onMessage,30] - 过期的KEY===>>captcha_codes:3c3b86cb99534702b1578cff80e9be69 
+17:47:53.918 [schedule-pool-1] INFO  sys-user - [run,55] - [127.0.0.1]内网IP[admin][Error][验证码已失效]
+17:47:56.505 [schedule-pool-2] INFO  sys-user - [run,55] - [127.0.0.1]内网IP[admin][Error][验证码错误]
+17:48:01.248 [schedule-pool-3] INFO  sys-user - [run,55] - [127.0.0.1]内网IP[admin][Success][登录成功]
+17:49:06.062 [schedule-pool-1] INFO  sys-user - [run,55] - [127.0.0.1]内网IP[admin][Logout][退出成功]
+17:49:11.282 [schedule-pool-5] INFO  sys-user - [run,55] - [127.0.0.1]内网IP[dada][Success][登录成功]
+17:50:50.315 [schedule-pool-2] INFO  sys-user - [run,55] - [127.0.0.1]内网IP[dada][Logout][退出成功]
+17:51:01.517 [schedule-pool-3] INFO  sys-user - [run,55] - [127.0.0.1]内网IP[admin][Success][登录成功]
+17:52:45.201 [schedule-pool-6] INFO  sys-user - [run,55] - [127.0.0.1]内网IP[admin][Logout][退出成功]
+17:52:50.785 [schedule-pool-9] INFO  sys-user - [run,55] - [127.0.0.1]内网IP[xiaozhu][Error][验证码错误]
+17:52:51.305 [container-3] INFO  c.b.f.r.RedisKeyExpirationListener - [onMessage,30] - 过期的KEY===>>captcha_codes:28f074b0518b4d95a46a996d57c41900 
+17:52:54.786 [schedule-pool-3] INFO  sys-user - [run,55] - [127.0.0.1]内网IP[xiaozhu][Success][登录成功]
+17:53:07.545 [schedule-pool-4] INFO  sys-user - [run,55] - [127.0.0.1]内网IP[xiaozhu][Logout][退出成功]
+17:53:14.608 [schedule-pool-11] INFO  sys-user - [run,55] - [127.0.0.1]内网IP[admin][Success][登录成功]
+17:56:41.949 [container-4] INFO  c.b.f.r.RedisKeyExpirationListener - [onMessage,30] - 过期的KEY===>>repeat_submit:/order-process-server/order/orderNode/complateNodeBearer eyJhbGciOiJIUzUxMiJ9.eyJsb2dpbl91c2VyX2tleSI6IjIyODBiYTQxLWExY2QtNDgyMS1hYTk2LWJiZDVkZWQ3ZDFhMCJ9.rXI-1UyCt_5wmZCppriC-AAtZNY3ntYvegC1dqWbipsbxpIr2x9fhCWYhWQ097nZzy-TjwnEU2UYjRI3qa-5Yw 
+17:59:08.199 [container-5] INFO  c.b.f.r.RedisKeyExpirationListener - [onMessage,30] - 过期的KEY===>>repeat_submit:/order-process-server/order/orderNode/complateNodeBearer eyJhbGciOiJIUzUxMiJ9.eyJsb2dpbl91c2VyX2tleSI6IjIyODBiYTQxLWExY2QtNDgyMS1hYTk2LWJiZDVkZWQ3ZDFhMCJ9.rXI-1UyCt_5wmZCppriC-AAtZNY3ntYvegC1dqWbipsbxpIr2x9fhCWYhWQ097nZzy-TjwnEU2UYjRI3qa-5Yw 
+18:17:42.435 [container-6] INFO  c.b.f.r.RedisKeyExpirationListener - [onMessage,30] - 过期的KEY===>>captcha_codes:6500e92e60274e8584307fe901d6bfd4 
+18:53:14.864 [container-7] INFO  c.b.f.r.RedisKeyExpirationListener - [onMessage,30] - 过期的KEY===>>login_tokens:2280ba41-a1cd-4821-aa96-bbd5ded7d1a0 
+19:25:35.157 [container-8] INFO  c.b.f.r.RedisKeyExpirationListener - [onMessage,30] - 过期的KEY===>>PLUG-CORE_SSOAPPINFO_MAP 
+19:29:48.564 [container-9] INFO  c.b.f.r.RedisKeyExpirationListener - [onMessage,30] - 过期的KEY===>>PLUG-CORE_PLUG-CORE_TOKEN_354af8bb243b5794fdfb444cf59a207fa7c 
+19:36:16.301 [SpringApplicationShutdownHook] INFO  o.q.c.QuartzScheduler - [standby,585] - Scheduler quartzScheduler_$_NON_CLUSTERED paused.
+19:36:24.837 [background-preinit] INFO  o.h.v.i.util.Version - [<clinit>,21] - HV000001: Hibernate Validator 6.2.3.Final
+19:36:24.847 [restartedMain] INFO  c.b.RuoYiApplication - [logStarting,55] - Starting RuoYiApplication using Java 1.8.0_322 on LAPTOP-E35JHJUB with PID 22448 (D:\work\order-process-main\brt-admin\target\classes started by dada in D:\work\order-process-main)
+19:36:24.870 [restartedMain] INFO  c.b.RuoYiApplication - [logStartupProfileInfo,686] - The following 2 profiles are active: "druid", "dev"
+19:36:28.049 [restartedMain] INFO  o.a.c.h.Http11NioProtocol - [log,173] - Initializing ProtocolHandler ["http-nio-8080"]
+19:36:28.050 [restartedMain] INFO  o.a.c.c.StandardService - [log,173] - Starting service [Tomcat]
+19:36:28.050 [restartedMain] INFO  o.a.c.c.StandardEngine - [log,173] - Starting Servlet engine: [Apache Tomcat/9.0.63]
+19:36:28.162 [restartedMain] INFO  o.a.c.c.C.[.[.[/order-process-server] - [log,173] - Initializing Spring embedded WebApplicationContext
+19:36:39.172 [restartedMain] INFO  c.a.d.p.DruidDataSource - [init,996] - {dataSource-1} inited
+19:36:50.135 [restartedMain] INFO  o.q.i.StdSchedulerFactory - [instantiate,1220] - Using default implementation for ThreadExecutor
+19:36:50.162 [restartedMain] INFO  o.q.c.SchedulerSignalerImpl - [<init>,61] - Initialized Scheduler Signaller of type: class org.quartz.core.SchedulerSignalerImpl
+19:36:50.163 [restartedMain] INFO  o.q.c.QuartzScheduler - [<init>,229] - Quartz Scheduler v.2.3.2 created.
+19:36:50.165 [restartedMain] INFO  o.q.s.RAMJobStore - [initialize,155] - RAMJobStore initialized.
+19:36:50.167 [restartedMain] INFO  o.q.c.QuartzScheduler - [initialize,294] - Scheduler meta-data: Quartz Scheduler (v2.3.2) 'quartzScheduler' with instanceId 'NON_CLUSTERED'
+  Scheduler class: 'org.quartz.core.QuartzScheduler' - running locally.
+  NOT STARTED.
+  Currently in standby mode.
+  Number of jobs executed: 0
+  Using thread pool 'org.quartz.simpl.SimpleThreadPool' - with 10 threads.
+  Using job-store 'org.quartz.simpl.RAMJobStore' - which does not support persistence. and is not clustered.
+
+19:36:50.168 [restartedMain] INFO  o.q.i.StdSchedulerFactory - [instantiate,1374] - Quartz scheduler 'quartzScheduler' initialized from an externally provided properties instance.
+19:36:50.169 [restartedMain] INFO  o.q.i.StdSchedulerFactory - [instantiate,1378] - Quartz scheduler version: 2.3.2
+19:36:50.169 [restartedMain] INFO  o.q.c.QuartzScheduler - [setJobFactory,2293] - JobFactory set to: org.springframework.scheduling.quartz.SpringBeanJobFactory@449bc3af
+19:36:54.281 [restartedMain] INFO  o.a.c.h.Http11NioProtocol - [log,173] - Starting ProtocolHandler ["http-nio-8080"]
+19:36:55.194 [restartedMain] INFO  o.q.c.QuartzScheduler - [start,547] - Scheduler quartzScheduler_$_NON_CLUSTERED started.
+19:36:55.244 [restartedMain] INFO  c.b.RuoYiApplication - [logStarted,61] - Started RuoYiApplication in 31.07 seconds (JVM running for 33.619)
+19:36:57.615 [http-nio-8080-exec-2] INFO  o.a.c.c.C.[.[.[/order-process-server] - [log,173] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+19:37:06.423 [schedule-pool-1] INFO  sys-user - [run,55] - [127.0.0.1]内网IP[admin][Success][登录成功]
+19:38:03.058 [container-2] INFO  c.b.f.r.RedisKeyExpirationListener - [onMessage,30] - 过期的KEY===>>repeat_submit:/order-process-server/order/orderNode/complateNodeBearer eyJhbGciOiJIUzUxMiJ9.eyJsb2dpbl91c2VyX2tleSI6IjcwMzU0MDQxLTQ1ZmMtNGVjMS1hYWJkLTgyMDliYjEwN2I0YyJ9.-7YnYG15ml_p-p9z6sV_HeHB16lUXd8zVtvCr61dMeyFUHCjOMLJAcCRcvPF6Pb3A2ymhVTOEdzJrKPBpyv9CA 
+19:38:56.979 [container-3] INFO  c.b.f.r.RedisKeyExpirationListener - [onMessage,30] - 过期的KEY===>>repeat_submit:/order-process-server/order/orderNode/complateNodeBearer eyJhbGciOiJIUzUxMiJ9.eyJsb2dpbl91c2VyX2tleSI6IjcwMzU0MDQxLTQ1ZmMtNGVjMS1hYWJkLTgyMDliYjEwN2I0YyJ9.-7YnYG15ml_p-p9z6sV_HeHB16lUXd8zVtvCr61dMeyFUHCjOMLJAcCRcvPF6Pb3A2ymhVTOEdzJrKPBpyv9CA 
+19:39:25.243 [container-4] INFO  c.b.f.r.RedisKeyExpirationListener - [onMessage,30] - 过期的KEY===>>repeat_submit:/order-process-server/order/orderNode/complateNodeBearer eyJhbGciOiJIUzUxMiJ9.eyJsb2dpbl91c2VyX2tleSI6IjcwMzU0MDQxLTQ1ZmMtNGVjMS1hYWJkLTgyMDliYjEwN2I0YyJ9.-7YnYG15ml_p-p9z6sV_HeHB16lUXd8zVtvCr61dMeyFUHCjOMLJAcCRcvPF6Pb3A2ymhVTOEdzJrKPBpyv9CA 
+20:02:43.570 [container-5] INFO  c.b.f.r.RedisKeyExpirationListener - [onMessage,30] - 过期的KEY===>>repeat_submit:/order-process-server/order/orderNode/complateNodeBearer eyJhbGciOiJIUzUxMiJ9.eyJsb2dpbl91c2VyX2tleSI6IjcwMzU0MDQxLTQ1ZmMtNGVjMS1hYWJkLTgyMDliYjEwN2I0YyJ9.-7YnYG15ml_p-p9z6sV_HeHB16lUXd8zVtvCr61dMeyFUHCjOMLJAcCRcvPF6Pb3A2ymhVTOEdzJrKPBpyv9CA 
+20:06:11.969 [container-6] INFO  c.b.f.r.RedisKeyExpirationListener - [onMessage,30] - 过期的KEY===>>repeat_submit:/order-process-server/order/orderNode/complateNodeBearer eyJhbGciOiJIUzUxMiJ9.eyJsb2dpbl91c2VyX2tleSI6ImE1Nzk1NGEyLTA2ZWItNGZkZC04MGQ3LTQ0NWVhMjUxOTQ4ZSJ9.PkAW58K2ZHgi-dkyNIyM1_A0MN48LZ6LHYt2T8Jks2jz6WWoxMtGRS_a6bSMKbh8bbJ1JUqvdphvm961PAP1ew 
+20:14:33.466 [container-7] INFO  c.b.f.r.RedisKeyExpirationListener - [onMessage,30] - 过期的KEY===>>repeat_submit:/order-process-server/order/orderNode/complateNodeBearer eyJhbGciOiJIUzUxMiJ9.eyJsb2dpbl91c2VyX2tleSI6IjcwMzU0MDQxLTQ1ZmMtNGVjMS1hYWJkLTgyMDliYjEwN2I0YyJ9.-7YnYG15ml_p-p9z6sV_HeHB16lUXd8zVtvCr61dMeyFUHCjOMLJAcCRcvPF6Pb3A2ymhVTOEdzJrKPBpyv9CA 
+20:27:52.973 [container-8] INFO  c.b.f.r.RedisKeyExpirationListener - [onMessage,30] - 过期的KEY===>>repeat_submit:/order-process-server/order/orderNode/complateNodeBearer eyJhbGciOiJIUzUxMiJ9.eyJsb2dpbl91c2VyX2tleSI6IjcwMzU0MDQxLTQ1ZmMtNGVjMS1hYWJkLTgyMDliYjEwN2I0YyJ9.-7YnYG15ml_p-p9z6sV_HeHB16lUXd8zVtvCr61dMeyFUHCjOMLJAcCRcvPF6Pb3A2ymhVTOEdzJrKPBpyv9CA 
+20:28:32.264 [container-9] INFO  c.b.f.r.RedisKeyExpirationListener - [onMessage,30] - 过期的KEY===>>repeat_submit:/order-process-server/order/orderNode/complateNodeBearer eyJhbGciOiJIUzUxMiJ9.eyJsb2dpbl91c2VyX2tleSI6IjcwMzU0MDQxLTQ1ZmMtNGVjMS1hYWJkLTgyMDliYjEwN2I0YyJ9.-7YnYG15ml_p-p9z6sV_HeHB16lUXd8zVtvCr61dMeyFUHCjOMLJAcCRcvPF6Pb3A2ymhVTOEdzJrKPBpyv9CA 
+20:50:48.156 [container-10] INFO  c.b.f.r.RedisKeyExpirationListener - [onMessage,30] - 过期的KEY===>>PLUG-CORE_SSOAPPINFO_MAP 
+20:52:34.000 [container-11] INFO  c.b.f.r.RedisKeyExpirationListener - [onMessage,30] - 过期的KEY===>>login_tokens:a57954a2-06eb-4fdd-80d7-445ea251948e 
+21:00:20.432 [restartedMain] INFO  c.b.RuoYiApplication - [logStarting,55] - Starting RuoYiApplication using Java 1.8.0_322 on LAPTOP-E35JHJUB with PID 25480 (D:\work\order-process-main\brt-admin\target\classes started by dada in D:\work\order-process-main)
+21:00:20.436 [restartedMain] INFO  c.b.RuoYiApplication - [logStartupProfileInfo,686] - The following 2 profiles are active: "druid", "dev"
+21:00:20.441 [background-preinit] INFO  o.h.v.i.util.Version - [<clinit>,21] - HV000001: Hibernate Validator 6.2.3.Final
+21:00:23.170 [restartedMain] INFO  o.a.c.h.Http11NioProtocol - [log,173] - Initializing ProtocolHandler ["http-nio-8080"]
+21:00:23.171 [restartedMain] INFO  o.a.c.c.StandardService - [log,173] - Starting service [Tomcat]
+21:00:23.171 [restartedMain] INFO  o.a.c.c.StandardEngine - [log,173] - Starting Servlet engine: [Apache Tomcat/9.0.63]
+21:00:23.279 [restartedMain] INFO  o.a.c.c.C.[.[.[/order-process-server] - [log,173] - Initializing Spring embedded WebApplicationContext
+21:00:30.159 [restartedMain] INFO  c.a.d.p.DruidDataSource - [init,996] - {dataSource-1} inited
+21:00:36.550 [restartedMain] INFO  o.q.i.StdSchedulerFactory - [instantiate,1220] - Using default implementation for ThreadExecutor
+21:00:36.560 [restartedMain] INFO  o.q.c.SchedulerSignalerImpl - [<init>,61] - Initialized Scheduler Signaller of type: class org.quartz.core.SchedulerSignalerImpl
+21:00:36.561 [restartedMain] INFO  o.q.c.QuartzScheduler - [<init>,229] - Quartz Scheduler v.2.3.2 created.
+21:00:36.561 [restartedMain] INFO  o.q.s.RAMJobStore - [initialize,155] - RAMJobStore initialized.
+21:00:36.562 [restartedMain] INFO  o.q.c.QuartzScheduler - [initialize,294] - Scheduler meta-data: Quartz Scheduler (v2.3.2) 'quartzScheduler' with instanceId 'NON_CLUSTERED'
+  Scheduler class: 'org.quartz.core.QuartzScheduler' - running locally.
+  NOT STARTED.
+  Currently in standby mode.
+  Number of jobs executed: 0
+  Using thread pool 'org.quartz.simpl.SimpleThreadPool' - with 10 threads.
+  Using job-store 'org.quartz.simpl.RAMJobStore' - which does not support persistence. and is not clustered.
+
+21:00:36.562 [restartedMain] INFO  o.q.i.StdSchedulerFactory - [instantiate,1374] - Quartz scheduler 'quartzScheduler' initialized from an externally provided properties instance.
+21:00:36.562 [restartedMain] INFO  o.q.i.StdSchedulerFactory - [instantiate,1378] - Quartz scheduler version: 2.3.2
+21:00:36.563 [restartedMain] INFO  o.q.c.QuartzScheduler - [setJobFactory,2293] - JobFactory set to: org.springframework.scheduling.quartz.SpringBeanJobFactory@106fce33
+21:00:38.521 [restartedMain] INFO  o.a.c.h.Http11NioProtocol - [log,173] - Starting ProtocolHandler ["http-nio-8080"]
+21:00:39.102 [restartedMain] INFO  o.q.c.QuartzScheduler - [start,547] - Scheduler quartzScheduler_$_NON_CLUSTERED started.
+21:00:39.123 [restartedMain] INFO  c.b.RuoYiApplication - [logStarted,61] - Started RuoYiApplication in 19.1 seconds (JVM running for 21.128)
+21:00:47.933 [http-nio-8080-exec-1] INFO  o.a.c.c.C.[.[.[/order-process-server] - [log,173] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+21:01:14.645 [container-2] INFO  c.b.f.r.RedisKeyExpirationListener - [onMessage,30] - 过期的KEY===>>repeat_submit:/order-process-server/order/orderNode/complateNodeBearer eyJhbGciOiJIUzUxMiJ9.eyJsb2dpbl91c2VyX2tleSI6IjcwMzU0MDQxLTQ1ZmMtNGVjMS1hYWJkLTgyMDliYjEwN2I0YyJ9.-7YnYG15ml_p-p9z6sV_HeHB16lUXd8zVtvCr61dMeyFUHCjOMLJAcCRcvPF6Pb3A2ymhVTOEdzJrKPBpyv9CA 
+21:01:43.912 [container-3] INFO  c.b.f.r.RedisKeyExpirationListener - [onMessage,30] - 过期的KEY===>>repeat_submit:/order-process-server/order/orderNode/complateNodeBearer eyJhbGciOiJIUzUxMiJ9.eyJsb2dpbl91c2VyX2tleSI6IjcwMzU0MDQxLTQ1ZmMtNGVjMS1hYWJkLTgyMDliYjEwN2I0YyJ9.-7YnYG15ml_p-p9z6sV_HeHB16lUXd8zVtvCr61dMeyFUHCjOMLJAcCRcvPF6Pb3A2ymhVTOEdzJrKPBpyv9CA 
+21:25:30.672 [container-4] INFO  c.b.f.r.RedisKeyExpirationListener - [onMessage,30] - 过期的KEY===>>login_tokens:70354041-45fc-4ec1-aabd-8209bb107b4c 

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtOrderMaterielPlanMapper">
+
+    <resultMap type="com.brt.order.vo.BrtOrderMaterielPlanVo" id="BrtOrderMaterielPlanResult">
+        <result property="planId"    column="plan_id"    />
+        <result property="nodeId"    column="node_id"    />
+        <result property="orderNodeId"    column="order_node_id"    />
+        <result property="orderId"    column="order_id"    />
+        <result property="orderNo"    column="order_no"    />
+        <result property="orderDetailsId"    column="order_details_id"    />
+        <result property="orderDetailsNo"    column="order_details_no"    />
+        <result property="orderType"    column="order_type"    />
+        <result property="materielId"    column="materiel_id"    />
+        <result property="materielNum"    column="materiel_num"    />
+        <result property="planNum"    column="plan_num"    />
+        <result property="orderNum"    column="order_num"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="materielType"    column="materiel_type"    />
+        <association property="materielVo" javaType="com.brt.order.vo.BrtMaterielVo" column="materiel_id" select="com.brt.order.mapper.BrtMaterielMapper.queryBrtMaterielByMaterielId" />
+    </resultMap>
+
+    <sql id="brtOrderMaterielPlanAllField">
+            A.plan_id,
+            A.node_id,
+            A.order_node_id,
+            A.order_id,
+            A.order_no,
+            A.order_details_id,
+            A.order_details_no,
+            A.order_type,
+            A.materiel_id,
+            A.materiel_num,
+            A.plan_num,
+            A.order_num,
+            A.create_time,
+            A.create_by,
+            A.update_time,
+            A.update_by,
+            A.materiel_type
+    </sql>
+
+    <sql id="brtOrderMaterielPlanQuerySql">
+        select <include refid="brtOrderMaterielPlanAllField"/>
+        from brt_order_materiel_plan A
+    </sql>
+
+    <select id="queryBrtOrderMaterielPlanList" parameterType="com.brt.order.vo.BrtOrderMaterielPlanVo" resultMap="BrtOrderMaterielPlanResult">
+        <include refid="brtOrderMaterielPlanQuerySql"/>
+        <where>
+            <if test="brtOrderMaterielPlanVo.nodeId != null  and brtOrderMaterielPlanVo.nodeId != ''"> and A.node_id = #{brtOrderMaterielPlanVo.nodeId}</if>
+            <if test="brtOrderMaterielPlanVo.orderNodeId != null  and brtOrderMaterielPlanVo.orderNodeId != ''"> and A.order_node_id = #{brtOrderMaterielPlanVo.orderNodeId}</if>
+            <if test="brtOrderMaterielPlanVo.orderId != null  and brtOrderMaterielPlanVo.orderId != ''"> and A.order_id = #{brtOrderMaterielPlanVo.orderId}</if>
+            <if test="brtOrderMaterielPlanVo.orderNo != null  and brtOrderMaterielPlanVo.orderNo != ''"> and A.order_no = #{brtOrderMaterielPlanVo.orderNo}</if>
+            <if test="brtOrderMaterielPlanVo.orderType != null  and brtOrderMaterielPlanVo.orderType != ''"> and A.order_type = #{brtOrderMaterielPlanVo.orderType}</if>
+            <if test="brtOrderMaterielPlanVo.materielId != null  and brtOrderMaterielPlanVo.materielId != ''"> and A.materiel_id = #{brtOrderMaterielPlanVo.materielId}</if>
+            <if test="brtOrderMaterielPlanVo.materielNum != null "> and A.materiel_num = #{brtOrderMaterielPlanVo.materielNum}</if>
+            <if test="brtOrderMaterielPlanVo.planNum != null "> and A.plan_num = #{brtOrderMaterielPlanVo.planNum}</if>
+            <if test="brtOrderMaterielPlanVo.orderNum != null "> and A.order_num = #{brtOrderMaterielPlanVo.orderNum}</if>
+        </where>
+        order by A.create_time desc
+    </select>
+
+    <select id="queryBrtOrderMaterielPlanByPlanId" resultMap="BrtOrderMaterielPlanResult">
+        <include refid="brtOrderMaterielPlanQuerySql"/>
+        where A.plan_id = #{PlanId}
+    </select>
+</mapper>

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtCheckTypeMapper">
+    
+    <resultMap type="com.brt.order.vo.BrtCheckTypeVo" id="BrtCheckTypeResult">
+        <result property="typeId"    column="type_id"    />
+        <result property="typeName"    column="type_name"    />
+        <result property="type"    column="type"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="updateBy"    column="update_by"    />
+    </resultMap>
+
+    <sql id="brtCheckTypeAllField">
+            A.type_id,
+            A.type_name,
+            A.type,
+            A.create_time,
+            A.create_by,
+            A.update_time,
+        A.update_by
+    </sql>
+
+    <sql id="brtCheckTypeQuerySql">
+        select <include refid="brtCheckTypeAllField"/>
+        from brt_check_type A
+    </sql>
+
+    <select id="queryBrtCheckTypeList" parameterType="com.brt.order.vo.BrtCheckTypeVo" resultMap="BrtCheckTypeResult">
+        <include refid="brtCheckTypeQuerySql"/>
+        <where>  
+            <if test="brtCheckTypeVo.typeName != null  and brtCheckTypeVo.typeName != ''"> and A.type_name like concat('%', #{brtCheckTypeVo.typeName}, '%')</if>
+            <if test="brtCheckTypeVo.type != null  and brtCheckTypeVo.type != ''"> and A.type = #{brtCheckTypeVo.type}</if>
+        </where>
+        order by A.create_time desc
+    </select>
+
+    <select id="queryBrtCheckTypeByTypeId" resultMap="BrtCheckTypeResult">
+        <include refid="brtCheckTypeQuerySql"/>
+        where A.type_id = #{TypeId}
+    </select>
+</mapper>

@@ -1,0 +1,372 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtStatisticsMapper">
+    <select id="salesStatistics" resultType="java.util.Map" parameterType="java.util.Map">
+        select
+            "销售金额" name,
+            ifnull(sum(p.detailsAmount),0) value -- 销售金额
+        from (
+            SELECT
+            so.user_id userId, -- 业务员
+            DATE_FORMAT(so.delivery_time,"%Y-%m") deliveryTime, -- 交货日期
+            sod.details_amount detailsAmount, -- 销售金额
+            ifnull(omp.materiel_num,0)* ifnull(sod.details_price,0) offAmount-- 已送货金额
+            FROM
+            brt_sales_order so
+            INNER JOIN brt_sales_order_details sod on sod.order_id = so.order_id
+            LEFT JOIN brt_order_materiel_plan omp on omp.order_details_id = sod.details_id
+            GROUP BY sod.details_id
+            )p
+            <where>
+                <if test="map.userId!=null and map.userId!=''">
+                    and p.userId = #{map.userId}
+                </if>
+                <if test="map.queryDate!=null and map.queryDate!=''">
+                    and p.deliveryTime = #{map.queryDate}
+                </if>
+            </where>
+
+        union  all
+
+        select
+            "已送货金额" name,
+            ifnull(sum(p.offAmount),0) value -- 已送货金额
+        from (
+            SELECT
+            so.user_id userId, -- 业务员
+            DATE_FORMAT(so.delivery_time,"%Y-%m") deliveryTime, -- 交货日期
+            sod.details_amount detailsAmount, -- 销售金额
+            ifnull(omp.materiel_num,0)* ifnull(sod.details_price,0) offAmount-- 已送货金额
+            FROM
+            brt_sales_order so
+            INNER JOIN brt_sales_order_details sod on sod.order_id = so.order_id
+            LEFT JOIN brt_order_materiel_plan omp on omp.order_details_id = sod.details_id
+            GROUP BY sod.details_id
+            )p
+            <where>
+                <if test="map.userId!=null and map.userId!=''">
+                    and p.userId = #{map.userId}
+                </if>
+                <if test="map.queryDate!=null and map.queryDate!=''">
+                    and p.deliveryTime = #{map.queryDate}
+                </if>
+            </where>
+
+
+        union all
+
+        select
+            "未送货金额" name,
+            ifnull(sum(p.detailsAmount)-sum(p.offAmount),0) value -- 未送货金额
+        from (
+            SELECT
+            so.user_id userId, -- 业务员
+            DATE_FORMAT(so.delivery_time,"%Y-%m") deliveryTime, -- 交货日期
+            sod.details_amount detailsAmount, -- 销售金额
+            ifnull(omp.materiel_num,0)* ifnull(sod.details_price,0) offAmount-- 已送货金额
+            FROM
+            brt_sales_order so
+            INNER JOIN brt_sales_order_details sod on sod.order_id = so.order_id
+            LEFT JOIN brt_order_materiel_plan omp on omp.order_details_id = sod.details_id
+            GROUP BY sod.details_id
+            )p
+            <where>
+                <if test="map.userId!=null and map.userId!=''">
+                    and p.userId = #{map.userId}
+                </if>
+                <if test="map.queryDate!=null and map.queryDate!=''">
+                    and p.deliveryTime = #{map.queryDate}
+                </if>
+            </where>
+
+    </select>
+
+    <select id="marketStatistics" resultType="java.util.Map" parameterType="java.util.Map">
+        select
+            ifnull(sum(case p.`month` when 01 then ifnull(p.totalNum,0) end),0) '1',
+                ifnull(sum(case p.`month` when 02 then ifnull(p.totalNum,0) end),0) '2',
+                ifnull(sum(case p.`month` when 03 then ifnull(p.totalNum,0) end),0) '3',
+                ifnull(sum(case p.`month` when 04 then ifnull(p.totalNum,0) end),0) '4',
+                ifnull(sum(case p.`month` when 05 then ifnull(p.totalNum,0) end),0) '5',
+                ifnull(sum(case p.`month` when 06 then ifnull(p.totalNum,0) end),0) '6',
+                ifnull(sum(case p.`month` when 07 then ifnull(p.totalNum,0) end),0) '7',
+                ifnull(sum(case p.`month` when 08 then ifnull(p.totalNum,0) end),0) '8',
+                ifnull(sum(case p.`month` when 09 then ifnull(p.totalNum,0) end),0) '9',
+                ifnull(sum(case p.`month` when 10 then ifnull(p.totalNum,0) end),0) '10',
+                ifnull(sum(case p.`month` when 11 then ifnull(p.totalNum,0) end),0) '11',
+                ifnull(sum(case p.`month` when 12 then ifnull(p.totalNum,0) end),0) '12'
+        from (
+                 SELECT
+                     DATE_FORMAT(o.receiving_time,"%Y") `year`,
+                     DATE_FORMAT(o.receiving_time,"%m") `month`,
+                     od.details_num totalNum,
+                     omp.materiel_num offNum
+                 FROM
+                     brt_market_order o
+                         INNER JOIN brt_market_order_details od on od.order_id = o.order_id
+                         left join brt_order_materiel_plan omp on omp.order_details_id = od.details_id
+             )p
+        <if test="map.queryYear!=null and map.queryYear!=''">
+            where p.`year` = #{map.queryYear}
+            GROUP BY p.`year`
+        </if>
+
+    </select>
+
+    <select id="marketStatisticsReceived" resultType="java.util.Map" parameterType="java.util.Map">
+        select
+        ifnull(sum(case p.`month` when 01 then ifnull(p.offNum,0) end),0) '1',
+        ifnull(sum(case p.`month` when 02 then ifnull(p.offNum,0) end),0) '2',
+        ifnull(sum(case p.`month` when 03 then ifnull(p.offNum,0) end),0) '3',
+        ifnull(sum(case p.`month` when 04 then ifnull(p.offNum,0) end),0) '4',
+        ifnull(sum(case p.`month` when 05 then ifnull(p.offNum,0) end),0) '5',
+        ifnull(sum(case p.`month` when 06 then ifnull(p.offNum,0) end),0) '6',
+        ifnull(sum(case p.`month` when 07 then ifnull(p.offNum,0) end),0) '7',
+        ifnull(sum(case p.`month` when 08 then ifnull(p.offNum,0) end),0) '8',
+        ifnull(sum(case p.`month` when 09 then ifnull(p.offNum,0) end),0) '9',
+        ifnull(sum(case p.`month` when 10 then ifnull(p.offNum,0) end),0) '10',
+        ifnull(sum(case p.`month` when 11 then ifnull(p.offNum,0) end),0) '11',
+        ifnull(sum(case p.`month` when 12 then ifnull(p.offNum,0) end),0) '12'
+        from (
+        SELECT
+        DATE_FORMAT(o.receiving_time,"%Y") `year`,
+        DATE_FORMAT(o.receiving_time,"%m") `month`,
+        od.details_num totalNum,
+        omp.materiel_num offNum
+        FROM
+        brt_market_order o
+        INNER JOIN brt_market_order_details od on od.order_id = o.order_id
+        left join brt_order_materiel_plan omp on omp.order_details_id = od.details_id
+        )p
+        <if test="map.queryYear!=null and map.queryYear!=''">
+            where p.`year` = #{map.queryYear}
+            GROUP BY p.`year`
+        </if>
+
+
+    </select>
+
+    <select id="earning" resultType="java.util.Map" parameterType="java.util.Map">
+        select
+            ifnull(sum(case when p.type="s" and p.`month` = 01 then p.amount end),0) '1' ,
+                ifnull(sum(case when p.type="s" and p.`month` = 02 then p.amount end),0) '2' ,
+                ifnull(sum(case when p.type="s" and p.`month` = 03 then p.amount end),0) '3' ,
+                ifnull(sum(case when p.type="s" and p.`month` = 04 then p.amount end),0) '4' ,
+                ifnull(sum(case when p.type="s" and p.`month` = 05 then p.amount end),0) '5' ,
+                ifnull(sum(case when p.type="s" and p.`month` = 06 then p.amount end),0) '6' ,
+                ifnull(sum(case when p.type="s" and p.`month` = 07 then p.amount end),0) '7' ,
+                ifnull(sum(case when p.type="s" and p.`month` = 08 then p.amount end),0) '8' ,
+                ifnull(sum(case when p.type="s" and p.`month` = 09 then p.amount end),0) '9' ,
+                ifnull(sum(case when p.type="s" and p.`month` = 10 then p.amount end),0) '10' ,
+                ifnull(sum(case when p.type="s" and p.`month` = 11 then p.amount end),0) '11' ,
+                ifnull(sum(case when p.type="s" and p.`month` = 12 then p.amount end),0) '12'
+        from (
+                 SELECT
+                     "s" type, -- 收支类型 （s:收入，z:支出）
+                     DATE_FORMAT(update_time,"%Y") `year`, -- 年份
+                     DATE_FORMAT(update_time,"%m") `month`, -- 月份
+                     collection_amount amount
+                 FROM
+                     brt_order_collection_record
+
+                 UNION ALL
+
+                 SELECT
+                     if(check_type='0','z','s') type,
+                     DATE_FORMAT(create_time,"%Y") `year`, -- 年份
+                     DATE_FORMAT(create_time,"%m") `month`, -- 月份
+                     check_amount amount
+                 FROM
+                     brt_check
+             )p
+        <where>
+            <if test="map.queryYear!=null">
+                and p.`year` = #{map.queryYear}
+            </if>
+        </where>
+    </select>
+
+    <select id="expend" resultType="java.util.Map" parameterType="java.util.Map">
+        select
+        ifnull(sum(case when p.type="z" and p.`month` = 01 then p.amount end),0) '1' ,
+        ifnull(sum(case when p.type="z" and p.`month` = 02 then p.amount end),0) '2' ,
+        ifnull(sum(case when p.type="z" and p.`month` = 03 then p.amount end),0) '3' ,
+        ifnull(sum(case when p.type="z" and p.`month` = 04 then p.amount end),0) '4' ,
+        ifnull(sum(case when p.type="z" and p.`month` = 05 then p.amount end),0) '5' ,
+        ifnull(sum(case when p.type="z" and p.`month` = 06 then p.amount end),0) '6' ,
+        ifnull(sum(case when p.type="z" and p.`month` = 07 then p.amount end),0) '7' ,
+        ifnull(sum(case when p.type="z" and p.`month` = 08 then p.amount end),0) '8' ,
+        ifnull(sum(case when p.type="z" and p.`month` = 09 then p.amount end),0) '9' ,
+        ifnull(sum(case when p.type="z" and p.`month` = 10 then p.amount end),0) '10' ,
+        ifnull(sum(case when p.type="z" and p.`month` = 11 then p.amount end),0) '11' ,
+        ifnull(sum(case when p.type="z" and p.`month` = 12 then p.amount end),0) '12'
+        from (
+        SELECT
+        "s" type, -- 收支类型 （s:收入，z:支出）
+        DATE_FORMAT(update_time,"%Y") `year`, -- 年份
+        DATE_FORMAT(update_time,"%m") `month`, -- 月份
+        collection_amount amount
+        FROM
+        brt_order_collection_record
+
+        UNION ALL
+
+        SELECT
+        if(check_type='0','z','s') type,
+        DATE_FORMAT(create_time,"%Y") `year`, -- 年份
+        DATE_FORMAT(create_time,"%m") `month`, -- 月份
+        check_amount amount
+        FROM
+        brt_check
+        )p
+        <where>
+            <if test="map.queryYear!=null">
+                and p.`year` = #{map.queryYear}
+            </if>
+        </where>
+    </select>
+
+    <select id="deptOnTime" resultType="java.util.Map" parameterType="java.util.Map">
+        select
+        p.deptName,
+        sum(ifnull(p.ans,0)) onTime, -- 按时完成数
+        (sum(ifnull(p.ans,1)) - sum(ifnull(p.ans,0)))  unOnTime -- 未按时完成数
+        from (
+
+        SELECT
+        DATE_FORMAT(o.finish_date,"%Y-%m-%d") finishTime,
+        d.dept_name deptName, -- 部门名称
+        case when n.complate_date is null or DATE_FORMAT(n.update_time,"%Y-%m-%d") &lt;= DATE_FORMAT(n.complate_date,"%Y-%m-%d") then 1 end ans
+        FROM
+        brt_sales_order o
+        inner JOIN brt_order_template t on o.order_id = t.order_id
+        inner join brt_order_node n on n.order_template_id = t.order_template_id
+        inner join sys_dept d on d.dept_id = n.dept_id
+        where n.node_status = '2'
+
+        )p
+        <where>
+            <if test="map.queryDateStart!=null">
+                and p.finishTime &gt; #{map.queryDateStart}
+            </if>
+            <if test="map.queryDateEnd!=null">
+                and p.finishTime &lt; #{map.queryDateEnd}
+            </if>
+        </where>
+        -- where p.finishTime
+        GROUP BY p.deptName
+    </select>
+
+    <!--  查询首页订单数量  -->
+    <select id="getOrderNum" resultType="String">
+        SELECT
+                count(*)
+        FROM
+                brt_sales_order so
+    </select>
+
+    <!--  查询首页未出货数量  -->
+    <select id="getNoDelivery" resultType="String">
+        select
+            count(*)
+        from (
+                 SELECT
+                     so.order_id orderId,
+                     sum(ifnull( omp.order_num, 0 )) orderNum,
+                     sum(ifnull( omp.materiel_num, 0 )) materielNum
+                 FROM
+                     brt_sales_order so
+                         inner join brt_customer_delivery cd on cd.order_id = so.order_id
+                         INNER JOIN brt_sales_order_details sod ON sod.order_id = so.order_id
+                         INNER JOIN brt_order_materiel_plan omp ON omp.order_details_id = sod.details_id and omp.order_node_id = cd.order_node_id
+                 GROUP BY
+                     so.order_id
+             )p
+        where p.orderNum-p.materielNum >0
+    </select>
+
+    <!--  查询首页准时发货数量  -->
+    <select id="getPunctualityDelivery" resultType="String">
+        select
+            count(p.delivery_id)
+        from (
+                 SELECT
+                     cd.delivery_id
+                 FROM
+                     brt_sales_order so
+                         INNER JOIN brt_customer_delivery cd ON cd.order_id = so.order_id
+                         INNER JOIN brt_sales_order_details sod ON sod.order_id = so.order_id
+                         INNER JOIN brt_order_materiel_plan omp ON omp.order_details_id = sod.details_id AND omp.order_node_id = cd.order_node_id
+                 where
+                     (omp.update_time &lt; so.delivery_time or so.delivery_time = null)
+                 GROUP BY
+                     so.order_id
+                 )p
+    </select>
+
+    <select id="picking" resultType="java.util.Map">
+        SELECT
+            m.materiel_no materielNo,
+            m.materiel_name materielName,
+            m.materiel_spec materielSpec,
+            m.materiel_unit materielUnit,
+            ob.total_num totalNum
+
+        FROM
+            brt_order_boom ob
+                LEFT JOIN brt_materiel m ON m.materiel_id = ob.materiel_id
+        where ob.order_id = #{orderId}
+    </select>
+
+    <select id="inInventory" resultType="java.util.Map">
+        SELECT
+            m.materiel_no materielNo,
+            m.materiel_name materielName,
+            m.materiel_spec materielSpec,
+            m.materiel_unit materielUnit,
+            iim.in_inventory_num inInventoryNum
+
+        FROM
+            brt_in_inventory ii
+                left join brt_in_inventory_materiel iim on iim.in_inventory_id = ii.in_inventory_id
+                left join brt_materiel m on m.materiel_id = iim.materiel_id
+        where ii.in_inventory_id = #{inInventoryId}
+    </select>
+
+    <select id="outInventory" resultType="java.util.Map">
+        SELECT
+            m.materiel_no materielNo,
+            m.materiel_name materielName,
+            m.materiel_spec materielSpec,
+            m.materiel_unit materielUnit,
+            iim.out_inventory_num outInventoryNum
+
+        FROM
+            brt_out_inventory ii
+                left join brt_out_inventory_materiel iim on iim.out_inventory_id = ii.out_inventory_id
+                left join brt_materiel m on m.materiel_id = iim.materiel_id
+        where ii.out_inventory_id = #{outInventoryId}
+    </select>
+
+    <select id="productInInventory" resultType="java.util.Map">
+        SELECT
+            c.customer_name customerName,
+            if(m.materiel_name is null,od.materiel_id,m.materiel_name) materielName,
+            m.materiel_spec spec,
+            od.materiel_unit unit,
+            od.details_num num,
+            od.details_remark remark,
+            od.customer_pn customerPn,
+            so.order_no orderNo
+        FROM
+            brt_sales_order so
+                LEFT JOIN brt_sales_order_details od ON so.order_id = od.order_id
+                left join brt_materiel m on m.materiel_id = od.materiel_id
+                left join brt_customer c on c.customer_id = so.customer_id
+        where so.order_id = #{orderId}
+    </select>
+
+
+</mapper>

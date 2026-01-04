@@ -2,6 +2,7 @@ package com.brt.hub.controller;
 
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.brt.common.annotation.Anonymous;
 import com.brt.common.core.domain.AjaxResult;
 import com.brt.common.core.page.TableDataInfo;
 import com.brt.common.utils.MD5Util;
@@ -34,6 +35,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Anonymous
 @RestController
 @RequestMapping("/hub")
 @RequiredArgsConstructor(onConstructor_ = @Autowired)

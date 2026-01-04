@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtFlowNodeMapper">
+
+    <resultMap type="com.brt.order.vo.BrtFlowNodeVo" id="BrtFlowNodeResult">
+        <result property="nodeId"    column="node_id"    />
+        <result property="templateId" column="template_id"/>
+        <result property="nodeName"    column="node_name"    />
+        <result property="nodeType"    column="node_type"    />
+        <result property="nodeStatus"    column="node_status"    />
+        <result property="sort"    column="sort"    />
+        <result property="limitAdd"    column="limit_add"    />
+        <result property="deadlineType"    column="deadline_type"    />
+        <result property="autoCompletion"    column="auto_completion"    />
+        <result property="day"    column="day"    />
+        <result property="hour"    column="hour"    />
+        <result property="minute"    column="minute"    />
+        <result property="otherSetting"    column="other_setting"    />
+        <result property="interfaceType"    column="interface_type"    />
+        <result property="callbackUrl"    column="callback_url"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="updateBy"    column="update_by"    />
+    </resultMap>
+
+    <sql id="brtFlowNodeAllField">
+            A.node_id,
+            A.template_id,
+            A.node_name,
+            A.node_type,
+            A.node_status,
+            A.sort,
+            A.limit_add,
+            A.deadline_type,
+            A.auto_completion,
+            A.day,
+            A.hour,
+            A.minute,
+            A.other_setting,
+            A.create_time,
+            A.create_by,
+            A.update_time,
+        A.update_by,
+        A.interface_type,
+        A.callback_url
+    </sql>
+
+    <sql id="brtFlowNodeQuerySql">
+        select <include refid="brtFlowNodeAllField"/>
+        from brt_flow_node A
+    </sql>
+
+    <select id="queryBrtFlowNodeList" parameterType="com.brt.order.vo.BrtFlowNodeVo" resultMap="BrtFlowNodeResult">
+        <include refid="brtFlowNodeQuerySql"/>
+        <where>
+            <if test="brtFlowNodeVo.templateId != null and brtFlowNodeVo.templateId != ''"> and A.template_id = #{brtFlowNodeVo.templateId}</if>
+            <if test="brtFlowNodeVo.nodeName != null  and brtFlowNodeVo.nodeName != ''"> and A.node_name like concat('%', #{brtFlowNodeVo.nodeName}, '%')</if>
+            <if test="brtFlowNodeVo.nodeType != null  and brtFlowNodeVo.nodeType != ''"> and A.node_type = #{brtFlowNodeVo.nodeType}</if>
+            <if test="brtFlowNodeVo.nodeStatus != null  and brtFlowNodeVo.nodeStatus != ''"> and A.node_status = #{brtFlowNodeVo.nodeStatus}</if>
+        </where>
+        order by A.create_time desc
+    </select>
+
+    <select id="queryBrtFlowNodeByNodeId" resultMap="BrtFlowNodeResult">
+        <include refid="brtFlowNodeQuerySql"/>
+        where A.node_id = #{NodeId}
+    </select>
+
+    <select id="queryBrtFlowNodeListByTemplateId" resultMap="BrtFlowNodeResult">
+        <include refid="brtFlowNodeQuerySql"/>
+        where A.template_id = #{templateId}
+        order by A.sort asc
+    </select>
+
+    <select id="queryFlownode" resultMap="BrtFlowNodeResult">
+        <include refid="brtFlowNodeQuerySql"/>
+        where A.template_id = #{templateId}
+        and A.node_name = #{nodeName}
+        and A.node_status = #{status}
+    </select>
+
+</mapper>

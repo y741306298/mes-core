@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtSupplierMapper">
+
+    <resultMap type="com.brt.order.vo.BrtSupplierVo" id="BrtSupplierResult">
+        <result property="supplierId"    column="supplier_id"    />
+        <result property="supplierName"    column="supplier_name"    />
+        <result property="supplierNo"    column="supplier_no"    />
+        <result property="supplierType"    column="supplier_type"    />
+        <result property="linkman"    column="linkman"    />
+        <result property="phone"    column="phone"    />
+        <result property="action"    column="action"    />
+        <result property="paymentType"    column="payment_type"    />
+        <result property="payer"    column="payer"    />
+        <result property="paymentName"    column="payment_name"    />
+        <result property="account" column="account"/>
+        <result property="remark" column="remark"/>
+        <result property="files" column="files"/>
+        <result property="otherFields" column="other_fields"/>
+    </resultMap>
+
+    <sql id="brtSupplierAllField">
+            A.supplier_id,
+            A.supplier_name ,
+            A.supplier_no ,
+            A.supplier_type ,
+            A.linkman ,
+            A.phone ,
+            A.action ,
+            A.payment_type ,
+            A.payer ,
+            A.payment_name ,
+            A.account ,
+            A.remark ,
+            A.files ,
+            A.other_fields,
+            A.create_time,
+            A.create_by,
+            A.update_time,
+            A.update_by
+    </sql>
+
+    <sql id="brtSupplierQuerySql">
+        select <include refid="brtSupplierAllField"/>
+        from brt_supplier A
+    </sql>
+
+    <select id="queryBrtSupplierList" parameterType="com.brt.order.vo.BrtSupplierVo" resultMap="BrtSupplierResult">
+        <include refid="brtSupplierQuerySql"/>
+        <where>
+            <if test="brtSupplierVo.supplierId != null  and brtSupplierVo.supplierId != ''"> and A.supplier_id = #{brtSupplierVo.supplierId}</if>
+            <if test="brtSupplierVo.supplierName != null  and brtSupplierVo.supplierName != ''"> and A.supplier_name = #{brtSupplierVo.supplierName}</if>
+            <if test="brtSupplierVo.supplierNo != null  and brtSupplierVo.supplierNo != ''"> and A.supplier_no = #{brtSupplierVo.supplierNo}</if>
+            <if test="brtSupplierVo.supplierType != null  and brtSupplierVo.supplierType != ''"> and A.supplier_type = #{brtSupplierVo.supplierType}</if>
+            <if test="brtSupplierVo.linkman != null  and brtSupplierVo.linkman != ''"> and A.linkman = #{brtSupplierVo.linkman}</if>
+            <if test="brtSupplierVo.phone != null  and brtSupplierVo.phone != ''"> and A.phone = #{brtSupplierVo.phone}</if>
+            <if test="brtSupplierVo.action != null  and brtSupplierVo.action != ''"> and A.action = #{brtSupplierVo.action}</if>
+            <if test="brtSupplierVo.paymentType != null  and brtSupplierVo.paymentType != ''"> and A.payment_type = #{brtSupplierVo.paymentType}</if>
+            <if test="brtSupplierVo.payer != null  and brtSupplierVo.payer != ''"> and A.payer = #{brtSupplierVo.payer}</if>
+            <if test="brtSupplierVo.account != null and brtSupplierVo.account != ''"> and A.account = #{brtSupplierVo.account}</if>
+            <if test="brtSupplierVo.keyWords != null and brtSupplierVo.keyWords != ''">
+                and (A.supplier_name like concat('%', #{brtSupplierVo.keyWords}, '%') or A.supplier_no like concat('%', #{brtSupplierVo.keyWords}, '%'))
+            </if>
+            <if test="brtSupplierVo.dateType != null and brtSupplierVo.dateType != ''">
+                <choose>
+                    <when test="brtSupplierVo.dateType == '0'.toString() ">
+                        and date_format(A.create_time,'%y%m%d') = date_format(now(),'%y%m%d')
+                    </when>
+                    <when test="brtSupplierVo.dateType == '1'.toString() ">
+                        and DATE(A.create_time) = CURDATE() - INTERVAL 1 DAY
+                    </when>
+                    <when test="brtSupplierVo.dateType == '2'.toString() ">
+                        and date_format(A.create_time,'%y%m') = date_format(now(),'%y%m')
+                    </when>
+                    <when test="brtSupplierVo.dateType == '3'.toString() ">
+                        and QUARTER(A.create_time) = QUARTER(CURDATE()) and YEAR(A.create_time) = YEAR(CURDATE())
+                    </when>
+                    <when test="brtSupplierVo.dateType == '4'.toString() ">
+                        and YEAR(A.create_time) = YEAR(CURDATE())
+                    </when>
+                </choose>
+            </if>
+            <if test="brtSupplierVo.createTimes != null and brtSupplierVo.createTimes.size > 1">
+                and date_format(A.create_time,'%y%m%d') between date_format(#{brtSupplierVo.createTimes[0]},'%y%m%d') and date_format(#{brtSupplierVo.createTimes[1]},'%y%m%d')
+            </if>
+            <if test="brtSupplierVo.ids!=null">
+                and supplier_id in
+                <foreach collection="brtSupplierVo.ids" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+            </if>
+        </where>
+        order by A.create_time desc
+    </select>
+
+    <select id="queryBrtSupplierBySupplierId" resultMap="BrtSupplierResult">
+        <include refid="brtSupplierQuerySql"/>
+        where A.supplier_id = #{supplierId}
+    </select>
+
+    <!--  查询客户的销售记录  -->
+    <select id="queryPurchaseRecord" parameterType="com.brt.order.vo.PurchaseRecordVo" resultType="com.brt.order.vo.PurchaseRecordVo">
+        select
+            p.orderNo,
+            p.orderTime,
+            p.receivingStatus,
+            p.receivingNum,
+            if(p.planId = null,p.totalAmount,p.planAmount) totalAmount, -- 总金额
+            if(p.planId = null,0,p.collectionAmount) collectionAmount, -- 收款金额
+            if(p.planId = null,p.totalAmount,p.planAmount-p.collectionAmount) unCollectionAmount, -- 未收款金额
+            if(p.planId = null,"0",if(p.collectionAmount &lt; p.planAmount,if(p.collectionAmount = 0,"0","2"),"1")) priceStatus -- 收款状态
+        from (
+            SELECT
+                so.order_no orderNo, -- 订单号
+                order_time orderTime, -- 日期
+                sum(omp.materiel_num) receivingNum, -- 收货数量
+                ifnull(so.total_amount,0) totalAmount, -- 订单合计金额
+                ifnull(ocp.plan_amount,0) planAmount, -- 计划收款金额
+                cd.receiving_status receivingStatus, -- 送货状态
+                ifnull(so.collection_amount,0) collectionAmount, -- 收款金额
+                ocp.plan_id planId
+            FROM
+                brt_market_order so
+                inner JOIN brt_supplier_receiving cd ON cd.order_id = so.order_id
+                left join brt_order_materiel_plan omp on omp.order_id = cd.order_id
+                left join brt_order_collection_plan ocp on ocp.order_id = so.order_id
+                where cd.supplier_id = #{purchaseRecordVo.supplierId}
+                GROUP BY  so.order_id
+        )p
+    </select>
+
+</mapper>

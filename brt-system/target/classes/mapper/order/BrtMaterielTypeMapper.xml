@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brt.order.mapper.BrtMaterielTypeMapper">
+
+    <resultMap type="com.brt.order.vo.BrtMaterielTypeVo" id="BrtMaterielTypeResult">
+        <result property="typeId"    column="type_id"    />
+        <result property="typeName"    column="type_name"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="updateBy"    column="update_by"    />
+    </resultMap>
+
+    <sql id="brtMaterielTypeAllField">
+            A.type_id,
+            A.type_name,
+            A.create_time,
+            A.create_by,
+            A.update_time,
+        A.update_by
+    </sql>
+
+    <sql id="brtMaterielTypeQuerySql">
+        select <include refid="brtMaterielTypeAllField"/>
+        from brt_materiel_type A
+    </sql>
+
+    <select id="queryBrtMaterielTypeList" parameterType="com.brt.order.vo.BrtMaterielTypeVo" resultMap="BrtMaterielTypeResult">
+        <include refid="brtMaterielTypeQuerySql"/>
+        <where>
+            <if test="brtMaterielTypeVo.typeName != null  and brtMaterielTypeVo.typeName != ''"> and A.type_name like concat('%', #{brtMaterielTypeVo.typeName}, '%')</if>
+        </where>
+        order by A.create_time desc
+    </select>
+
+    <select id="queryBrtMaterielTypeByTypeId" resultMap="BrtMaterielTypeResult">
+        <include refid="brtMaterielTypeQuerySql"/>
+        where A.type_id = #{TypeId}
+    </select>
+
+    <select id="queryByName" resultMap="BrtMaterielTypeResult">
+        <include refid="brtMaterielTypeQuerySql"/>
+        where A.type_name = #{typeName}
+    </select>
+
+</mapper>
