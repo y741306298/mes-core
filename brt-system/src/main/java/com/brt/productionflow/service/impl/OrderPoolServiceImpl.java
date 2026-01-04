@@ -209,6 +209,7 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
         productionFlowVo.setOrderIds(new ArrayList<>(orderIds));
         saveFlowRelations(entity.getFlowId(), productionFlowVo);
         syncFlowTemplateToOrders(entity, orderIds, now);
+        refreshFlowOrderStatuses(Collections.singleton(entity.getFlowId()));
         updateOrdersStatus(orderIds, "已入池", now);
         return selectProductionFlowById(entity.getFlowId());
     }
@@ -234,6 +235,7 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
         productionFlowVo.setOrderIds(new ArrayList<>(newOrderIds));
         syncFlowTemplateToOrders(entity, newOrderIds, now);
 
+        refreshFlowOrderStatuses(Collections.singleton(entity.getFlowId()));
         updateOrdersStatus(newOrderIds, "已入池", now);
         previousOrderIds.removeAll(newOrderIds);
         updateOrdersStatus(previousOrderIds, "待处理", now);
@@ -381,7 +383,74 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
         }
         List<ProductionFlowOrderRel> relations = productionFlowOrderRelMapper.selectList(Wrappers.<ProductionFlowOrderRel>lambdaQuery()
             .in(ProductionFlowOrderRel::getFlowId, flowIds));
+        applyOrderStatusFromProcesses(relations);
         return relations.stream().collect(Collectors.groupingBy(ProductionFlowOrderRel::getFlowId));
+    }
+
+    private void refreshFlowOrderStatuses(Set<String> flowIds) {
+        if (CollectionUtils.isEmpty(flowIds)) {
+            return;
+        }
+        loadFlowOrderRelations(flowIds);
+    }
+
+    private void applyOrderStatusFromProcesses(List<ProductionFlowOrderRel> relations) {
+        if (CollectionUtils.isEmpty(relations)) {
+            return;
+        }
+        Set<String> orderIds = relations.stream()
+            .map(ProductionFlowOrderRel::getOrderId)
+            .filter(StringUtils::isNotBlank)
+            .collect(Collectors.toSet());
+        Map<String, String> statusMap = resolveOrderProcessStatuses(orderIds);
+        relations.forEach(rel -> {
+            String targetStatus = statusMap.getOrDefault(rel.getOrderId(), "pending");
+            if (!StringUtils.equals(targetStatus, rel.getStatus())) {
+                rel.setStatus(targetStatus);
+                productionFlowOrderRelMapper.update(null, Wrappers.<ProductionFlowOrderRel>lambdaUpdate()
+                    .eq(ProductionFlowOrderRel::getId, rel.getId())
+                    .set(ProductionFlowOrderRel::getStatus, targetStatus));
+            }
+        });
+    }
+
+    private Map<String, String> resolveOrderProcessStatuses(Set<String> orderIds) {
+        if (CollectionUtils.isEmpty(orderIds)) {
+            return Collections.emptyMap();
+        }
+        List<BrtOrderNode> nodes = orderNodeService.list(Wrappers.<BrtOrderNode>lambdaQuery()
+            .in(BrtOrderNode::getOrderId, orderIds));
+        Map<String, List<BrtOrderNode>> nodeMap = nodes.stream()
+            .collect(Collectors.groupingBy(BrtOrderNode::getOrderId));
+        Map<String, String> statusMap = new HashMap<>();
+        orderIds.forEach(orderId -> statusMap.put(orderId, calculateProcessStatus(nodeMap.get(orderId))));
+        return statusMap;
+    }
+
+    private String calculateProcessStatus(List<BrtOrderNode> nodes) {
+        if (CollectionUtils.isEmpty(nodes)) {
+            return "pending";
+        }
+        boolean hasProcessing = false;
+        boolean hasPending = false;
+        for (BrtOrderNode node : nodes) {
+            String status = node.getNodeStatus();
+            if (StringUtils.equals(status, NodeStatusEnums.已超时.getCode())) {
+                return "timeout";
+            }
+            if (StringUtils.equals(status, NodeStatusEnums.进行中.getCode())) {
+                hasProcessing = true;
+            } else if (!StringUtils.equals(status, NodeStatusEnums.已完成.getCode())) {
+                hasPending = true;
+            }
+        }
+        if (hasProcessing) {
+            return "processing";
+        }
+        if (!hasPending) {
+            return "completed";
+        }
+        return "pending";
     }
 
     private void saveFlowRelations(String flowId, ProductionFlowVo flowVo) {
@@ -610,6 +679,7 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
             return;
         }
         Map<String, Integer> quantityMap = aggregateOrderQuantities(flowVo);
+        Map<String, String> statusMap = resolveOrderProcessStatuses(quantityMap.keySet());
         if (quantityMap.isEmpty()) {
             return;
         }
@@ -617,7 +687,8 @@ public class OrderPoolServiceImpl implements IOrderPoolService {
             .setId(null)
             .setFlowId(flowId)
             .setOrderId(orderId)
-            .setQuantity(quantity == null ? 0 : quantity)));
+            .setQuantity(quantity == null ? 0 : quantity)
+            .setStatus(statusMap.getOrDefault(orderId, "pending"))));
     }
 
     private void saveSteps(String flowId, List<ProductionFlowStep> steps) {

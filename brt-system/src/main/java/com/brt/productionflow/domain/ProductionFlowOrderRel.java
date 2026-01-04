@@ -26,4 +26,7 @@ public class ProductionFlowOrderRel {
 
     @TableField("quantity")
     private Integer quantity;
+
+    @TableField("status")
+    private String status;
 }
