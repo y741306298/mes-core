@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS `pf_production_flow_order` (
   `flow_id` varchar(64) NOT NULL COMMENT '生产流ID',
   `order_id` varchar(64) NOT NULL COMMENT '订单编号',
   `quantity` int DEFAULT 0 COMMENT '分配数量',
+  `status` varchar(32) NOT NULL DEFAULT 'pending' COMMENT '任务状态',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_flow_order` (`flow_id`, `order_id`),
   CONSTRAINT `fk_flow_order_flow` FOREIGN KEY (`flow_id`) REFERENCES `pf_production_flow` (`flow_id`) ON DELETE CASCADE,
