@@ -121,7 +121,7 @@ public class HubProductionController {
             log.warn("未获取到材料数据，跳过同步");
             return;
         }
-        hubMatService.remove(Wrappers.emptyWrapper());
+        hubMatService.remove(Wrappers.<HubMat>lambdaQuery().isNotNull(HubMat::getMatCode));
         List<HubMat> hubMats = matList.stream()
                 .map(mat -> new HubMat()
                         .setMatCode(mat.getMat_code())
@@ -149,7 +149,7 @@ public class HubProductionController {
             log.warn("未获取到产品数据，跳过同步");
             return;
         }
-        hubProdService.remove(Wrappers.emptyWrapper());
+        hubProdService.remove(Wrappers.<HubProd>lambdaQuery().isNotNull(HubProd::getProdCode));
         List<HubProd> hubProds = prodList.stream()
                 .map(prod -> new HubProd()
                         .setProdCode(prod.getProd_code())
@@ -179,7 +179,7 @@ public class HubProductionController {
             log.warn("未获取到工艺数据，跳过同步");
             return;
         }
-        hubProcService.remove(Wrappers.emptyWrapper());
+        hubProcService.remove(Wrappers.<HubProc>lambdaQuery().isNotNull(HubProc::getProcCode));
         List<HubProc> hubProcs = procList.stream()
                 .map(proc -> new HubProc()
                         .setProcCode(proc.getProc_code())
