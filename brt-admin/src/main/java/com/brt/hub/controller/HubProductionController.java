@@ -121,9 +121,10 @@ public class HubProductionController {
             log.warn("未获取到材料数据，跳过同步");
             return;
         }
-        hubMatService.remove(Wrappers.emptyWrapper());
-        List<HubMat> hubMats = matList.stream()
-                .map(mat -> new HubMat()
+        hubMatService.remove(Wrappers.<HubMat>lambdaQuery().isNotNull(HubMat::getMatCode));
+        List<HubMat> hubMats = new ArrayList<>(matList.stream()
+                .filter(mat -> StringUtils.hasText(mat.getMat_code()))
+                .collect(Collectors.toMap(Mat::getMat_code, mat -> new HubMat()
                         .setMatCode(mat.getMat_code())
                         .setMatName(mat.getMat_name())
                         .setMatCategory(mat.getMat_category())
@@ -139,8 +140,8 @@ public class HubProductionController {
                         .setUnitWeight(mat.getUnit_weight())
                         .setUnitPrice(mat.getUnit_price())
                         .setValid(mat.getIs_valid())
-                        .setComments(mat.getComments()))
-                .collect(Collectors.toList());
+                        .setComments(mat.getComments()), (left, right) -> right))
+                .values());
         hubMatService.saveBatch(hubMats);
     }
 
@@ -149,9 +150,10 @@ public class HubProductionController {
             log.warn("未获取到产品数据，跳过同步");
             return;
         }
-        hubProdService.remove(Wrappers.emptyWrapper());
-        List<HubProd> hubProds = prodList.stream()
-                .map(prod -> new HubProd()
+        hubProdService.remove(Wrappers.<HubProd>lambdaQuery().isNotNull(HubProd::getProdCode));
+        List<HubProd> hubProds = new ArrayList<>(prodList.stream()
+                .filter(prod -> StringUtils.hasText(prod.getProd_code()))
+                .collect(Collectors.toMap(Prod::getProd_code, prod -> new HubProd()
                         .setProdCode(prod.getProd_code())
                         .setProdType(prod.getProd_type())
                         .setProdName(prod.getProd_name())
@@ -169,8 +171,8 @@ public class HubProductionController {
                         .setUnitWeight(prod.getUnit_weight())
                         .setAdditionalUnitfee(prod.getAdditional_unitfee())
                         .setComments(prod.getComments())
-                        .setMerchandise(prod.getIs_merchandise()))
-                .collect(Collectors.toList());
+                        .setMerchandise(prod.getIs_merchandise()), (left, right) -> right))
+                .values());
         hubProdService.saveBatch(hubProds);
     }
 
@@ -179,9 +181,10 @@ public class HubProductionController {
             log.warn("未获取到工艺数据，跳过同步");
             return;
         }
-        hubProcService.remove(Wrappers.emptyWrapper());
-        List<HubProc> hubProcs = procList.stream()
-                .map(proc -> new HubProc()
+        hubProcService.remove(Wrappers.<HubProc>lambdaQuery().isNotNull(HubProc::getProcCode));
+        List<HubProc> hubProcs = new ArrayList<>(procList.stream()
+                .filter(proc -> StringUtils.hasText(proc.getProc_code()))
+                .collect(Collectors.toMap(Proc::getProc_code, proc -> new HubProc()
                         .setProcCode(proc.getProc_code())
                         .setProcName(proc.getProc_name())
                         .setProcAttachmentTypeList(proc.getProc_attachmentTypeList())
@@ -189,8 +192,8 @@ public class HubProductionController {
                         .setMeasureUnitStr(proc.getMeasure_unitStr())
                         .setProcPrice(proc.getProc_price())
                         .setValid(proc.getIs_valid())
-                        .setComments(proc.getComments()))
-                .collect(Collectors.toList());
+                        .setComments(proc.getComments()), (left, right) -> right))
+                .values());
         hubProcService.saveBatch(hubProcs);
     }
 
