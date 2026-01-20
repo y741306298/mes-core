@@ -125,6 +125,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <include refid="brtSalesOrderQuerySql"/>
         <where>
             <if test="brtSalesOrderVo.orderNo != null  and brtSalesOrderVo.orderNo != ''"> and A.order_no like concat('%',#{brtSalesOrderVo.orderNo},'%')</if>
+            <if test="brtSalesOrderVo.orderSn != null  and brtSalesOrderVo.orderSn != ''"> and A.order_sn like concat('%',#{brtSalesOrderVo.orderSn},'%')</if>
             <if test="brtSalesOrderVo.customerId != null  and brtSalesOrderVo.customerId != ''"> and A.customer_id = #{brtSalesOrderVo.customerId}</if>
             <if test="brtSalesOrderVo.contact != null  and brtSalesOrderVo.contact != ''"> and A.contact = #{brtSalesOrderVo.contact}</if>
             <if test="brtSalesOrderVo.contactTel != null  and brtSalesOrderVo.contactTel != ''"> and A.contact_tel = #{brtSalesOrderVo.contactTel}</if>

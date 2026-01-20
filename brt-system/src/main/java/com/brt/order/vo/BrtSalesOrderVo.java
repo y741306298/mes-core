@@ -9,6 +9,9 @@ import com.brt.common.annotation.Excels;
 import com.brt.common.core.domain.entity.SysUser;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.brt.order.domain.BrtSalesOrder;
+import com.brt.order.domain.BrtSalesOrderItem;
+import com.brt.order.domain.BrtSalesOrderItemProc;
+import com.brt.order.domain.BrtSalesOrderPackage;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
@@ -34,6 +37,15 @@ public class BrtSalesOrderVo extends BrtSalesOrder {
 
     // 销售单列表
     private List<BrtSalesOrderDetailsVo> salesOrderDetailsVoList;
+
+    // 订单明细列表(来源 order_items)
+    private List<BrtSalesOrderItem> salesOrderItemList;
+
+    // 订单包裹列表(来源 order_packages)
+    private List<BrtSalesOrderPackage> salesOrderPackageList;
+
+    // 订单工艺列表(来源 order_items.component)
+    private List<BrtSalesOrderItemProc> salesOrderItemProcList;
 
     // 客户地址
     private BrtCustomerAddressVo customerAddressVo;

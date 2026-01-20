@@ -230,6 +230,166 @@ export default {
         width: 180
       },
       {
+        label: "来源客户ID",
+        prop: "clientId",
+        visible: false,
+        align: "center",
+        width: 140
+      },
+      {
+        label: "收货人",
+        prop: "consignee",
+        visible: false,
+        align: "center",
+        width: 140
+      },
+      {
+        label: "收货电话",
+        prop: "tel",
+        visible: false,
+        align: "center",
+        width: 140
+      },
+      {
+        label: "收货地址",
+        prop: "address",
+        visible: false,
+        align: "center",
+        width: 220
+      },
+      {
+        label: "来源金额",
+        prop: "orderAmount",
+        visible: false,
+        align: "center",
+        width: 120
+      },
+      {
+        label: "来源运费",
+        prop: "shippingFee",
+        visible: false,
+        align: "center",
+        width: 120
+      },
+      {
+        label: "已付金额",
+        prop: "moneyPaid",
+        visible: false,
+        align: "center",
+        width: 120
+      },
+      {
+        label: "优惠金额",
+        prop: "discount",
+        visible: false,
+        align: "center",
+        width: 120
+      },
+      {
+        label: "支付时间",
+        prop: "payTime",
+        visible: false,
+        align: "center",
+        type: "date",
+        dateFormat: "{y}-{m}-{d} {h}:{i}:{s}",
+        width: 170
+      },
+      {
+        label: "生产方ID",
+        prop: "manufacturerId",
+        visible: false,
+        align: "center",
+        width: 140
+      },
+      {
+        label: "来源交货",
+        prop: "deliveryDate",
+        visible: false,
+        align: "center",
+        type: "date",
+        dateFormat: "{y}-{m}-{d}",
+        width: 120
+      },
+      {
+        label: "MES标记",
+        prop: "mes",
+        visible: false,
+        align: "center",
+        width: 90
+      },
+      {
+        label: "MES时间",
+        prop: "mesTime",
+        visible: false,
+        align: "center",
+        type: "date",
+        dateFormat: "{y}-{m}-{d} {h}:{i}:{s}",
+        width: 170
+      },
+      {
+        label: "物流单号",
+        prop: "logisticCode",
+        visible: false,
+        align: "center",
+        width: 160
+      },
+      {
+        label: "是否撤回",
+        prop: "isWithdraw",
+        visible: false,
+        align: "center",
+        width: 90
+      },
+      {
+        label: "账号编码",
+        prop: "userCode",
+        visible: false,
+        align: "center",
+        width: 140
+      },
+      {
+        label: "组织编码",
+        prop: "userOrgCode",
+        visible: false,
+        align: "center",
+        width: 140
+      },
+      {
+        label: "转移状态",
+        prop: "transferStatus",
+        visible: false,
+        align: "center",
+        width: 120
+      },
+      {
+        label: "转移来源",
+        prop: "transferFrom",
+        visible: false,
+        align: "center",
+        width: 120
+      },
+      {
+        label: "结算金额",
+        prop: "settleOrderAmount",
+        visible: false,
+        align: "center",
+        width: 120
+      },
+      {
+        label: "订单类型",
+        prop: "type",
+        visible: false,
+        align: "center",
+        width: 120
+      },
+      {
+        label: "外部单号",
+        prop: "outOrderNo",
+        visible: false,
+        align: "center",
+        width: 160
+      },
+      {
         label: "客户名称",
         prop: "customerVo.customerName",
         visible: true,

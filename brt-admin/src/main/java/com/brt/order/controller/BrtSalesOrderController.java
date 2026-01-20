@@ -8,7 +8,10 @@ import com.brt.common.enums.OrderNoEnums;
 import com.brt.order.domain.BrtSalesOrder;
 import com.brt.order.utils.BrtOrderNoUtil;
 import lombok.RequiredArgsConstructor;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import javax.servlet.http.HttpServletResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -107,6 +110,26 @@ public class BrtSalesOrderController extends BaseController {
     @GetMapping(value = "/{orderId}")
     public AjaxResult getInfo(@PathVariable("orderId") String orderId) {
         return success(brtSalesOrderService.queryBrtSalesOrderByOrderId(orderId));
+    }
+
+    /**
+     * 获取销售单完整结构(包含明细/包裹/工艺)
+     */
+    @GetMapping(value = "/structure/{orderId}")
+    public AjaxResult getStructure(@PathVariable("orderId") String orderId) {
+        BrtSalesOrderVo salesOrderVo = brtSalesOrderService.queryBrtSalesOrderByOrderId(orderId);
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("salesOrder", salesOrderVo);
+        if (salesOrderVo == null) {
+            payload.put("salesOrderItems", Collections.emptyList());
+            payload.put("salesOrderPackages", Collections.emptyList());
+            payload.put("salesOrderItemProcs", Collections.emptyList());
+        } else {
+            payload.put("salesOrderItems", salesOrderVo.getSalesOrderItemList());
+            payload.put("salesOrderPackages", salesOrderVo.getSalesOrderPackageList());
+            payload.put("salesOrderItemProcs", salesOrderVo.getSalesOrderItemProcList());
+        }
+        return AjaxResult.success(payload);
     }
 
     /**
