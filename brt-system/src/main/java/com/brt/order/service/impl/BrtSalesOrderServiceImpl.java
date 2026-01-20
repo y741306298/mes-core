@@ -69,6 +69,15 @@ public class BrtSalesOrderServiceImpl extends ServiceImpl<BrtSalesOrderMapper, B
     private IBrtOrderMaterielPlanService materielPlanService;
 
     @Autowired
+    private IBrtSalesOrderItemService salesOrderItemService;
+
+    @Autowired
+    private IBrtSalesOrderPackageService salesOrderPackageService;
+
+    @Autowired
+    private IBrtSalesOrderItemProcService salesOrderItemProcService;
+
+    @Autowired
     private BrtOrderNoUtil orderNoUtil;
 
 
@@ -86,7 +95,17 @@ public class BrtSalesOrderServiceImpl extends ServiceImpl<BrtSalesOrderMapper, B
 
     @Override
     public BrtSalesOrderVo queryBrtSalesOrderByOrderId(String orderId) {
-        return this.baseMapper.queryBrtSalesOrderByOrderId(orderId);
+        BrtSalesOrderVo salesOrderVo = this.baseMapper.queryBrtSalesOrderByOrderId(orderId);
+        if (ObjectUtil.isEmpty(salesOrderVo)) {
+            return null;
+        }
+        salesOrderVo.setSalesOrderItemList(salesOrderItemService.list(new LambdaQueryWrapper<BrtSalesOrderItem>()
+                .eq(BrtSalesOrderItem::getOrderId, orderId)));
+        salesOrderVo.setSalesOrderPackageList(salesOrderPackageService.list(new LambdaQueryWrapper<BrtSalesOrderPackage>()
+                .eq(BrtSalesOrderPackage::getOrderId, orderId)));
+        salesOrderVo.setSalesOrderItemProcList(salesOrderItemProcService.list(new LambdaQueryWrapper<BrtSalesOrderItemProc>()
+                .eq(BrtSalesOrderItemProc::getOrderId, orderId)));
+        return salesOrderVo;
     }
 
     @Transactional
@@ -95,19 +114,34 @@ public class BrtSalesOrderServiceImpl extends ServiceImpl<BrtSalesOrderMapper, B
 
         saveBefore(brtSalesOrderVo);
 
-        // 保存订单详情
-        List<BrtSalesOrderDetailsVo> orderDetailsVoList = brtSalesOrderVo.getSalesOrderDetailsVoList();
-        if (ObjectUtil.isEmpty(orderDetailsVoList)){
+        // 保存订单详情/明细
+        List<BrtSalesOrderDetailsVo> orderDetailsVoList = Optional.ofNullable(brtSalesOrderVo.getSalesOrderDetailsVoList())
+                .orElse(Collections.emptyList());
+        List<BrtSalesOrderItem> orderItemList = Optional.ofNullable(brtSalesOrderVo.getSalesOrderItemList())
+                .orElse(Collections.emptyList());
+
+        if (ObjectUtil.isEmpty(orderDetailsVoList) && ObjectUtil.isEmpty(orderItemList)) {
             throw new ServiceException("请至少添加一个产品信息");
         }
 
-        //统计订单数量
-        long toatlNum = orderDetailsVoList.stream().mapToLong(BrtSalesOrderDetailsVo::getDetailsNum).sum();
-        brtSalesOrderVo.setTotalNum(toatlNum);
-
-        //统计订单总金额
-        BigDecimal totalAmount = orderDetailsVoList.stream().map(BrtSalesOrderDetailsVo::getDetailsAmount).reduce(BigDecimal::add).get();
-        brtSalesOrderVo.setTotalAmount(totalAmount);
+        if (ObjectUtil.isNotEmpty(orderDetailsVoList)) {
+            long totalNum = orderDetailsVoList.stream().mapToLong(BrtSalesOrderDetailsVo::getDetailsNum).sum();
+            brtSalesOrderVo.setTotalNum(totalNum);
+            BigDecimal totalAmount = orderDetailsVoList.stream()
+                    .map(BrtSalesOrderDetailsVo::getDetailsAmount)
+                    .reduce(BigDecimal::add)
+                    .orElse(BigDecimal.ZERO);
+            brtSalesOrderVo.setTotalAmount(totalAmount);
+        } else {
+            BigDecimal totalNum = orderItemList.stream()
+                    .map(item -> Optional.ofNullable(item.getItemNumber()).orElse(BigDecimal.ZERO))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            brtSalesOrderVo.setTotalNum(totalNum.longValue());
+            BigDecimal totalAmount = orderItemList.stream()
+                    .map(this::resolveOrderItemAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            brtSalesOrderVo.setTotalAmount(totalAmount);
+        }
         brtSalesOrderVo.setUserId(SecurityUtils.getUserId().toString());
         brtSalesOrderVo.setOrderNo(orderNoUtil.getNoAndAdd(OrderNoEnums.销售单));
         int i = this.baseMapper.insert(brtSalesOrderVo);
@@ -129,8 +163,27 @@ public class BrtSalesOrderServiceImpl extends ServiceImpl<BrtSalesOrderMapper, B
             });
         }
 
+        if (ObjectUtil.isNotEmpty(orderItemList)) {
+            orderItemList.forEach(item -> item.setOrderId(brtSalesOrderVo.getOrderId()));
+            salesOrderItemService.saveBatch(orderItemList);
+        }
+
+        List<BrtSalesOrderPackage> packageList = brtSalesOrderVo.getSalesOrderPackageList();
+        if (ObjectUtil.isNotEmpty(packageList)) {
+            packageList.forEach(item -> item.setOrderId(brtSalesOrderVo.getOrderId()));
+            salesOrderPackageService.saveBatch(packageList);
+        }
+
+        List<BrtSalesOrderItemProc> procList = brtSalesOrderVo.getSalesOrderItemProcList();
+        if (ObjectUtil.isNotEmpty(procList)) {
+            procList.forEach(item -> item.setOrderId(brtSalesOrderVo.getOrderId()));
+            salesOrderItemProcService.saveBatch(procList);
+        }
+
         // 2. 锁定库存
-        materielService.lockStock(brtSalesOrderVo);
+        if (ObjectUtil.isNotEmpty(orderDetailsVoList)) {
+            materielService.lockStock(brtSalesOrderVo);
+        }
 
 
         BrtOrderVo orderVo = new BrtOrderVo();
@@ -151,24 +204,71 @@ public class BrtSalesOrderServiceImpl extends ServiceImpl<BrtSalesOrderMapper, B
         BrtSalesOrder salesOrder = this.baseMapper.selectById(brtSalesOrderVo.getOrderId());
 
         // 保存订单详情
-        List<BrtSalesOrderDetailsVo> orderDetailsVoList = brtSalesOrderVo.getSalesOrderDetailsVoList();
+        List<BrtSalesOrderDetailsVo> orderDetailsVoList = Optional.ofNullable(brtSalesOrderVo.getSalesOrderDetailsVoList())
+                .orElse(Collections.emptyList());
+        List<BrtSalesOrderItem> orderItemList = Optional.ofNullable(brtSalesOrderVo.getSalesOrderItemList())
+                .orElse(Collections.emptyList());
 
-        //统计订单数量
-        long toatlNum = orderDetailsVoList.stream().mapToLong(BrtSalesOrderDetailsVo::getDetailsNum).sum();
-        brtSalesOrderVo.setTotalNum(toatlNum);
+        if (ObjectUtil.isEmpty(orderDetailsVoList) && ObjectUtil.isEmpty(orderItemList)) {
+            throw new ServiceException("请至少添加一个产品信息");
+        }
 
-        //统计订单总金额
-        BigDecimal totalAmount = orderDetailsVoList.stream().map(BrtSalesOrderDetailsVo::getDetailsAmount).reduce(BigDecimal::add).get();
-        brtSalesOrderVo.setTotalAmount(totalAmount);
+        if (ObjectUtil.isNotEmpty(orderDetailsVoList)) {
+            long totalNum = orderDetailsVoList.stream().mapToLong(BrtSalesOrderDetailsVo::getDetailsNum).sum();
+            brtSalesOrderVo.setTotalNum(totalNum);
+            BigDecimal totalAmount = orderDetailsVoList.stream()
+                    .map(BrtSalesOrderDetailsVo::getDetailsAmount)
+                    .reduce(BigDecimal::add)
+                    .orElse(BigDecimal.ZERO);
+            brtSalesOrderVo.setTotalAmount(totalAmount);
+        } else {
+            BigDecimal totalNum = orderItemList.stream()
+                    .map(item -> Optional.ofNullable(item.getItemNumber()).orElse(BigDecimal.ZERO))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            brtSalesOrderVo.setTotalNum(totalNum.longValue());
+            BigDecimal totalAmount = orderItemList.stream()
+                    .map(this::resolveOrderItemAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            brtSalesOrderVo.setTotalAmount(totalAmount);
+        }
         brtSalesOrderVo.setUserId(SecurityUtils.getUserId().toString());
 
-        if(ObjectUtil.isNotEmpty(orderDetailsVoList)){
+        if (ObjectUtil.isNotEmpty(orderDetailsVoList)) {
             orderDetailsVoList.stream().forEach(item -> {
                 if(ObjectUtil.isNotEmpty(item)){
                     item.setOrderId(brtSalesOrderVo.getOrderId());
                     salesOrderDetailsService.saveOrUpdate(item);
                 }
             });
+        }
+
+        if (brtSalesOrderVo.getSalesOrderItemList() != null) {
+            salesOrderItemService.remove(new LambdaQueryWrapper<BrtSalesOrderItem>()
+                    .eq(BrtSalesOrderItem::getOrderId, brtSalesOrderVo.getOrderId()));
+            if (ObjectUtil.isNotEmpty(orderItemList)) {
+                orderItemList.forEach(item -> item.setOrderId(brtSalesOrderVo.getOrderId()));
+                salesOrderItemService.saveBatch(orderItemList);
+            }
+        }
+
+        if (brtSalesOrderVo.getSalesOrderPackageList() != null) {
+            salesOrderPackageService.remove(new LambdaQueryWrapper<BrtSalesOrderPackage>()
+                    .eq(BrtSalesOrderPackage::getOrderId, brtSalesOrderVo.getOrderId()));
+            List<BrtSalesOrderPackage> packageList = brtSalesOrderVo.getSalesOrderPackageList();
+            if (ObjectUtil.isNotEmpty(packageList)) {
+                packageList.forEach(item -> item.setOrderId(brtSalesOrderVo.getOrderId()));
+                salesOrderPackageService.saveBatch(packageList);
+            }
+        }
+
+        if (brtSalesOrderVo.getSalesOrderItemProcList() != null) {
+            salesOrderItemProcService.remove(new LambdaQueryWrapper<BrtSalesOrderItemProc>()
+                    .eq(BrtSalesOrderItemProc::getOrderId, brtSalesOrderVo.getOrderId()));
+            List<BrtSalesOrderItemProc> procList = brtSalesOrderVo.getSalesOrderItemProcList();
+            if (ObjectUtil.isNotEmpty(procList)) {
+                procList.forEach(item -> item.setOrderId(brtSalesOrderVo.getOrderId()));
+                salesOrderItemProcService.saveBatch(procList);
+            }
         }
 
         if (!salesOrder.getTemplateId().equals(brtSalesOrderVo.getTemplateId())){
@@ -203,6 +303,11 @@ public class BrtSalesOrderServiceImpl extends ServiceImpl<BrtSalesOrderMapper, B
         // 删除订单详情
         int orderDetailsRow = salesOrderDetailsService.removeByOrderIds(orderIds);
 
+        // 删除订单明细/包裹/工艺
+        salesOrderItemService.remove(new LambdaQueryWrapper<BrtSalesOrderItem>().in(BrtSalesOrderItem::getOrderId, orderIds));
+        salesOrderPackageService.remove(new LambdaQueryWrapper<BrtSalesOrderPackage>().in(BrtSalesOrderPackage::getOrderId, orderIds));
+        salesOrderItemProcService.remove(new LambdaQueryWrapper<BrtSalesOrderItemProc>().in(BrtSalesOrderItemProc::getOrderId, orderIds));
+
         // 删除开票计划
         orderInvoicePlanService.remove(new LambdaQueryWrapper<BrtOrderInvoicePlan>().in(BrtOrderInvoicePlan::getOrderId,orderIds));
 
@@ -212,6 +317,15 @@ public class BrtSalesOrderServiceImpl extends ServiceImpl<BrtSalesOrderMapper, B
         // 删除数量计划
         materielPlanService.remove(new LambdaQueryWrapper<BrtOrderMaterielPlan>().in(BrtOrderMaterielPlan::getOrderId,orderIds));
         return this.baseMapper.deleteBatchIds(Arrays.asList(orderIds));
+    }
+
+    private BigDecimal resolveOrderItemAmount(BrtSalesOrderItem item) {
+        if (ObjectUtil.isNotEmpty(item.getActualAmount())) {
+            return item.getActualAmount();
+        }
+        BigDecimal itemPrice = Optional.ofNullable(item.getItemPrice()).orElse(BigDecimal.ZERO);
+        BigDecimal itemNumber = Optional.ofNullable(item.getItemNumber()).orElse(BigDecimal.ZERO);
+        return itemPrice.multiply(itemNumber);
     }
 
     @Override

@@ -65,3 +65,83 @@ ALTER TABLE `brt_sales_order_details`
     ADD COLUMN `color_format` varchar(64) DEFAULT NULL COMMENT '色彩模式',
     ADD COLUMN `prod_attrs` text COMMENT '产品属性',
     ADD COLUMN `snapshot` text COMMENT '来源快照';
+
+-- brt_sales_order_items 订单明细表（拆分 brt_sales_order_details 的订单明细信息）
+CREATE TABLE IF NOT EXISTS `brt_sales_order_items` (
+    `id` bigint NOT NULL COMMENT '来源明细ID',
+    `order_id` varchar(64) NOT NULL COMMENT '销售订单ID',
+    `prod_name` varchar(255) DEFAULT NULL COMMENT '产品名称',
+    `prod_code` varchar(64) DEFAULT NULL COMMENT '产品编码',
+    `prod_type` int DEFAULT NULL COMMENT '产品类型',
+    `component` longtext COMMENT '组件信息(JSON)',
+    `width` decimal(10,2) DEFAULT NULL COMMENT '宽度',
+    `height` decimal(10,2) DEFAULT NULL COMMENT '高度',
+    `thickness` decimal(10,2) DEFAULT NULL COMMENT '厚度',
+    `weight` decimal(10,2) DEFAULT NULL COMMENT '重量',
+    `procs_desc` longtext COMMENT '工艺描述',
+    `procs_attachpath` longtext COMMENT '工艺附件',
+    `item_number` decimal(18,2) DEFAULT NULL COMMENT '件数',
+    `item_price` decimal(18,2) DEFAULT NULL COMMENT '单价',
+    `actual_amount` decimal(18,2) DEFAULT NULL COMMENT '实际金额',
+    `delivery_sn` varchar(128) DEFAULT NULL COMMENT '发货单号',
+    `delivery_id` varchar(64) DEFAULT NULL COMMENT '发货ID',
+    `item_status` int DEFAULT NULL COMMENT '明细状态',
+    `shipping_time` datetime DEFAULT NULL COMMENT '发货时间',
+    `shipping_status` int DEFAULT NULL COMMENT '物流状态',
+    `prod_description` longtext COMMENT '产品描述',
+    `imagefile_path` longtext COMMENT '原始文件路径',
+    `comments` longtext COMMENT '客户备注',
+    `preview_image_path` longtext COMMENT '预览图',
+    `thumbnails_path` longtext COMMENT '缩略图',
+    `proc_code` varchar(255) DEFAULT NULL COMMENT '工艺编码集合',
+    `item_seq` int DEFAULT NULL COMMENT '明细排序',
+    `orderItem_sn` varchar(128) DEFAULT NULL COMMENT '明细流水号',
+    `is_urgent` tinyint DEFAULT NULL COMMENT '是否加急',
+    `delivery_date` date DEFAULT NULL COMMENT '发货日期',
+    `logistics_type` varchar(64) DEFAULT NULL COMMENT '物流类型',
+    `mat_cost` decimal(18,2) DEFAULT NULL COMMENT '物料成本',
+    `proc_cost` decimal(18,2) DEFAULT NULL COMMENT '工艺成本',
+    `gross_margin` decimal(18,2) DEFAULT NULL COMMENT '毛利',
+    `tax_fee` decimal(18,2) DEFAULT NULL COMMENT '税费',
+    `color_format` varchar(64) DEFAULT NULL COMMENT '色彩模式',
+    `prod_attrs` longtext COMMENT '产品属性',
+    `snapshot` longtext COMMENT '来源快照',
+    PRIMARY KEY (`id`),
+    KEY `idx_brt_sales_order_items_order_id` (`order_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='销售订单明细(来源 order_items)';
+
+-- brt_sales_order_packages 订单包裹表（拆分 brt_sales_order_details 的包裹信息）
+CREATE TABLE IF NOT EXISTS `brt_sales_order_packages` (
+    `id` bigint NOT NULL COMMENT '来源包裹ID',
+    `order_id` varchar(64) NOT NULL COMMENT '销售订单ID',
+    `package_name` varchar(128) DEFAULT NULL COMMENT '包裹名称',
+    `consignee` varchar(128) DEFAULT NULL COMMENT '收货人',
+    `address` varchar(255) DEFAULT NULL COMMENT '收货地址',
+    `tel` varchar(32) DEFAULT NULL COMMENT '收货电话',
+    `orderItem_sns` longtext COMMENT '关联明细流水号集合',
+    `counts` longtext COMMENT '明细数量集合',
+    `addr_id` varchar(64) DEFAULT NULL COMMENT '地址ID',
+    `shipping_fee` decimal(18,2) DEFAULT NULL COMMENT '运费',
+    `delivery_net` varchar(128) DEFAULT NULL COMMENT '物流网点',
+    `snapshot` longtext COMMENT '来源快照',
+    PRIMARY KEY (`id`),
+    KEY `idx_brt_sales_order_packages_order_id` (`order_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='销售订单包裹(来源 order_packages)';
+
+-- brt_sales_order_item_procs 订单工艺表（由 order_items.component 拆解）
+CREATE TABLE IF NOT EXISTS `brt_sales_order_item_procs` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `order_id` varchar(64) NOT NULL COMMENT '销售订单ID',
+    `order_item_id` bigint NOT NULL COMMENT '订单明细ID',
+    `proc_code` varchar(64) DEFAULT NULL COMMENT '工艺编码',
+    `proc_name` varchar(255) DEFAULT NULL COMMENT '工艺名称',
+    `proc_description` longtext COMMENT '工艺描述(JSON)',
+    `accessory_code` varchar(64) DEFAULT NULL COMMENT '辅材编码',
+    `accessory_number` decimal(18,2) DEFAULT NULL COMMENT '辅材数量',
+    `proc_attach_path` longtext COMMENT '工艺附件路径',
+    `proc_sort` int DEFAULT NULL COMMENT '工艺顺序',
+    `snapshot` longtext COMMENT '来源快照',
+    PRIMARY KEY (`id`),
+    KEY `idx_brt_sales_order_item_procs_order_id` (`order_id`),
+    KEY `idx_brt_sales_order_item_procs_item_id` (`order_item_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='销售订单工艺(来源 order_items.component)';

@@ -64,6 +64,174 @@
                 </el-form-item>
               </el-col>
             </el-row>
+            <el-divider>来源订单信息</el-divider>
+            <el-row>
+              <el-col :span="24">
+                <el-form-item label="来源客户ID" prop="clientId">
+                  <el-input v-model="form.clientId" placeholder="请输入来源客户ID" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col :span="24">
+                <el-form-item label="收货人" prop="consignee">
+                  <el-input v-model="form.consignee" placeholder="请输入收货人" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col :span="24">
+                <el-form-item label="收货电话" prop="tel">
+                  <el-input v-model="form.tel" placeholder="请输入收货电话" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col :span="24">
+                <el-form-item label="收货地址" prop="address">
+                  <el-input v-model="form.address" placeholder="请输入收货地址" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col :span="24">
+                <el-form-item label="来源金额" prop="orderAmount">
+                  <el-input v-model="form.orderAmount" placeholder="请输入来源订单金额" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col :span="24">
+                <el-form-item label="来源运费" prop="shippingFee">
+                  <el-input v-model="form.shippingFee" placeholder="请输入来源运费" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col :span="24">
+                <el-form-item label="已付金额" prop="moneyPaid">
+                  <el-input v-model="form.moneyPaid" placeholder="请输入已付金额" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col :span="24">
+                <el-form-item label="优惠金额" prop="discount">
+                  <el-input v-model="form.discount" placeholder="请输入优惠金额" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col :span="24">
+                <el-form-item label="支付时间" prop="payTime">
+                  <el-date-picker class="drag-screenful-contnet" v-model="form.payTime" type="datetime"
+                    value-format="yyyy-MM-dd HH:mm:ss" placeholder="请选择支付时间">
+                  </el-date-picker>
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col :span="24">
+                <el-form-item label="生产方ID" prop="manufacturerId">
+                  <el-input v-model="form.manufacturerId" placeholder="请输入生产方ID" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col :span="24">
+                <el-form-item label="来源交货" prop="deliveryDate">
+                  <el-date-picker class="drag-screenful-contnet" v-model="form.deliveryDate" type="date"
+                    value-format="yyyy-MM-dd" placeholder="请选择来源交货日期">
+                  </el-date-picker>
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col :span="24">
+                <el-form-item label="MES标记" prop="mes">
+                  <el-input v-model="form.mes" placeholder="请输入MES标记" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col :span="24">
+                <el-form-item label="MES时间" prop="mesTime">
+                  <el-date-picker class="drag-screenful-contnet" v-model="form.mesTime" type="datetime"
+                    value-format="yyyy-MM-dd HH:mm:ss" placeholder="请选择MES创建时间">
+                  </el-date-picker>
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col :span="24">
+                <el-form-item label="物流单号" prop="logisticCode">
+                  <el-input v-model="form.logisticCode" placeholder="请输入物流单号" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col :span="24">
+                <el-form-item label="是否撤回" prop="isWithdraw">
+                  <el-input v-model="form.isWithdraw" placeholder="请输入是否撤回" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col :span="24">
+                <el-form-item label="账号编码" prop="userCode">
+                  <el-input v-model="form.userCode" placeholder="请输入账号编码" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col :span="24">
+                <el-form-item label="组织编码" prop="userOrgCode">
+                  <el-input v-model="form.userOrgCode" placeholder="请输入账号组织编码" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col :span="24">
+                <el-form-item label="转移状态" prop="transferStatus">
+                  <el-input v-model="form.transferStatus" placeholder="请输入转移状态" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col :span="24">
+                <el-form-item label="转移来源" prop="transferFrom">
+                  <el-input v-model="form.transferFrom" placeholder="请输入转移来源" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col :span="24">
+                <el-form-item label="结算金额" prop="settleOrderAmount">
+                  <el-input v-model="form.settleOrderAmount" placeholder="请输入结算金额" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col :span="24">
+                <el-form-item label="订单类型" prop="type">
+                  <el-input v-model="form.type" placeholder="请输入订单类型" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col :span="24">
+                <el-form-item label="外部单号" prop="outOrderNo">
+                  <el-input v-model="form.outOrderNo" placeholder="请输入外部订单号" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col :span="24">
+                <el-form-item label="来源快照" prop="snapshot">
+                  <el-input type="textarea" v-model="form.snapshot" placeholder="请输入来源快照" />
+                </el-form-item>
+              </el-col>
+            </el-row>
             <el-row>
               <el-col :span="24">
                 <el-form-item label="交货日期" prop="deliveryTime">
@@ -561,6 +729,29 @@
           orderId: null,
           orderNo: null,
           orderSn: null,
+          clientId: null,
+          consignee: null,
+          address: null,
+          tel: null,
+          orderAmount: null,
+          shippingFee: null,
+          moneyPaid: null,
+          discount: null,
+          payTime: null,
+          manufacturerId: null,
+          deliveryDate: null,
+          mes: null,
+          mesTime: null,
+          logisticCode: null,
+          isWithdraw: null,
+          userCode: null,
+          userOrgCode: null,
+          transferStatus: null,
+          snapshot: null,
+          transferFrom: null,
+          settleOrderAmount: null,
+          type: null,
+          outOrderNo: null,
           customerId: null,
           contact: null,
           contactTel: null,
